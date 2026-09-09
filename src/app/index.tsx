@@ -1,98 +1,179 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+function OpcionRol(props) {
+  return(
+    <Pressable
+      style={({ pressed }) => [
+        styles.opcion,
+        { backgroundColor: props.colorFondo },
+        pressed && styles.opcionPresionada,
+      ]}
+      onPress={props.onPress}
+    >
+      <View style={[styles.cuadro, { backgroundColor: props.colorCuadro }]}>
+        <Text style={styles.letra}>{props.letra}</Text>
+      </View>
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+      <View style={styles.textos}>
+        <Text style={[styles.tituloOpcion, { color: props.colorCuadro }]}>
+          {props.titulo}
+        </Text>
+        <Text style={styles.subtituloOpcion}>{props.subtitulo}</Text>
+      </View>
+
+      <Text style={styles.flecha}>›</Text>
+    </Pressable>
   );
 }
 
-export default function HomeScreen() {
+export default function SeleccionRol (){
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <View style={styles.container}>
+      <View style={styles.logo}><Text style={styles.logoTexto}>C</Text></View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <Text style={styles.titulo}>¿Cómo querés ingresar?</Text>
+      <Text style={styles.subTitulo}>Elegí tu perfil para continuar.</Text>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      <View style={styles.lista}>
+        <OpcionRol
+          letra="P"
+          titulo="Paciente"
+          subtitulo="Turnos, estudios y medicación"
+          colorFondo="#eff6ff"
+          colorCuadro="#2563eb"
+          onPress={() => router.push('/login?rol=paciente')}
+        />
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <OpcionRol
+          letra="M"
+          titulo="Médico"
+          subtitulo="Agenda, preconsultas y recetas"
+          colorFondo="#f1f5f9"
+          colorCuadro="#1e293b"
+          onPress={() => router.push('/login?rol=medico')}
+        />
+
+        <OpcionRol
+          letra="S"
+          titulo="Secretaría"
+          subtitulo="Agendas, lista de espera y avisos"
+          colorFondo="#ecfdf5"
+          colorCuadro="#0f766e"
+          onPress={() => router.push('/login?rol=secretaria')}
+        />
+
+        <OpcionRol
+          letra="A"
+          titulo="Administrador"
+          subtitulo="Métricas, personal y consultorio"
+          colorFondo="#f5f3ff"
+          colorCuadro="#7c3aed"
+          onPress={() => router.push('/login?rol=administrador')}
+        />
+      </View>
+
+      <View style={styles.pie}>
+        <Text style={styles.pieTexto}>¿Primera vez? </Text>
+        <Pressable>
+          <Text style={styles.pieLink}>Registrate como paciente</Text>
+        </Pressable>
+      </View>
+
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    paddingTop: 70,
+    paddingHorizontal: 22,
     flex: 1,
+  },
+  titulo: {
+    color: 'black',
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginTop: 22,
+  },
+  subTitulo: {
+    color: 'grey',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8,
+  },
+  logo: {
+    backgroundColor: 'black',
+    width: 46,
+    height: 46,
     justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 14,
+  },
+  logoTexto: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  lista: {
+    marginTop: 26,
+  },
+  opcion: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 15,
   },
-  heroSection: {
-    alignItems: 'center',
+  cuadro: {
+    width: 44,
+    height: 44,
     justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  letra: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  textos: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    marginLeft: 14,
   },
-  title: {
-    textAlign: 'center',
+  tituloOpcion: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  code: {
-    textTransform: 'uppercase',
+  subtituloOpcion: {
+    color: '#64748b',
+    fontSize: 13,
+    marginTop: 2,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  flecha: {
+    color: '#94a3b8',
+    fontSize: 22,
   },
+  pie: {
+    marginTop: 'auto',
+    marginBottom: 45,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pieTexto: {
+    color: 'grey',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  pieLink: {
+    color: '#2563eb',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  opcionPresionada: {
+    opacity: 0.7,
+    transform: [{ scale: 0.98 }],
+  },
+
 });
