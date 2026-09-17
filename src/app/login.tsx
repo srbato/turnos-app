@@ -3,7 +3,21 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 
-const TEMAS = {
+const ROLES = ['paciente', 'medico', 'secretaria', 'administrador'] as const;
+type Rol = (typeof ROLES)[number];
+
+function normalizarRol(valor: string | string[] | undefined): Rol {
+  const candidato = Array.isArray(valor) ? valor[0] : valor;
+  return (ROLES as readonly string[]).includes(candidato ?? '') ? (candidato as Rol) : 'paciente';
+}
+
+const TEMAS: Record<Rol, {
+  color: string;
+  fondo: string;
+  colorCard: string;
+  etiqueta: string;
+  alternativo: string | null;
+}> = {
   paciente: {
     color: '#2563eb',
     fondo: '#eff6ff',
@@ -25,7 +39,7 @@ const TEMAS = {
     etiqueta: 'Ingreso secretaría',
     alternativo: null,
   },
-  admin: {
+  administrador: {
     color: '#7c3aed',
     fondo: '#f5f3ff',
     colorCard: '#ffffff',
@@ -34,14 +48,37 @@ const TEMAS = {
   },
 };
 
+// Credenciales de prueba: todavía no hay backend, se validan a mano.
+const CREDENCIALES: Record<Rol, { email: string; password: string }> = {
+  paciente: { email: 'paciente@test.com', password: 'paciente123' },
+  medico: { email: 'medico@test.com', password: 'medico123' },
+  secretaria: { email: 'secretaria@test.com', password: 'secretaria123' },
+  administrador: { email: 'admin@test.com', password: 'admin123' },
+};
+
 export default function Login() {
-    const { rol } = useLocalSearchParams();
-    const tema = TEMAS[rol] ?? TEMAS.paciente;
+    const { rol: rolParam } = useLocalSearchParams();
+    const rol = normalizarRol(rolParam);
+    const tema = TEMAS[rol];
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [verPassword, setVerPassword] = useState(false);
     const [recordarme, setRecordarme] = useState(false);
+    const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
+
+    function handleIngresar() {
+        const credenciales = CREDENCIALES[rol];
+        if (email !== credenciales.email || password !== credenciales.password) {
+            setMensaje({ texto: 'Email o contraseña incorrectos.', esError: true });
+            return;
+        }
+        if (rol === 'paciente') {
+            router.push('/paciente');
+            return;
+        }
+        setMensaje({ texto: `${tema.etiqueta} correcto. Esta pantalla todavía no está armada.`, esError: false });
+    }
 
     return(
         <View style = {[styles.container, { backgroundColor: tema.fondo }]}>
@@ -103,9 +140,24 @@ export default function Login() {
                         </Text>
                     </Pressable>
                 </View>
+
+                <Pressable
+                    style={({ pressed }) => [
+                        styles.botonIngresar,
+                        { backgroundColor: tema.color },
+                        pressed && styles.botonIngresarPresionado,
+                    ]}
+                    onPress={handleIngresar}
+                >
+                    <Text style={styles.botonIngresarTexto}>Ingresar</Text>
+                </Pressable>
             </View>
 
-
+            {mensaje && (
+                <Text style={mensaje.esError ? styles.mensajeError : styles.mensajeExito}>
+                    {mensaje.texto}
+                </Text>
+            )}
 
         </View>
     );
@@ -214,5 +266,33 @@ const styles = StyleSheet.create({
     color: 'grey',
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  botonIngresar: {
+    borderRadius: 10,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  botonIngresarPresionado: {
+    opacity: 0.8,
+  },
+  botonIngresarTexto: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  mensajeError: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  mensajeExito: {
+    color: '#16a34a',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 16,
+    textAlign: 'center',
   },
 });
