@@ -50,10 +50,10 @@ const TEMAS: Record<Rol, {
 
 // Credenciales de prueba: todavía no hay backend, se validan a mano.
 const CREDENCIALES: Record<Rol, { email: string; password: string }> = {
-  paciente: { email: 'paciente@test.com', password: 'paciente123' },
-  medico: { email: 'medico@test.com', password: 'medico123' },
-  secretaria: { email: 'secretaria@test.com', password: 'secretaria123' },
-  administrador: { email: 'admin@test.com', password: 'admin123' },
+  paciente: { email: 'p@t.com', password: 'p' },
+  medico: { email: 'm@t.com', password: 'm' },
+  secretaria: { email: 's@t.com', password: 's' },
+  administrador: { email: 'a@t.com', password: 'a' },
 };
 
 export default function Login() {
@@ -75,6 +75,10 @@ export default function Login() {
         }
         if (rol === 'paciente') {
             router.push('/paciente');
+            return;
+        }
+        if (rol === 'medico') {
+            router.push('/medico');
             return;
         }
         setMensaje({ texto: `${tema.etiqueta} correcto. Esta pantalla todavía no está armada.`, esError: false });
