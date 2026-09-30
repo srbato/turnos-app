@@ -101,7 +101,10 @@ export default function Login() {
             <View style={[styles.card, {backgroundColor: tema.colorCard}]}>
                 <Text style={styles.label}>EMAIL</Text>
                 <TextInput
-                    style={[styles.input, {borderColor: tema.color}]}
+                    style={[
+                      styles.input, 
+                      {borderColor: emailError !== '' ? '#dc2626' : tema.color},
+                    ]}
                     value={email}
                     onChangeText={setEmail}
                     placeholder='tucorreo@gmail.com'
@@ -109,8 +112,12 @@ export default function Login() {
                     keyboardType='email-address'
                     autoCapitalize='none'
                 />
+                {emailError !== '' && <Text style={styles.errorText}>{emailError}</Text>}
 
-                <View style={styles.passwordFila}>
+                    <View style={[
+                            styles.passwordFila,
+                            passwordError !== '' && { borderColor: '#dc2626' },
+                          ]}>
                     <TextInput
                         style={[styles.passwordInput, {borderColor: tema.color}]}
                         value={password}
@@ -125,6 +132,7 @@ export default function Login() {
                         </Text>
                     </Pressable>
                 </View>
+                {passwordError !== '' && <Text style={styles.errorText}>{passwordError}</Text>}
 
                 <View style={styles.opcionesFila}> 
                     <Pressable style={styles.checkFila} onPress={() => setRecordarme(!recordarme)}>
@@ -146,6 +154,43 @@ export default function Login() {
                 </View>
 
                 <Pressable
+<<<<<<< HEAD
+                  style={({pressed}) => [
+                    styles.boton,
+                    {backgroundColor:tema.color},
+                    pressed && styles.presionado,
+                  ]}
+                  onPress={handleIngresar}
+                >
+                  <Text style={styles.textoBoton}>Ingresar</Text>
+                </Pressable>
+              </View>
+
+              {tema.alternativo && (
+                <>
+                  <Text style={styles.separador}>____________________    o    ____________________</Text>
+                  <Pressable
+                  style={({pressed}) => [
+                    styles.botonAlternativo,
+                    {borderColor:tema.color},
+                    pressed && styles.presionado,
+                  ]}
+                  onPress={() => router.replace('/(paciente)')}
+                  >
+                  <Text style={[styles.textoBotonAlternativo, { color: tema.color }]}>
+                    {tema.alternativo}
+                  </Text>
+                  </Pressable>
+                </>
+              )}
+
+              <View style={styles.pie}>
+                <Text style={styles.pieTexto}>¿No tenés cuenta?</Text>
+                <Pressable>
+                  <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
+                </Pressable>
+              </View>
+=======
                     style={({ pressed }) => [
                         styles.botonIngresar,
                         { backgroundColor: tema.color },
@@ -156,6 +201,7 @@ export default function Login() {
                     <Text style={styles.botonIngresarTexto}>Ingresar</Text>
                 </Pressable>
             </View>
+>>>>>>> origin/main
 
             {mensaje && (
                 <Text style={mensaje.esError ? styles.mensajeError : styles.mensajeExito}>
@@ -191,6 +237,9 @@ const styles = StyleSheet.create({
   etiquetaTexto: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  presionado: {
+    opacity:0.7,
   },
   titulo: {
     color: 'black',
@@ -271,6 +320,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
+<<<<<<< HEAD
+  boton: {
+    borderRadius:17,
+    alignItems:'center',
+    justifyContent:'center',
+    height:50,
+  },
+  textoBoton: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize:15,
+  },
+  separador: {
+    textAlign:'center',
+    marginVertical:30,
+    color: '#cbd5e1',
+  },
+  botonAlternativo: {
+    backgroundColor:'transparent',
+    borderWidth:1,
+    borderRadius:17,
+    alignItems:'center',
+    justifyContent:'center',
+    height:60,
+  },
+  textoBotonAlternativo: {
+    fontWeight: 'bold',
+    fontSize:15,
+  },
+  pie: {
+    marginTop:140,
+    justifyContent:'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+  },
+  pieTexto: {
+    color: '#64748b',
+    fontSize: 13,
+  },
+  pieLink: {
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 12,
+    marginTop: -12,
+    marginBottom: 14,
+  },
+
+=======
   botonIngresar: {
     borderRadius: 10,
     height: 48,
@@ -299,4 +399,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
+>>>>>>> origin/main
 });
