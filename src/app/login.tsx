@@ -3,7 +3,21 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 
-const TEMAS = {
+const ROLES = ['paciente', 'medico', 'secretaria', 'administrador'] as const;
+type Rol = (typeof ROLES)[number];
+
+function normalizarRol(valor: string | string[] | undefined): Rol {
+  const candidato = Array.isArray(valor) ? valor[0] : valor;
+  return (ROLES as readonly string[]).includes(candidato ?? '') ? (candidato as Rol) : 'paciente';
+}
+
+const TEMAS: Record<Rol, {
+  color: string;
+  fondo: string;
+  colorCard: string;
+  etiqueta: string;
+  alternativo: string | null;
+}> = {
   paciente: {
     color: '#2563eb',
     fondo: '#eff6ff',
@@ -34,40 +48,40 @@ const TEMAS = {
   },
 };
 
+// Credenciales de prueba: todavía no hay backend, se validan a mano.
+const CREDENCIALES: Record<Rol, { email: string; password: string }> = {
+  paciente: { email: 'p@t.com', password: 'p' },
+  medico: { email: 'm@t.com', password: 'm' },
+  secretaria: { email: 's@t.com', password: 's' },
+  administrador: { email: 'a@t.com', password: 'a' },
+};
+
 export default function Login() {
-    const { rol } = useLocalSearchParams();
-    const tema = TEMAS[rol] ?? TEMAS.paciente;
+    const { rol: rolParam } = useLocalSearchParams();
+    const rol = normalizarRol(rolParam);
+    const tema = TEMAS[rol];
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [verPassword, setVerPassword] = useState(false);
     const [recordarme, setRecordarme] = useState(false);
-    const [emailError, setEmailError] = useState('');
-    const [passwordError, setPasswordError] = useState('');
+    const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
 
-    const handleIngresar = () => {
-      let hayError = false;
-
-        if (email.trim() === '') {
-          setEmailError('El email es obligatorio');
-          hayError = true;
-        } else if (!email.includes('@')) {
-          setEmailError('El email debe contener @');
-          hayError = true;
-        } else {
-          setEmailError('');
+    function handleIngresar() {
+        const credenciales = CREDENCIALES[rol];
+        if (email !== credenciales.email || password !== credenciales.password) {
+            setMensaje({ texto: 'Email o contraseña incorrectos.', esError: true });
+            return;
         }
-
-        if (password.trim() === '') {
-          setPasswordError('La contraseña es obligatoria');
-          hayError = true;
-        } else {
-          setPasswordError('');
+        if (rol === 'paciente') {
+            router.push('/paciente');
+            return;
         }
-
-        if (!hayError) {
-          router.replace('/(paciente)');
+        if (rol === 'medico') {
+            router.push('/medico');
+            return;
         }
+        setMensaje({ texto: `${tema.etiqueta} correcto. Esta pantalla todavía no está armada.`, esError: false });
     }
 
     return(
@@ -140,6 +154,7 @@ export default function Login() {
                 </View>
 
                 <Pressable
+<<<<<<< HEAD
                   style={({pressed}) => [
                     styles.boton,
                     {backgroundColor:tema.color},
@@ -175,8 +190,24 @@ export default function Login() {
                   <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
                 </Pressable>
               </View>
+=======
+                    style={({ pressed }) => [
+                        styles.botonIngresar,
+                        { backgroundColor: tema.color },
+                        pressed && styles.botonIngresarPresionado,
+                    ]}
+                    onPress={handleIngresar}
+                >
+                    <Text style={styles.botonIngresarTexto}>Ingresar</Text>
+                </Pressable>
+            </View>
+>>>>>>> origin/main
 
-
+            {mensaje && (
+                <Text style={mensaje.esError ? styles.mensajeError : styles.mensajeExito}>
+                    {mensaje.texto}
+                </Text>
+            )}
 
         </View>
     );
@@ -289,6 +320,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
+<<<<<<< HEAD
   boton: {
     borderRadius:17,
     alignItems:'center',
@@ -338,4 +370,34 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+=======
+  botonIngresar: {
+    borderRadius: 10,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  botonIngresarPresionado: {
+    opacity: 0.8,
+  },
+  botonIngresarTexto: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  mensajeError: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  mensajeExito: {
+    color: '#16a34a',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+>>>>>>> origin/main
 });
