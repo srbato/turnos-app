@@ -65,23 +65,54 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [verPassword, setVerPassword] = useState(false);
     const [recordarme, setRecordarme] = useState(false);
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
     const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
 
-    function handleIngresar() {
-        const credenciales = CREDENCIALES[rol];
-        if (email !== credenciales.email || password !== credenciales.password) {
-            setMensaje({ texto: 'Email o contraseña incorrectos.', esError: true });
-            return;
-        }
+    const irAlInicio = () => {
         if (rol === 'paciente') {
-            router.push('/paciente');
+            router.replace('/paciente');
             return;
         }
         if (rol === 'medico') {
-            router.push('/medico');
+            router.replace('/medico');
             return;
         }
         setMensaje({ texto: `${tema.etiqueta} correcto. Esta pantalla todavía no está armada.`, esError: false });
+    }
+
+    const handleIngresar = () => {
+      let hayError = false;
+      setMensaje(null);
+
+        if (email.trim() === '') {
+          setEmailError('El email es obligatorio');
+          hayError = true;
+        } else if (!email.includes('@')) {
+          setEmailError('El email debe contener @');
+          hayError = true;
+        } else {
+          setEmailError('');
+        }
+
+        if (password.trim() === '') {
+          setPasswordError('La contraseña es obligatoria');
+          hayError = true;
+        } else {
+          setPasswordError('');
+        }
+
+        if (hayError) {
+          return;
+        }
+
+        const credenciales = CREDENCIALES[rol];
+        if (email.trim() !== credenciales.email || password !== credenciales.password) {
+          setMensaje({ texto: 'Email o contraseña incorrectos.', esError: true });
+          return;
+        }
+
+        irAlInicio();
     }
 
     return(
@@ -154,7 +185,6 @@ export default function Login() {
                 </View>
 
                 <Pressable
-<<<<<<< HEAD
                   style={({pressed}) => [
                     styles.boton,
                     {backgroundColor:tema.color},
@@ -164,6 +194,12 @@ export default function Login() {
                 >
                   <Text style={styles.textoBoton}>Ingresar</Text>
                 </Pressable>
+
+                {mensaje && (
+                  <Text style={mensaje.esError ? styles.mensajeError : styles.mensajeExito}>
+                    {mensaje.texto}
+                  </Text>
+                )}
               </View>
 
               {tema.alternativo && (
@@ -175,7 +211,7 @@ export default function Login() {
                     {borderColor:tema.color},
                     pressed && styles.presionado,
                   ]}
-                  onPress={() => router.replace('/(paciente)')}
+                  onPress={irAlInicio}
                   >
                   <Text style={[styles.textoBotonAlternativo, { color: tema.color }]}>
                     {tema.alternativo}
@@ -190,24 +226,8 @@ export default function Login() {
                   <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
                 </Pressable>
               </View>
-=======
-                    style={({ pressed }) => [
-                        styles.botonIngresar,
-                        { backgroundColor: tema.color },
-                        pressed && styles.botonIngresarPresionado,
-                    ]}
-                    onPress={handleIngresar}
-                >
-                    <Text style={styles.botonIngresarTexto}>Ingresar</Text>
-                </Pressable>
-            </View>
->>>>>>> origin/main
 
-            {mensaje && (
-                <Text style={mensaje.esError ? styles.mensajeError : styles.mensajeExito}>
-                    {mensaje.texto}
-                </Text>
-            )}
+
 
         </View>
     );
@@ -320,7 +340,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
-<<<<<<< HEAD
   boton: {
     borderRadius:17,
     alignItems:'center',
@@ -369,22 +388,6 @@ const styles = StyleSheet.create({
     marginTop: -12,
     marginBottom: 14,
   },
-
-=======
-  botonIngresar: {
-    borderRadius: 10,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  botonIngresarPresionado: {
-    opacity: 0.8,
-  },
-  botonIngresarTexto: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
   mensajeError: {
     color: '#dc2626',
     fontSize: 13,
@@ -399,5 +402,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
->>>>>>> origin/main
+
 });
