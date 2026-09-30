@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type EstadoTurno = 'confirmado' | 'pendiente' | 'en_espera' | 'bloqueado';
 
@@ -116,7 +117,7 @@ export default function AgendaMedico() {
 
   return (
     <View style={styles.pantalla}>
-      <View style={styles.encabezado}>
+      <SafeAreaView style={styles.encabezado} edges={['top']}>
         <View style={styles.encabezadoFila}>
           <View>
             <Text style={styles.fecha}>{fechaDeHoy()}</Text>
@@ -145,7 +146,7 @@ export default function AgendaMedico() {
             <Text style={styles.resumenEtiqueta}>riesgo alto</Text>
           </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
         <View style={styles.listaEncabezado}>
@@ -198,7 +199,7 @@ export default function AgendaMedico() {
         )}
       </ScrollView>
 
-      <View style={styles.tabBar}>
+      <SafeAreaView style={styles.tabBar} edges={['bottom']}>
         <View style={styles.tabItem}>
           <Text style={[styles.tabIcono, styles.tabIconoActivo]}>▤</Text>
           <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Agenda</Text>
@@ -215,7 +216,7 @@ export default function AgendaMedico() {
           <Text style={styles.tabIcono}>⚙</Text>
           <Text style={styles.tabTexto}>Perfil</Text>
         </Pressable>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -262,14 +263,14 @@ const styles = StyleSheet.create({
   },
   resumen: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   resumenCaja: {
     flex: 1,
     backgroundColor: '#2B2F36',
     borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
   },
   resumenNumero: {
     fontSize: 20,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   resumenEtiqueta: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#A9ADB4',
     marginTop: 2,
   },

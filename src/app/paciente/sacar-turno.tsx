@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type DiaDisponible = {
   fecha: string; // AAAA-MM-DD
@@ -81,7 +82,7 @@ export default function SacarTurno() {
   const horariosTarde = HORARIOS.filter((h) => h.turno === 'Tarde');
 
   return (
-    <View style={styles.pantalla}>
+    <SafeAreaView style={styles.pantalla} edges={['top']}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <Pressable style={styles.volver} onPress={() => router.back()}>
           <Text style={styles.volverTexto}>‹ Sacar turno</Text>
@@ -222,17 +223,21 @@ export default function SacarTurno() {
         </View>
       </ScrollView>
 
-      <Pressable
-        disabled={!horaSeleccionada}
-        style={[styles.botonConfirmar, !horaSeleccionada && styles.botonConfirmarDeshabilitado]}
-        onPress={() => router.push('/paciente')}>
-        <Text style={styles.botonConfirmarTexto}>
-          {horaSeleccionada
-            ? `Confirmar ${formatearFechaCorta(fechaSeleccionada)} · ${horaSeleccionada} h`
-            : 'Seleccioná un horario'}
-        </Text>
-      </Pressable>
-    </View>
+      <SafeAreaView
+        edges={['bottom']}
+        style={[styles.pieConfirmar, !horaSeleccionada && styles.botonConfirmarDeshabilitado]}>
+        <Pressable
+          disabled={!horaSeleccionada}
+          style={[styles.botonConfirmar, !horaSeleccionada && styles.botonConfirmarDeshabilitado]}
+          onPress={() => router.push('/paciente')}>
+          <Text style={styles.botonConfirmarTexto}>
+            {horaSeleccionada
+              ? `Confirmar ${formatearFechaCorta(fechaSeleccionada)} · ${horaSeleccionada} h`
+              : 'Seleccioná un horario'}
+          </Text>
+        </Pressable>
+      </SafeAreaView>
+    </SafeAreaView>
   );
 }
 
@@ -456,6 +461,9 @@ const styles = StyleSheet.create({
   },
   horarioTextoDeshabilitado: {
     color: '#C2C2C2',
+  },
+  pieConfirmar: {
+    backgroundColor: COLOR_PACIENTE,
   },
   botonConfirmar: {
     backgroundColor: COLOR_PACIENTE,

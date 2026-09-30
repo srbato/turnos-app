@@ -1,23 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 
-const ROLES = ['paciente', 'medico', 'secretaria', 'administrador'] as const;
-type Rol = (typeof ROLES)[number];
-
-function normalizarRol(valor: string | string[] | undefined): Rol {
-  const candidato = Array.isArray(valor) ? valor[0] : valor;
-  return (ROLES as readonly string[]).includes(candidato ?? '') ? (candidato as Rol) : 'paciente';
-}
-
-const TEMAS: Record<Rol, {
-  color: string;
-  fondo: string;
-  colorCard: string;
-  etiqueta: string;
-  alternativo: string | null;
-}> = {
+const TEMAS = {
   paciente: {
     color: '#2563eb',
     fondo: '#eff6ff',
@@ -37,19 +23,19 @@ const TEMAS: Record<Rol, {
     fondo: '#ecfdf5',
     colorCard: '#ffffff',
     etiqueta: 'Ingreso secretaría',
-    alternativo: null,
+    alternativo: '',
   },
   administrador: {
     color: '#7c3aed',
     fondo: '#f5f3ff',
     colorCard: '#ffffff',
     etiqueta: 'Ingreso administrador',
-    alternativo: null,
+    alternativo: '',
   },
 };
 
 // Credenciales de prueba: todavía no hay backend, se validan a mano.
-const CREDENCIALES: Record<Rol, { email: string; password: string }> = {
+const CREDENCIALES = {
   paciente: { email: 'p@t.com', password: 'p' },
   medico: { email: 'm@t.com', password: 'm' },
   secretaria: { email: 's@t.com', password: 's' },
@@ -57,9 +43,21 @@ const CREDENCIALES: Record<Rol, { email: string; password: string }> = {
 };
 
 export default function Login() {
-    const { rol: rolParam } = useLocalSearchParams();
-    const rol = normalizarRol(rolParam);
-    const tema = TEMAS[rol];
+    const { rol } = useLocalSearchParams();
+
+    let tema = TEMAS.paciente;
+    let credenciales = CREDENCIALES.paciente;
+
+    if (rol === 'medico') {
+        tema = TEMAS.medico;
+        credenciales = CREDENCIALES.medico;
+    } else if (rol === 'secretaria') {
+        tema = TEMAS.secretaria;
+        credenciales = CREDENCIALES.secretaria;
+    } else if (rol === 'administrador') {
+        tema = TEMAS.administrador;
+        credenciales = CREDENCIALES.administrador;
+    }
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -67,7 +65,8 @@ export default function Login() {
     const [recordarme, setRecordarme] = useState(false);
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
-    const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
+    const [mensajeError, setMensajeError] = useState('');
+    const [mensajeExito, setMensajeExito] = useState('');
 
     const irAlInicio = () => {
         if (rol === 'paciente') {
@@ -78,12 +77,13 @@ export default function Login() {
             router.replace('/medico');
             return;
         }
-        setMensaje({ texto: `${tema.etiqueta} correcto. Esta pantalla todavía no está armada.`, esError: false });
+        setMensajeExito('Ingreso correcto. Esta pantalla todavía no está armada.');
     }
 
     const handleIngresar = () => {
       let hayError = false;
-      setMensaje(null);
+      setMensajeError('');
+      setMensajeExito('');
 
         if (email.trim() === '') {
           setEmailError('El email es obligatorio');
@@ -106,9 +106,8 @@ export default function Login() {
           return;
         }
 
-        const credenciales = CREDENCIALES[rol];
         if (email.trim() !== credenciales.email || password !== credenciales.password) {
-          setMensaje({ texto: 'Email o contraseña incorrectos.', esError: true });
+          setMensajeError('Email o contraseña incorrectos.');
           return;
         }
 
@@ -116,7 +115,12 @@ export default function Login() {
     }
 
     return(
-        <View style = {[styles.container, { backgroundColor: tema.fondo }]}>
+        <KeyboardAvoidingView style={styles.teclado} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+            style={{ backgroundColor: tema.fondo }}
+            contentContainerStyle={styles.container}
+            keyboardShouldPersistTaps='handled'
+        >
 
             <Pressable style = {({pressed}) => [styles.volver, pressed && styles.presionado]} onPress={() => router.back()}>
                 <Text style={styles.volverTexto}>‹    Cambiar de perfil</Text>
@@ -145,9 +149,10 @@ export default function Login() {
                 />
                 {emailError !== '' && <Text style={styles.errorText}>{emailError}</Text>}
 
+                <Text style={styles.label}>CONTRASEÑA</Text>
                     <View style={[
                             styles.passwordFila,
-                            passwordError !== '' && { borderColor: '#dc2626' },
+                            {borderColor: passwordError !== '' ? '#dc2626' : tema.color},
                           ]}>
                     <TextInput
                         style={[styles.passwordInput, {borderColor: tema.color}]}
@@ -195,14 +200,11 @@ export default function Login() {
                   <Text style={styles.textoBoton}>Ingresar</Text>
                 </Pressable>
 
-                {mensaje && (
-                  <Text style={mensaje.esError ? styles.mensajeError : styles.mensajeExito}>
-                    {mensaje.texto}
-                  </Text>
-                )}
+                {mensajeError !== '' && <Text style={styles.mensajeError}>{mensajeError}</Text>}
+                {mensajeExito !== '' && <Text style={styles.mensajeExito}>{mensajeExito}</Text>}
               </View>
 
-              {tema.alternativo && (
+              {tema.alternativo !== '' && (
                 <>
                   <Text style={styles.separador}>____________________    o    ____________________</Text>
                   <Pressable
@@ -227,18 +229,21 @@ export default function Login() {
                 </Pressable>
               </View>
 
-
-
-        </View>
+        </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 
 const styles = StyleSheet.create({
+  teclado: {
+    flex: 1,
+  },
   container: {
     paddingTop: 70,
     paddingHorizontal: 22,
-    flex: 1,
+    paddingBottom: 30,
+    flexGrow: 1,
   },
   volver: {
 
@@ -369,7 +374,7 @@ const styles = StyleSheet.create({
     fontSize:15,
   },
   pie: {
-    marginTop:140,
+    marginTop:40,
     justifyContent:'center',
     alignItems: 'center',
     flexDirection: 'row',

@@ -1,25 +1,9 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const ROLES = ['paciente', 'medico', 'secretaria', 'administrador'] as const;
-type Rol = (typeof ROLES)[number];
-
-function normalizarRol(valor: string | string[] | undefined): Rol {
-  const candidato = Array.isArray(valor) ? valor[0] : valor;
-  return (ROLES as readonly string[]).includes(candidato ?? '') ? (candidato as Rol) : 'paciente';
-}
-
-type InfoPerfil = {
-  nombre: string;
-  iniciales: string;
-  email: string;
-  chip: string;
-  filaTitulo: string;
-  filaSubtitulo: string;
-};
-
-const PERFILES: Record<Rol, InfoPerfil> = {
+const PERFILES = {
   paciente: {
     nombre: 'Valentín',
     iniciales: 'VM',
@@ -27,6 +11,7 @@ const PERFILES: Record<Rol, InfoPerfil> = {
     chip: 'Paciente · Swiss Medical',
     filaTitulo: 'Cobertura médica',
     filaSubtitulo: 'Swiss Medical SMG20 · 62-4418902/01',
+    etiqueta: 'Paciente',
   },
   medico: {
     nombre: 'Dra. Lucía Fernández',
@@ -35,6 +20,7 @@ const PERFILES: Record<Rol, InfoPerfil> = {
     chip: 'Médico · Clínica médica',
     filaTitulo: 'Matrícula',
     filaSubtitulo: 'MN 118.402',
+    etiqueta: 'Médico',
   },
   secretaria: {
     nombre: 'Norma Aguilar',
@@ -43,6 +29,7 @@ const PERFILES: Record<Rol, InfoPerfil> = {
     chip: 'Secretaría · Consultorios Rivadavia',
     filaTitulo: 'Turno de trabajo',
     filaSubtitulo: 'Lunes a viernes · 8:00 a 16:00',
+    etiqueta: 'Secretaría',
   },
   administrador: {
     nombre: 'Gustavo Aráoz',
@@ -51,41 +38,30 @@ const PERFILES: Record<Rol, InfoPerfil> = {
     chip: 'Administrador · Consultorios Rivadavia',
     filaTitulo: 'Acceso',
     filaSubtitulo: 'Gestión completa del consultorio',
+    etiqueta: 'Administrador',
   },
-};
-
-const ETIQUETAS_ROL: Record<Rol, string> = {
-  paciente: 'Paciente',
-  medico: 'Médico',
-  secretaria: 'Secretaría',
-  administrador: 'Administrador',
-};
-
-const TABS_POR_ROL: Partial<Record<Rol, { icono: string; texto: string; ruta: Href }[]>> = {
-  paciente: [
-    { icono: '⌂', texto: 'Inicio', ruta: '/paciente' },
-    { icono: '+', texto: 'Turnos', ruta: '/paciente/sacar-turno' },
-    { icono: '℞', texto: 'Salud', ruta: '/paciente/medicamentos' },
-  ],
-  medico: [
-    { icono: '▤', texto: 'Agenda', ruta: '/medico' },
-  ],
 };
 
 const COLOR_PERFIL = '#C9A24C';
 const FONDO_PERFIL = '#1A1815';
 
 export default function Perfil() {
-  const { rol: rolParam } = useLocalSearchParams();
-  const rol = normalizarRol(rolParam);
-  const info = PERFILES[rol];
-  const tabs = TABS_POR_ROL[rol] ?? [];
+  const { rol } = useLocalSearchParams();
+
+  let info = PERFILES.paciente;
+  if (rol === 'medico') {
+    info = PERFILES.medico;
+  } else if (rol === 'secretaria') {
+    info = PERFILES.secretaria;
+  } else if (rol === 'administrador') {
+    info = PERFILES.administrador;
+  }
 
   const [recordatorios, setRecordatorios] = useState(true);
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
   return (
-    <View style={styles.pantalla}>
+    <SafeAreaView style={styles.pantalla} edges={['top']}>
       <ScrollView style={styles.contenido} contentContainerStyle={styles.contenidoInterno}>
         <View style={styles.encabezado}>
           <Text style={styles.tituloPantalla}>Mi perfil</Text>
@@ -100,7 +76,7 @@ export default function Perfil() {
           </View>
           <View style={styles.datosPerfil}>
             <Text style={styles.nombre}>{info.nombre}</Text>
-            <Text style={styles.email}>{info.email}</Text>
+            <Text style={styles.email} numberOfLines={1}>{info.email}</Text>
             <View style={styles.chip}>
               <Text style={styles.chipTexto}>{info.chip}</Text>
             </View>
@@ -139,7 +115,11 @@ export default function Perfil() {
               <Text style={styles.filaTitulo}>Recordatorios de turno</Text>
               <Text style={styles.filaSubtitulo}>WhatsApp y notificaciones</Text>
             </View>
-            <Toggle activo={recordatorios} onCambiar={() => setRecordatorios(!recordatorios)} />
+            <Pressable
+              style={[styles.toggleTrack, recordatorios && styles.toggleTrackActivo]}
+              onPress={() => setRecordatorios(!recordatorios)}>
+              <View style={[styles.toggleThumb, recordatorios && styles.toggleThumbActivo]} />
+            </Pressable>
           </View>
           <View style={styles.divisor} />
           <View style={styles.filaToggle}>
@@ -147,16 +127,17 @@ export default function Perfil() {
               <Text style={styles.filaTitulo}>Alertas de medicación</Text>
               <Text style={styles.filaSubtitulo}>Avisos de interacciones</Text>
             </View>
-            <Toggle
-              activo={alertasMedicacion}
-              onCambiar={() => setAlertasMedicacion(!alertasMedicacion)}
-            />
+            <Pressable
+              style={[styles.toggleTrack, alertasMedicacion && styles.toggleTrackActivo]}
+              onPress={() => setAlertasMedicacion(!alertasMedicacion)}>
+              <View style={[styles.toggleThumb, alertasMedicacion && styles.toggleThumbActivo]} />
+            </Pressable>
           </View>
         </View>
 
         <Pressable style={styles.filaCambiarPerfil} onPress={() => router.push('/')}>
           <Text style={styles.filaTitulo}>Cambiar de perfil</Text>
-          <Text style={styles.cambiarPerfilValor}>{ETIQUETAS_ROL[rol]} ▾</Text>
+          <Text style={styles.cambiarPerfilValor}>{info.etiqueta} ▾</Text>
         </Pressable>
 
         <Pressable style={styles.botonCerrarSesion} onPress={() => router.push('/')}>
@@ -166,31 +147,40 @@ export default function Perfil() {
         <Text style={styles.version}>versión 2.4.1 · Consultorios Rivadavia</Text>
       </ScrollView>
 
-      {tabs.length > 0 && (
-        <View style={styles.tabBar}>
-          {tabs.map((tab) => (
-            <Pressable key={tab.texto} style={styles.tabItem} onPress={() => router.push(tab.ruta)}>
-              <Text style={styles.tabIcono}>{tab.icono}</Text>
-              <Text style={styles.tabTexto}>{tab.texto}</Text>
-            </Pressable>
-          ))}
+      {rol === 'paciente' && (
+        <SafeAreaView style={styles.tabBar} edges={['bottom']}>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/paciente')}>
+            <Text style={styles.tabIcono}>⌂</Text>
+            <Text style={styles.tabTexto}>Inicio</Text>
+          </Pressable>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/sacar-turno')}>
+            <Text style={styles.tabIcono}>+</Text>
+            <Text style={styles.tabTexto}>Turnos</Text>
+          </Pressable>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/medicamentos')}>
+            <Text style={styles.tabIcono}>℞</Text>
+            <Text style={styles.tabTexto}>Salud</Text>
+          </Pressable>
           <View style={styles.tabItem}>
             <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⚙</Text>
             <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Perfil</Text>
           </View>
-        </View>
+        </SafeAreaView>
       )}
-    </View>
-  );
-}
 
-function Toggle({ activo, onCambiar }: { activo: boolean; onCambiar: () => void }) {
-  return (
-    <Pressable
-      style={[styles.toggleTrack, activo && styles.toggleTrackActivo]}
-      onPress={onCambiar}>
-      <View style={[styles.toggleThumb, activo && styles.toggleThumbActivo]} />
-    </Pressable>
+      {rol === 'medico' && (
+        <SafeAreaView style={styles.tabBar} edges={['bottom']}>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/medico')}>
+            <Text style={styles.tabIcono}>▤</Text>
+            <Text style={styles.tabTexto}>Agenda</Text>
+          </Pressable>
+          <View style={styles.tabItem}>
+            <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⚙</Text>
+            <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Perfil</Text>
+          </View>
+        </SafeAreaView>
+      )}
+    </SafeAreaView>
   );
 }
 

@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Medicamento = {
   id: string;
@@ -52,7 +53,7 @@ export default function MisMedicamentos() {
   const medicamentosRiesgo = MEDICAMENTOS.filter((medicamento) => medicamento.riesgo);
 
   return (
-    <View style={styles.pantalla}>
+    <SafeAreaView style={styles.pantalla} edges={['top']}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <View style={styles.encabezado}>
           <Pressable onPress={() => router.back()}>
@@ -131,7 +132,7 @@ export default function MisMedicamentos() {
         </View>
       </ScrollView>
 
-      <View style={styles.tabBar}>
+      <SafeAreaView style={styles.tabBar} edges={['bottom']}>
         <Pressable style={styles.tabItem} onPress={() => router.push('/paciente')}>
           <Text style={styles.tabIcono}>⌂</Text>
           <Text style={styles.tabTexto}>Inicio</Text>
@@ -148,8 +149,8 @@ export default function MisMedicamentos() {
           <Text style={styles.tabIcono}>◐</Text>
           <Text style={styles.tabTexto}>Perfil</Text>
         </Pressable>
-      </View>
-    </View>
+      </SafeAreaView>
+    </SafeAreaView>
   );
 }
 

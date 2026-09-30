@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Mensaje = {
   id: string;
@@ -50,8 +51,8 @@ export default function Preconsulta() {
   }
 
   return (
-    <View style={styles.pantalla}>
-      <View style={styles.encabezado}>
+    <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <SafeAreaView style={styles.encabezado} edges={['top']}>
         <View style={styles.encabezadoFila}>
           <Pressable onPress={() => router.back()}>
             <Text style={styles.volver}>‹</Text>
@@ -74,7 +75,7 @@ export default function Preconsulta() {
             />
           ))}
         </View>
-      </View>
+      </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.contenido}>
         <Text style={styles.horaMensajes}>Hoy · 09:38</Text>
@@ -123,7 +124,7 @@ export default function Preconsulta() {
         </View>
       </ScrollView>
 
-      <View style={styles.filaInput}>
+      <SafeAreaView style={styles.filaInput} edges={['bottom']}>
         <TextInput
           style={styles.input}
           value={respuesta}
@@ -135,8 +136,8 @@ export default function Preconsulta() {
         <Pressable style={styles.botonEnviar} onPress={enviarRespuesta}>
           <Text style={styles.botonEnviarTexto}>↑</Text>
         </Pressable>
-      </View>
-    </View>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  Button,
   Modal,
   Pressable,
   ScrollView,
@@ -9,6 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type EstadoTurno = 'confirmado' | 'pendiente' | 'cancelado';
 
@@ -162,7 +162,7 @@ export default function HubPaciente() {
     )[0];
 
   return (
-    <View style={styles.pantalla}>
+    <SafeAreaView style={styles.pantalla} edges={['top']}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <View style={styles.encabezado}>
           <View>
@@ -300,7 +300,7 @@ export default function HubPaciente() {
         transparent
         onRequestClose={() => setTurnoSeleccionado(null)}>
         <View style={styles.fondoModal}>
-          <View style={styles.tarjetaModal}>
+          <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
             {turnoSeleccionado && (
               <>
                 <Text style={styles.modalMedico}>{turnoSeleccionado.medico}</Text>
@@ -329,16 +329,18 @@ export default function HubPaciente() {
                     ))}
                   </View>
                 )}
-                <View style={styles.botonCerrar}>
-                  <Button title="Cerrar" onPress={() => setTurnoSeleccionado(null)} />
-                </View>
+                <Pressable
+                  style={styles.botonCerrar}
+                  onPress={() => setTurnoSeleccionado(null)}>
+                  <Text style={styles.botonPrimarioTexto}>Cerrar</Text>
+                </Pressable>
               </>
             )}
-          </View>
+          </SafeAreaView>
         </View>
       </Modal>
 
-      <View style={styles.tabBar}>
+      <SafeAreaView style={styles.tabBar} edges={['bottom']}>
         <View style={styles.tabItem}>
           <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⌂</Text>
           <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Inicio</Text>
@@ -355,8 +357,8 @@ export default function HubPaciente() {
           <Text style={styles.tabIcono}>◐</Text>
           <Text style={styles.tabTexto}>Perfil</Text>
         </Pressable>
-      </View>
-    </View>
+      </SafeAreaView>
+    </SafeAreaView>
   );
 }
 
@@ -697,6 +699,10 @@ const styles = StyleSheet.create({
   },
   botonCerrar: {
     marginTop: 20,
+    backgroundColor: COLOR_PACIENTE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   tabBar: {
     flexDirection: 'row',
