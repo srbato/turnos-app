@@ -1,6 +1,8 @@
 // Funciones para trabajar con las fechas de los turnos.
 // Las fechas se guardan como texto 'AAAA-MM-DD' y las horas como 'HH:MM'.
 
+import { Turno } from './datos';
+
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const MESES_ABREV = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 
@@ -28,4 +30,15 @@ export function detalleFecha(fecha: string) {
 export function formatearFecha(fecha: string) {
   const [anio, mes, dia] = fecha.split('-');
   return `${dia}/${mes}/${anio}`;
+}
+
+// El próximo turno: el más cercano que no está cancelado y todavía no pasó.
+// Si no hay ninguno, devuelve undefined.
+export function buscarProximoTurno(turnos: Turno[]) {
+  const ahora = new Date();
+  return [...turnos]
+    .filter((turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
+    .sort(
+      (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
+    )[0];
 }

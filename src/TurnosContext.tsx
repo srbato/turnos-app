@@ -10,6 +10,7 @@ export const TurnosContext = createContext({
   agregarTurno: (turnoNuevo: Turno) => {},
   cancelarTurno: (id: string) => {},
   reprogramarTurno: (id: string, fecha: string, hora: string) => {},
+  guardarPreconsulta: (id: string, respuestas: string[]) => {},
 });
 
 type PropsTurnosProvider = {
@@ -45,8 +46,20 @@ export function TurnosProvider(props: PropsTurnosProvider) {
     setTurnos(turnosActualizados);
   };
 
+  const guardarPreconsulta = (id: string, respuestas: string[]) => {
+    const turnosActualizados = turnos.map((turno) => {
+      if (turno.id === id) {
+        const turnoConPreconsulta: Turno = { ...turno, preconsulta: respuestas };
+        return turnoConPreconsulta;
+      }
+      return turno;
+    });
+    setTurnos(turnosActualizados);
+  };
+
   return (
-    <TurnosContext.Provider value={{ turnos, agregarTurno, cancelarTurno, reprogramarTurno }}>
+    <TurnosContext.Provider
+      value={{ turnos, agregarTurno, cancelarTurno, reprogramarTurno, guardarPreconsulta }}>
       {props.children}
     </TurnosContext.Provider>
   );

@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ADMINISTRADOR, MEDICA, NOMBRE_CONSULTORIO, PACIENTE, SECRETARIA } from '../datos';
+import { ADMINISTRADOR, NOMBRE_CONSULTORIO, PACIENTE, SECRETARIA } from '../datos';
+import { SesionContext } from '../SesionContext';
 
 const PERFILES = {
   paciente: {
@@ -13,15 +14,6 @@ const PERFILES = {
     filaTitulo: 'Cobertura médica',
     filaSubtitulo: `${PACIENTE.cobertura} ${PACIENTE.plan} · ${PACIENTE.numeroAfiliado}`,
     etiqueta: 'Paciente',
-  },
-  medico: {
-    nombre: MEDICA.nombre,
-    iniciales: MEDICA.iniciales,
-    email: MEDICA.email,
-    chip: `Médico · ${MEDICA.especialidad}`,
-    filaTitulo: 'Matrícula',
-    filaSubtitulo: MEDICA.matricula,
-    etiqueta: 'Médico',
   },
   secretaria: {
     nombre: SECRETARIA.nombre,
@@ -48,10 +40,20 @@ const FONDO_PERFIL = '#1A1815';
 
 export default function Perfil() {
   const { rol } = useLocalSearchParams();
+  const { medicoLogueado } = useContext(SesionContext);
 
   let info = PERFILES.paciente;
   if (rol === 'medico') {
-    info = PERFILES.medico;
+    // El perfil del médico se arma con los datos del médico que inició sesión.
+    info = {
+      nombre: medicoLogueado.nombre,
+      iniciales: medicoLogueado.iniciales,
+      email: medicoLogueado.email,
+      chip: `Médico · ${medicoLogueado.especialidad}`,
+      filaTitulo: 'Matrícula',
+      filaSubtitulo: medicoLogueado.matricula,
+      etiqueta: 'Médico',
+    };
   } else if (rol === 'secretaria') {
     info = PERFILES.secretaria;
   } else if (rol === 'administrador') {

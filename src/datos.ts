@@ -13,6 +13,7 @@ export const PACIENTE = {
   cobertura: 'Swiss Medical',
   plan: 'SMG20',
   numeroAfiliado: '62-4418902/01',
+  alergias: 'penicilina',
 };
 
 export const MEDICA = {
@@ -39,6 +40,71 @@ export const ADMINISTRADOR = {
 export const NOMBRE_CONSULTORIO = 'Consultorios Rivadavia';
 
 // ============================================================
+// MÉDICOS (para sacar turno y para iniciar sesión como médico)
+// ============================================================
+
+export type Medico = {
+  nombre: string;
+  iniciales: string;
+  especialidad: string;
+  consultorio: string;
+  matricula: string;
+  // Usuario de prueba para entrar como este médico (todavía no hay backend).
+  email: string;
+  password: string;
+};
+
+export const MEDICOS: Medico[] = [
+  {
+    nombre: 'Dr. Ricardo Paz',
+    iniciales: 'RP',
+    especialidad: 'Cardiología',
+    consultorio: 'Consultorio 5',
+    matricula: 'MN 104.233',
+    email: 'paz@t.com',
+    password: 'm',
+  },
+  {
+    nombre: 'Dra. Ana Torres',
+    iniciales: 'AT',
+    especialidad: 'Cardiología',
+    consultorio: 'Consultorio 4',
+    matricula: 'MN 121.876',
+    email: 'torres@t.com',
+    password: 'm',
+  },
+  {
+    nombre: MEDICA.nombre,
+    iniciales: MEDICA.iniciales,
+    especialidad: MEDICA.especialidad,
+    consultorio: 'Consultorio 3',
+    matricula: MEDICA.matricula,
+    email: 'm@t.com',
+    password: 'm',
+  },
+  {
+    nombre: 'Dra. Mariela Sosa',
+    iniciales: 'MS',
+    especialidad: 'Pediatría',
+    consultorio: 'Consultorio 1',
+    matricula: 'MN 098.551',
+    email: 'sosa@t.com',
+    password: 'm',
+  },
+  {
+    nombre: 'Dr. Gustavo Ibáñez',
+    iniciales: 'GI',
+    especialidad: 'Traumatología',
+    consultorio: 'Consultorio 2',
+    matricula: 'MN 112.640',
+    email: 'ibanez@t.com',
+    password: 'm',
+  },
+];
+
+export const ESPECIALIDADES = ['Cardiología', 'Clínica médica', 'Pediatría', 'Traumatología'];
+
+// ============================================================
 // PACIENTE: TURNOS, ESTUDIOS Y LISTA DE ESPERA
 // ============================================================
 
@@ -54,6 +120,7 @@ export type Turno = {
   sede: string;
   estado: EstadoTurno;
   instrucciones: string[];
+  preconsulta: string[]; // respuestas de la preconsulta, en orden (vacío si todavía no la hizo)
 };
 
 export const TURNOS_PACIENTE: Turno[] = [
@@ -67,6 +134,7 @@ export const TURNOS_PACIENTE: Turno[] = [
     sede: NOMBRE_CONSULTORIO,
     estado: 'confirmado',
     instrucciones: ['Ayuno de 8 horas antes del turno', 'Llevá la orden de Swiss Medical'],
+    preconsulta: [],
   },
   {
     id: '2',
@@ -78,6 +146,7 @@ export const TURNOS_PACIENTE: Turno[] = [
     sede: NOMBRE_CONSULTORIO,
     estado: 'pendiente',
     instrucciones: [],
+    preconsulta: [],
   },
   {
     id: '3',
@@ -89,6 +158,7 @@ export const TURNOS_PACIENTE: Turno[] = [
     sede: NOMBRE_CONSULTORIO,
     estado: 'cancelado',
     instrucciones: [],
+    preconsulta: [],
   },
   {
     id: '4',
@@ -100,6 +170,7 @@ export const TURNOS_PACIENTE: Turno[] = [
     sede: NOMBRE_CONSULTORIO,
     estado: 'confirmado',
     instrucciones: [],
+    preconsulta: [],
   },
 ];
 
@@ -222,8 +293,8 @@ export const TURNOS_HOY: TurnoAgenda[] = [
     id: '5',
     hora: '10:20',
     duracionMin: 20,
-    paciente: MEDICA.nombre,
-    subtitulo: 'Bloqueo · ateneo clínico',
+    paciente: 'Ateneo clínico',
+    subtitulo: 'Bloqueo de agenda',
     estado: 'bloqueado',
     riesgoAlto: false,
   },

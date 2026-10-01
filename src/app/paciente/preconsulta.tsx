@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MEDICA, PACIENTE } from '../../datos';
+import { MEDICAMENTOS, MEDICOS, PACIENTE } from '../../datos';
+import { buscarProximoTurno, formatearFecha } from '../../fechas';
+import { TurnosContext } from '../../TurnosContext';
 
 type Mensaje = {
   id: string;
@@ -10,44 +12,128 @@ type Mensaje = {
   texto: string;
 };
 
-const MENSAJES_INICIALES: Mensaje[] = [
-  { id: '1', autor: 'medica', texto: `Hola ${PACIENTE.nombre}. Contame, ¿cuál es el motivo principal de la consulta?` },
-  { id: '2', autor: 'paciente', texto: 'Dolor de cabeza hace 5 días, sobre todo a la tarde.' },
-  { id: '3', autor: 'medica', texto: '¿Tuviste alguno de estos síntomas junto con el dolor?' },
+// Las preguntas de la preconsulta, en orden. Cada respuesta avanza un paso.
+const PREGUNTAS = [
+  `Hola ${PACIENTE.nombre}. Contame, ¿cuál es el motivo principal de la consulta?`,
+  '¿Desde hace cuánto te pasa?',
+  '¿Tuviste alguno de estos síntomas? Marcá los que correspondan.',
+  '¿Estás tomando algún medicamento que no esté en tu lista?',
+  '¿Querés contarle algo más a tu médico antes del turno?',
 ];
+const PASOS_TOTALES = PREGUNTAS.length;
+const PASO_SINTOMAS = 3; // en este paso se responde con los chips de síntomas
 
 type Sintoma = { id: string; etiqueta: string; marcado: boolean };
 
 const SINTOMAS_INICIALES: Sintoma[] = [
-  { id: 'nauseas', etiqueta: 'Náuseas', marcado: true },
-  { id: 'vision', etiqueta: 'Visión borrosa', marcado: true },
+  { id: 'nauseas', etiqueta: 'Náuseas', marcado: false },
+  { id: 'vision', etiqueta: 'Visión borrosa', marcado: false },
   { id: 'fiebre', etiqueta: 'Fiebre', marcado: false },
   { id: 'mareos', etiqueta: 'Mareos', marcado: false },
-  { id: 'ninguno', etiqueta: 'Ninguno', marcado: false },
 ];
 
-const RESUMEN_CARGADO = ['Medicación: Enalapril 10 mg, Ibuprofeno 400 mg', 'Alergias: penicilina'];
+const RESUMEN_CARGADO = [
+  `Medicación: ${MEDICAMENTOS.map((medicamento) => medicamento.nombre).join(', ')}`,
+  `Alergias: ${PACIENTE.alergias}`,
+];
+
+const MENSAJE_FINAL = '¡Gracias! Ya tengo tu preconsulta. Nos vemos en el turno.';
 
 const COLOR_PACIENTE = '#2D6FE0';
 const FONDO_PACIENTE = '#EAF2FE';
 
-const PASO_ACTUAL = 3;
-const PASOS_TOTALES = 5;
+// Arma el chat completo (preguntas + respuestas) de una preconsulta ya hecha.
+function armarChatCompleto(respuestas: string[]) {
+  const chat: Mensaje[] = [];
+  for (let i = 0; i < PREGUNTAS.length; i++) {
+    chat.push({ id: 'pregunta' + i, autor: 'medica', texto: PREGUNTAS[i] });
+    chat.push({ id: 'respuesta' + i, autor: 'paciente', texto: respuestas[i] });
+  }
+  chat.push({ id: 'final', autor: 'medica', texto: MENSAJE_FINAL });
+  return chat;
+}
 
 export default function Preconsulta() {
-  const [mensajes, setMensajes] = useState<Mensaje[]>(MENSAJES_INICIALES);
+  const { turnos, guardarPreconsulta } = useContext(TurnosContext);
+
+  // La preconsulta es para el próximo turno del paciente.
+  const proximoTurno = buscarProximoTurno(turnos);
+
+  // Si ya la completó, se muestra el chat terminado; si no, empieza en el paso 1.
+  const [paso, setPaso] = useState(
+    proximoTurno && proximoTurno.preconsulta.length > 0 ? PASOS_TOTALES + 1 : 1
+  );
+  const [mensajes, setMensajes] = useState<Mensaje[]>(
+    proximoTurno && proximoTurno.preconsulta.length > 0
+      ? armarChatCompleto(proximoTurno.preconsulta)
+      : [{ id: '1', autor: 'medica', texto: PREGUNTAS[0] }]
+  );
   const [sintomas, setSintomas] = useState<Sintoma[]>(SINTOMAS_INICIALES);
   const [respuesta, setRespuesta] = useState('');
+
+  const terminado = paso > PASOS_TOTALES;
+
+  if (!proximoTurno) {
+    return (
+      <SafeAreaView style={styles.pantallaVacia}>
+        <Pressable onPress={() => router.back()}>
+          <Text style={styles.volverVacio}>‹ Preconsulta</Text>
+        </Pressable>
+        <View style={styles.estadoVacio}>
+          <Text style={styles.estadoVacioTexto}>
+            No tenés turnos próximos. Cuando saques uno, vas a poder hacer la preconsulta acá.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const medicoDelTurno = MEDICOS.find((medico) => medico.nombre === proximoTurno.medico);
+  const inicialesMedico = medicoDelTurno ? medicoDelTurno.iniciales : '';
 
   function alternarSintoma(id: string) {
     setSintomas(sintomas.map((s) => (s.id === id ? { ...s, marcado: !s.marcado } : s)));
   }
 
+  // Agrega la respuesta del paciente y, después, la siguiente pregunta
+  // (o el mensaje final si era la última).
+  function responder(texto: string) {
+    const nuevosMensajes: Mensaje[] = [
+      ...mensajes,
+      { id: String(Date.now()), autor: 'paciente', texto: texto },
+    ];
+
+    if (paso < PASOS_TOTALES) {
+      nuevosMensajes.push({ id: String(Date.now() + 1), autor: 'medica', texto: PREGUNTAS[paso] });
+    } else {
+      nuevosMensajes.push({ id: String(Date.now() + 1), autor: 'medica', texto: MENSAJE_FINAL });
+
+      // Era la última pregunta: se guardan todas las respuestas en el turno,
+      // así el médico las puede ver desde su agenda.
+      const respuestas = nuevosMensajes
+        .filter((mensaje) => mensaje.autor === 'paciente')
+        .map((mensaje) => mensaje.texto);
+      guardarPreconsulta(proximoTurno.id, respuestas);
+    }
+
+    setMensajes(nuevosMensajes);
+    setPaso(paso + 1);
+  }
+
   function enviarRespuesta() {
     const texto = respuesta.trim();
     if (texto === '') return;
-    setMensajes([...mensajes, { id: String(Date.now()), autor: 'paciente', texto }]);
+    responder(texto);
     setRespuesta('');
+  }
+
+  function enviarSintomas() {
+    const marcados = sintomas.filter((s) => s.marcado).map((s) => s.etiqueta);
+    if (marcados.length > 0) {
+      responder(marcados.join(', '));
+    } else {
+      responder('Ninguno');
+    }
   }
 
   return (
@@ -59,32 +145,34 @@ export default function Preconsulta() {
           </Pressable>
           <View style={styles.encabezadoTextos}>
             <Text style={styles.titulo}>Preconsulta</Text>
-            <Text style={styles.subtitulo}>{MEDICA.nombre} · mar 25/09</Text>
+            <Text style={styles.subtitulo}>
+              {proximoTurno.medico} · {formatearFecha(proximoTurno.fecha)}
+            </Text>
           </View>
           <View style={styles.pasoChip}>
             <Text style={styles.pasoChipTexto}>
-              Paso {PASO_ACTUAL} de {PASOS_TOTALES}
+              {terminado ? 'Completa' : `Paso ${paso} de ${PASOS_TOTALES}`}
             </Text>
           </View>
         </View>
         <View style={styles.progresoFila}>
-          {Array.from({ length: PASOS_TOTALES }).map((_, indice) => (
+          {PREGUNTAS.map((pregunta, indice) => (
             <View
-              key={indice}
-              style={[styles.progresoSegmento, indice < PASO_ACTUAL && styles.progresoSegmentoLleno]}
+              key={pregunta}
+              style={[styles.progresoSegmento, indice < paso && styles.progresoSegmentoLleno]}
             />
           ))}
         </View>
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.contenido}>
-        <Text style={styles.horaMensajes}>Hoy · 09:38</Text>
+        <Text style={styles.horaMensajes}>Hoy</Text>
 
         {mensajes.map((mensaje) =>
           mensaje.autor === 'medica' ? (
             <View key={mensaje.id} style={styles.filaMedica}>
               <View style={styles.avatarMedica}>
-                <Text style={styles.avatarMedicaTexto}>{MEDICA.iniciales}</Text>
+                <Text style={styles.avatarMedicaTexto}>{inicialesMedico}</Text>
               </View>
               <View style={styles.burbujaMedica}>
                 <Text style={styles.burbujaMedicaTexto}>{mensaje.texto}</Text>
@@ -99,20 +187,22 @@ export default function Preconsulta() {
           )
         )}
 
-        <View style={styles.chipsFila}>
-          {sintomas.map((sintoma) => (
-            <Pressable
-              key={sintoma.id}
-              style={[styles.sintomaChip, sintoma.marcado && styles.sintomaChipMarcado]}
-              onPress={() => alternarSintoma(sintoma.id)}>
-              <Text
-                style={[styles.sintomaChipTexto, sintoma.marcado && styles.sintomaChipTextoMarcado]}>
-                {sintoma.marcado ? '✓ ' : ''}
-                {sintoma.etiqueta}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        {paso === PASO_SINTOMAS && (
+          <View style={styles.chipsFila}>
+            {sintomas.map((sintoma) => (
+              <Pressable
+                key={sintoma.id}
+                style={[styles.sintomaChip, sintoma.marcado && styles.sintomaChipMarcado]}
+                onPress={() => alternarSintoma(sintoma.id)}>
+                <Text
+                  style={[styles.sintomaChipTexto, sintoma.marcado && styles.sintomaChipTextoMarcado]}>
+                  {sintoma.marcado ? '✓ ' : ''}
+                  {sintoma.etiqueta}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
 
         <View style={styles.resumenCaja}>
           <Text style={styles.resumenTitulo}>Ya cargado en tu resumen</Text>
@@ -125,23 +215,72 @@ export default function Preconsulta() {
       </ScrollView>
 
       <SafeAreaView style={styles.filaInput} edges={['bottom']}>
-        <TextInput
-          style={styles.input}
-          value={respuesta}
-          onChangeText={setRespuesta}
-          placeholder="Escribí tu respuesta..."
-          placeholderTextColor="#8A8A8A"
-          onSubmitEditing={enviarRespuesta}
-        />
-        <Pressable style={styles.botonEnviar} onPress={enviarRespuesta}>
-          <Text style={styles.botonEnviarTexto}>↑</Text>
-        </Pressable>
+        {terminado && (
+          <Pressable style={styles.botonAncho} onPress={() => router.back()}>
+            <Text style={styles.botonAnchoTexto}>Volver al inicio</Text>
+          </Pressable>
+        )}
+
+        {!terminado && paso === PASO_SINTOMAS && (
+          <Pressable style={styles.botonAncho} onPress={enviarSintomas}>
+            <Text style={styles.botonAnchoTexto}>Enviar síntomas</Text>
+          </Pressable>
+        )}
+
+        {!terminado && paso !== PASO_SINTOMAS && (
+          <>
+            <TextInput
+              style={styles.input}
+              value={respuesta}
+              onChangeText={setRespuesta}
+              placeholder="Escribí tu respuesta..."
+              placeholderTextColor="#8A8A8A"
+              onSubmitEditing={enviarRespuesta}
+            />
+            <Pressable style={styles.botonEnviar} onPress={enviarRespuesta}>
+              <Text style={styles.botonEnviarTexto}>↑</Text>
+            </Pressable>
+          </>
+        )}
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  pantallaVacia: {
+    flex: 1,
+    backgroundColor: FONDO_PACIENTE,
+    padding: 20,
+  },
+  volverVacio: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 20,
+  },
+  estadoVacio: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+  },
+  estadoVacioTexto: {
+    fontSize: 14,
+    color: '#5A5A5A',
+    textAlign: 'center',
+  },
+  botonAncho: {
+    flex: 1,
+    backgroundColor: COLOR_PACIENTE,
+    borderRadius: 22,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonAnchoTexto: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
   pantalla: {
     flex: 1,
     backgroundColor: FONDO_PACIENTE,

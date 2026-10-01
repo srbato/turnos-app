@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useContext, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NOMBRE_CONSULTORIO, PACIENTE } from '../../datos';
+import { ESPECIALIDADES, Medico, MEDICOS, NOMBRE_CONSULTORIO, PACIENTE } from '../../datos';
 import { TurnosContext } from '../../TurnosContext';
 
 type DiaDisponible = {
@@ -74,27 +74,45 @@ const DIAS = proximosDias(4);
 export default function SacarTurno() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(DIAS[1].fecha);
   const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null);
+  const [medico, setMedico] = useState(MEDICOS[0]);
+  // Qué lista de opciones está abierta: '' (ninguna), 'especialidad' o 'medico'.
+  const [eligiendo, setEligiendo] = useState('');
   const { turnos, agregarTurno, reprogramarTurno } = useContext(TurnosContext);
 
   // Si se llegó desde "Reprogramar", la URL trae el id del turno a cambiar.
   const { reprogramar } = useLocalSearchParams();
   const turnoAReprogramar = turnos.find((turno) => turno.id === reprogramar);
 
-  // Médico del turno: el del turno que se reprograma, o el Dr. Paz
-  // (por ahora es el único que se puede elegir al sacar un turno nuevo).
-  const medicoElegido = turnoAReprogramar ? turnoAReprogramar.medico : 'Dr. Ricardo Paz';
+  // Médico del turno: el del turno que se reprograma, o el elegido en la pantalla.
+  const nombreMedico = turnoAReprogramar ? turnoAReprogramar.medico : medico.nombre;
+
+  const medicosDeLaEspecialidad = MEDICOS.filter((m) => m.especialidad === medico.especialidad);
 
   // Un horario está reservado si ya hay un turno (no cancelado) con el mismo
   // médico, el mismo día y la misma hora.
   function estaReservado(hora: string) {
     const turnoEnEseHorario = turnos.find(
       (turno) =>
-        turno.medico === medicoElegido &&
+        turno.medico === nombreMedico &&
         turno.fecha === fechaSeleccionada &&
         turno.hora === hora &&
         turno.estado !== 'cancelado'
     );
     return turnoEnEseHorario !== undefined;
+  }
+
+  // Al cambiar de especialidad se elige el primer médico de esa especialidad.
+  function elegirEspecialidad(especialidad: string) {
+    const medicos = MEDICOS.filter((m) => m.especialidad === especialidad);
+    setMedico(medicos[0]);
+    setHoraSeleccionada(null);
+    setEligiendo('');
+  }
+
+  function elegirMedico(medicoNuevo: Medico) {
+    setMedico(medicoNuevo);
+    setHoraSeleccionada(null);
+    setEligiendo('');
   }
 
   function elegirDia(fecha: string) {
@@ -115,14 +133,15 @@ export default function SacarTurno() {
 
     agregarTurno({
       id: String(Date.now()),
-      medico: medicoElegido,
-      especialidad: 'Cardiología',
-      consultorio: 'Consultorio 5',
+      medico: medico.nombre,
+      especialidad: medico.especialidad,
+      consultorio: medico.consultorio,
       fecha: fechaSeleccionada,
       hora: horaSeleccionada,
       sede: NOMBRE_CONSULTORIO,
       estado: 'pendiente',
       instrucciones: [],
+      preconsulta: [],
     });
 
     // Vuelve a la pantalla desde donde se abrió (el inicio o Mis turnos).
@@ -172,26 +191,70 @@ export default function SacarTurno() {
 
             <View style={styles.tarjeta}>
               <View style={styles.tarjetaIcono}>
-                <Text style={styles.tarjetaIconoTexto}>CAR</Text>
+                <Text style={styles.tarjetaIconoTexto}>
+                  {medico.especialidad.slice(0, 3).toUpperCase()}
+                </Text>
               </View>
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.tarjetaEtiqueta}>Especialidad</Text>
-                <Text style={styles.tarjetaValor}>Cardiología</Text>
+                <Text style={styles.tarjetaValor}>{medico.especialidad}</Text>
               </View>
-              <Text style={styles.cambiar}>Cambiar</Text>
+              <Pressable
+                onPress={() => setEligiendo(eligiendo === 'especialidad' ? '' : 'especialidad')}>
+                <Text style={styles.cambiar}>Cambiar</Text>
+              </Pressable>
             </View>
+
+            {eligiendo === 'especialidad' && (
+              <View style={styles.listaOpciones}>
+                {ESPECIALIDADES.map((especialidad) => {
+                  const elegida = especialidad === medico.especialidad;
+                  return (
+                    <Pressable
+                      key={especialidad}
+                      style={[styles.opcion, elegida && styles.opcionElegida]}
+                      onPress={() => elegirEspecialidad(especialidad)}>
+                      <Text style={[styles.opcionTexto, elegida && styles.opcionTextoElegida]}>
+                        {especialidad}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
             <View style={styles.tarjetaSeleccionada}>
               <View style={styles.avatarMedico}>
-                <Text style={styles.avatarMedicoTexto}>RP</Text>
+                <Text style={styles.avatarMedicoTexto}>{medico.iniciales}</Text>
               </View>
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.tarjetaEtiqueta}>Profesional</Text>
-                <Text style={styles.tarjetaValor}>Dr. Ricardo Paz</Text>
+                <Text style={styles.tarjetaValor}>{medico.nombre}</Text>
                 <Text style={styles.tarjetaSubvalor}>Atiende {PACIENTE.cobertura} {PACIENTE.plan}</Text>
               </View>
-              <Text style={styles.cambiar}>Cambiar</Text>
+              <Pressable onPress={() => setEligiendo(eligiendo === 'medico' ? '' : 'medico')}>
+                <Text style={styles.cambiar}>Cambiar</Text>
+              </Pressable>
             </View>
+
+            {eligiendo === 'medico' && (
+              <View style={styles.listaOpciones}>
+                {medicosDeLaEspecialidad.map((medicoDeLaLista) => {
+                  const elegido = medicoDeLaLista.nombre === medico.nombre;
+                  return (
+                    <Pressable
+                      key={medicoDeLaLista.nombre}
+                      style={[styles.opcion, elegido && styles.opcionElegida]}
+                      onPress={() => elegirMedico(medicoDeLaLista)}>
+                      <Text style={[styles.opcionTexto, elegido && styles.opcionTextoElegida]}>
+                        {medicoDeLaLista.nombre}
+                      </Text>
+                      <Text style={styles.opcionSubtexto}>{medicoDeLaLista.consultorio}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </>
         )}
 
@@ -441,6 +504,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: COLOR_PACIENTE,
+  },
+  listaOpciones: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 8,
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  opcion: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  opcionElegida: {
+    backgroundColor: FONDO_PACIENTE,
+  },
+  opcionTexto: {
+    fontSize: 15,
+    color: '#1A1A1A',
+  },
+  opcionTextoElegida: {
+    fontWeight: '700',
+    color: COLOR_PACIENTE,
+  },
+  opcionSubtexto: {
+    fontSize: 12,
+    color: '#8A8A8A',
+    marginTop: 2,
   },
   filaDias: {
     flexDirection: 'row',

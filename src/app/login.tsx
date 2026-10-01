@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { MEDICOS } from '../datos';
+import { SesionContext } from '../SesionContext';
 
 
 const TEMAS = {
@@ -35,9 +37,9 @@ const TEMAS = {
 };
 
 // Credenciales de prueba: todavía no hay backend, se validan a mano.
+// Los médicos tienen un usuario cada uno, en la lista MEDICOS de datos.ts.
 const CREDENCIALES = {
   paciente: { email: 'p@t.com', password: 'p' },
-  medico: { email: 'm@t.com', password: 'm' },
   secretaria: { email: 's@t.com', password: 's' },
   administrador: { email: 'a@t.com', password: 'a' },
 };
@@ -50,7 +52,6 @@ export default function Login() {
 
     if (rol === 'medico') {
         tema = TEMAS.medico;
-        credenciales = CREDENCIALES.medico;
     } else if (rol === 'secretaria') {
         tema = TEMAS.secretaria;
         credenciales = CREDENCIALES.secretaria;
@@ -67,6 +68,7 @@ export default function Login() {
     const [passwordError, setPasswordError] = useState('');
     const [mensajeError, setMensajeError] = useState('');
     const [mensajeExito, setMensajeExito] = useState('');
+    const { setMedicoLogueado } = useContext(SesionContext);
 
     const irAlInicio = () => {
         if (rol === 'paciente') {
@@ -103,6 +105,18 @@ export default function Login() {
         }
 
         if (hayError) {
+          return;
+        }
+
+        // Médicos: se busca en la lista cuál médico es, y se guarda en la sesión.
+        if (rol === 'medico') {
+          const medico = MEDICOS.find((m) => m.email === email.trim() && m.password === password);
+          if (!medico) {
+            setMensajeError('Email o contraseña incorrectos.');
+            return;
+          }
+          setMedicoLogueado(medico);
+          irAlInicio();
           return;
         }
 

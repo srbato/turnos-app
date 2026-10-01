@@ -1,7 +1,11 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useContext, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { EstadoTurnoAgenda, MEDICA, TURNOS_HOY } from '../../datos';
+import { EstadoTurnoAgenda, MEDICAMENTOS, PACIENTE, Turno, TURNOS_HOY } from '../../datos';
+import { fechaHoraComoDate, formatearFecha } from '../../fechas';
+import { SesionContext } from '../../SesionContext';
+import { TurnosContext } from '../../TurnosContext';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -32,12 +36,34 @@ const MESES = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
 
+// Títulos de cada respuesta de la preconsulta.
+// Tienen que estar en el mismo orden que las preguntas de paciente/preconsulta.tsx.
+const TEMAS_PRECONSULTA = ['Motivo', 'Desde cuándo', 'Síntomas', 'Otra medicación', 'Comentarios'];
+
 function fechaDeHoy() {
   const hoy = new Date();
   return `${DIAS_SEMANA[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()]}`;
 }
 
 export default function AgendaMedico() {
+  const { turnos } = useContext(TurnosContext);
+  const { medicoLogueado } = useContext(SesionContext);
+  const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
+
+  // Turnos que los pacientes sacaron desde la app con este médico
+  // (no cancelados y que todavía no pasaron), del más cercano al más lejano.
+  const ahora = new Date();
+  const turnosDeLaApp = turnos
+    .filter(
+      (turno) =>
+        turno.medico === medicoLogueado.nombre &&
+        turno.estado !== 'cancelado' &&
+        fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
+    )
+    .sort(
+      (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
+    );
+
   // Se calcula en cada render: no hace falta useEffect para esto.
   const turnosDelDia = TURNOS_HOY.filter((turno) => turno.estado !== 'bloqueado');
   const confirmados = turnosDelDia.filter((turno) => turno.estado === 'confirmado').length;
@@ -53,7 +79,7 @@ export default function AgendaMedico() {
             <Text style={styles.titulo}>Tu agenda de hoy</Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{MEDICA.iniciales}</Text>
+            <Text style={styles.avatarTexto}>{medicoLogueado.iniciales}</Text>
           </View>
         </View>
 
@@ -126,7 +152,94 @@ export default function AgendaMedico() {
             </Pressable>
           ))
         )}
+
+        <View style={[styles.listaEncabezado, styles.listaEncabezadoSeparado]}>
+          <Text style={styles.listaTitulo}>Próximos días</Text>
+        </View>
+
+        {turnosDeLaApp.length === 0 && (
+          <View style={styles.estadoVacio}>
+            <Text style={styles.estadoVacioTexto}>No tenés turnos sacados desde la app.</Text>
+          </View>
+        )}
+
+        {turnosDeLaApp.map((turno) => {
+          const preconsultaLista = turno.preconsulta.length > 0;
+          return (
+            <Pressable
+              key={turno.id}
+              style={styles.tarjeta}
+              onPress={() => setTurnoSeleccionado(turno)}>
+              <View style={styles.tarjetaHora}>
+                <Text style={styles.horaTexto}>{turno.hora}</Text>
+                <Text style={styles.duracionTexto}>{formatearFecha(turno.fecha).slice(0, 5)}</Text>
+              </View>
+              <View style={styles.tarjetaDatos}>
+                <Text style={styles.pacienteTexto}>{PACIENTE.nombre}</Text>
+                <Text style={styles.subtituloTexto}>
+                  {PACIENTE.cobertura} · {preconsultaLista ? 'tocá para ver la preconsulta' : 'sin preconsulta'}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.chipEstado,
+                  { backgroundColor: preconsultaLista ? COLOR_CONFIRMADO : FONDO_BLOQUEADO },
+                ]}>
+                <Text style={[styles.chipEstadoTexto, !preconsultaLista && { color: COLOR_BLOQUEADO }]}>
+                  {preconsultaLista ? 'Preconsulta lista' : 'Sin preconsulta'}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
+
+      <Modal
+        visible={turnoSeleccionado !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setTurnoSeleccionado(null)}>
+        <View style={styles.fondoModal}>
+          <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
+            {turnoSeleccionado && (
+              <ScrollView>
+                <Text style={styles.modalPaciente}>{PACIENTE.nombre}</Text>
+                <Text style={styles.modalDato}>
+                  {formatearFecha(turnoSeleccionado.fecha)} · {turnoSeleccionado.hora} h ·{' '}
+                  {PACIENTE.cobertura} {PACIENTE.plan}
+                </Text>
+
+                <Text style={styles.modalSeccion}>Preconsulta</Text>
+                {turnoSeleccionado.preconsulta.length === 0 && (
+                  <Text style={styles.modalTexto}>Todavía no completó la preconsulta.</Text>
+                )}
+                {turnoSeleccionado.preconsulta.map((respuesta, indice) => (
+                  <View key={TEMAS_PRECONSULTA[indice]} style={styles.modalFila}>
+                    <Text style={styles.modalEtiqueta}>{TEMAS_PRECONSULTA[indice]}</Text>
+                    <Text style={styles.modalTexto}>{respuesta}</Text>
+                  </View>
+                ))}
+
+                <Text style={styles.modalSeccion}>Historia clínica</Text>
+                <View style={styles.modalFila}>
+                  <Text style={styles.modalEtiqueta}>Medicación habitual</Text>
+                  <Text style={styles.modalTexto}>
+                    {MEDICAMENTOS.map((medicamento) => medicamento.nombre).join(', ')}
+                  </Text>
+                </View>
+                <View style={styles.modalFila}>
+                  <Text style={styles.modalEtiqueta}>Alergias</Text>
+                  <Text style={styles.modalTexto}>{PACIENTE.alergias}</Text>
+                </View>
+
+                <Pressable style={styles.botonCerrar} onPress={() => setTurnoSeleccionado(null)}>
+                  <Text style={styles.botonCerrarTexto}>Cerrar</Text>
+                </Pressable>
+              </ScrollView>
+            )}
+          </SafeAreaView>
+        </View>
+      </Modal>
 
       <SafeAreaView style={styles.tabBar} edges={['bottom']}>
         <View style={styles.tabItem}>
@@ -224,6 +337,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  listaEncabezadoSeparado: {
+    marginTop: 14,
+  },
   listaTitulo: {
     fontSize: 14,
     fontWeight: '700',
@@ -299,6 +415,62 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5A5A5A',
     textAlign: 'center',
+  },
+  fondoModal: {
+    flex: 1,
+    backgroundColor: 'rgba(26, 24, 21, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  tarjetaModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '85%',
+  },
+  modalPaciente: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  modalDato: {
+    fontSize: 13,
+    color: '#5A5A5A',
+    marginTop: 4,
+  },
+  modalSeccion: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8A8A8A',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  modalFila: {
+    marginBottom: 10,
+  },
+  modalEtiqueta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLOR_MEDICO,
+  },
+  modalTexto: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    marginTop: 2,
+  },
+  botonCerrar: {
+    marginTop: 20,
+    backgroundColor: COLOR_MEDICO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonCerrarTexto: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',

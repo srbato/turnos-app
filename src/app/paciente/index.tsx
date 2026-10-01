@@ -17,7 +17,7 @@ import {
   PACIENTE,
   Turno,
 } from '../../datos';
-import { detalleFecha, fechaHoraComoDate, formatearFecha } from '../../fechas';
+import { buscarProximoTurno, detalleFecha, formatearFecha } from '../../fechas';
 import { TurnosContext } from '../../TurnosContext';
 
 const COLOR_PACIENTE = '#2D6FE0';
@@ -68,12 +68,7 @@ export default function HubPaciente() {
   const hayAlertaMedicacion = MEDICAMENTOS.some((medicamento) => medicamento.riesgo);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
-  const ahora = new Date();
-  const proximoTurno = [...turnos]
-    .filter((turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
-    .sort(
-      (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
-    )[0];
+  const proximoTurno = buscarProximoTurno(turnos);
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['top']}>
@@ -194,7 +189,11 @@ export default function HubPaciente() {
             style={styles.accesoPreconsulta}
             onPress={() => router.push('/paciente/preconsulta')}>
             <Text style={styles.accesoPreconsultaTitulo}>Preconsulta</Text>
-            <Text style={styles.accesoPreconsultaSubtitulo}>5 min antes del turno</Text>
+            <Text style={styles.accesoPreconsultaSubtitulo}>
+              {proximoTurno && proximoTurno.preconsulta.length > 0
+                ? 'Completa ✓'
+                : '5 min antes del turno'}
+            </Text>
           </Pressable>
           <Pressable
             style={styles.accesoMedicacion}
