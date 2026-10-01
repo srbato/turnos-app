@@ -1,20 +1,23 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useContext, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ADMINISTRADOR, NOMBRE_CONSULTORIO, PACIENTE, SECRETARIA } from '../datos';
+import { ADMINISTRADOR, NOMBRE_CONSULTORIO, SECRETARIA } from '../datos';
+import { PacienteContext } from '../PacienteContext';
 import { SesionContext } from '../SesionContext';
 
 const PERFILES = {
-  paciente: {
-    nombre: PACIENTE.nombre,
-    iniciales: PACIENTE.iniciales,
-    email: PACIENTE.email,
-    chip: `Paciente · ${PACIENTE.cobertura}`,
-    filaTitulo: 'Cobertura médica',
-    filaSubtitulo: `${PACIENTE.cobertura} ${PACIENTE.plan} · ${PACIENTE.numeroAfiliado}`,
-    etiqueta: 'Paciente',
-  },
   secretaria: {
     nombre: SECRETARIA.nombre,
     iniciales: SECRETARIA.iniciales,
@@ -41,8 +44,18 @@ const FONDO_PERFIL = '#1A1815';
 export default function Perfil() {
   const { rol } = useLocalSearchParams();
   const { medicoLogueado } = useContext(SesionContext);
+  const { paciente, actualizarPaciente } = useContext(PacienteContext);
 
-  let info = PERFILES.paciente;
+  // El perfil del paciente se arma con sus datos (que se pueden editar).
+  let info = {
+    nombre: `${paciente.nombre} ${paciente.apellido}`,
+    iniciales: paciente.iniciales,
+    email: paciente.email,
+    chip: `Paciente · ${paciente.cobertura}`,
+    filaTitulo: 'Cobertura médica',
+    filaSubtitulo: `${paciente.cobertura} ${paciente.plan} · ${paciente.numeroAfiliado}`,
+    etiqueta: 'Paciente',
+  };
   if (rol === 'medico') {
     // El perfil del médico se arma con los datos del médico que inició sesión.
     info = {
@@ -63,12 +76,101 @@ export default function Perfil() {
   const [recordatorios, setRecordatorios] = useState(true);
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
+  // Formulario para editar los datos del paciente (se muestra en un Modal).
+  const [editando, setEditando] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
+  const [alergias, setAlergias] = useState('');
+  const [cobertura, setCobertura] = useState('');
+  const [plan, setPlan] = useState('');
+  const [numeroAfiliado, setNumeroAfiliado] = useState('');
+  const [errorNombre, setErrorNombre] = useState('');
+  const [errorApellido, setErrorApellido] = useState('');
+  const [errorEmail, setErrorEmail] = useState('');
+  const [errorCobertura, setErrorCobertura] = useState('');
+
+  function proximamente() {
+    Alert.alert('Próximamente', 'Esta opción todavía no está disponible.');
+  }
+
+  // Solo el paciente puede editar sus datos por ahora.
+  function abrirEditar() {
+    if (rol !== 'paciente') {
+      proximamente();
+      return;
+    }
+    setNombre(paciente.nombre);
+    setApellido(paciente.apellido);
+    setEmail(paciente.email);
+    setAlergias(paciente.alergias);
+    setCobertura(paciente.cobertura);
+    setPlan(paciente.plan);
+    setNumeroAfiliado(paciente.numeroAfiliado);
+    setErrorNombre('');
+    setErrorApellido('');
+    setErrorEmail('');
+    setErrorCobertura('');
+    setEditando(true);
+  }
+
+  function guardarCambios() {
+    let hayError = false;
+
+    if (nombre.trim() === '') {
+      setErrorNombre('El nombre es obligatorio');
+      hayError = true;
+    } else {
+      setErrorNombre('');
+    }
+
+    if (apellido.trim() === '') {
+      setErrorApellido('El apellido es obligatorio');
+      hayError = true;
+    } else {
+      setErrorApellido('');
+    }
+
+    if (email.trim() === '') {
+      setErrorEmail('El email es obligatorio');
+      hayError = true;
+    } else if (!email.includes('@')) {
+      setErrorEmail('El email debe contener @');
+      hayError = true;
+    } else {
+      setErrorEmail('');
+    }
+
+    if (cobertura.trim() === '') {
+      setErrorCobertura('La cobertura es obligatoria');
+      hayError = true;
+    } else {
+      setErrorCobertura('');
+    }
+
+    if (hayError) {
+      return;
+    }
+
+    actualizarPaciente({
+      nombre: nombre.trim(),
+      apellido: apellido.trim(),
+      iniciales: (nombre.trim()[0] + apellido.trim()[0]).toUpperCase(),
+      email: email.trim(),
+      alergias: alergias.trim(),
+      cobertura: cobertura.trim(),
+      plan: plan.trim(),
+      numeroAfiliado: numeroAfiliado.trim(),
+    });
+    setEditando(false);
+  }
+
   return (
     <SafeAreaView style={styles.pantalla} edges={['top']}>
       <ScrollView style={styles.contenido} contentContainerStyle={styles.contenidoInterno}>
         <View style={styles.encabezado}>
           <Text style={styles.tituloPantalla}>Mi perfil</Text>
-          <Pressable>
+          <Pressable onPress={abrirEditar}>
             <Text style={styles.editar}>Editar</Text>
           </Pressable>
         </View>
@@ -87,15 +189,17 @@ export default function Perfil() {
         </View>
 
         <View style={styles.grupo}>
-          <Pressable style={styles.fila}>
+          <Pressable style={styles.fila} onPress={abrirEditar}>
             <View style={styles.filaTextos}>
               <Text style={styles.filaTitulo}>Datos personales</Text>
-              <Text style={styles.filaSubtitulo}>DNI, contacto y domicilio</Text>
+              <Text style={styles.filaSubtitulo}>
+                {rol === 'paciente' ? 'Nombre, email y alergias' : 'DNI, contacto y domicilio'}
+              </Text>
             </View>
             <Text style={styles.flecha}>›</Text>
           </Pressable>
           <View style={styles.divisor} />
-          <Pressable style={styles.fila}>
+          <Pressable style={styles.fila} onPress={abrirEditar}>
             <View style={styles.filaTextos}>
               <Text style={styles.filaTitulo}>{info.filaTitulo}</Text>
               <Text style={styles.filaSubtitulo}>{info.filaSubtitulo}</Text>
@@ -103,7 +207,7 @@ export default function Perfil() {
             <Text style={styles.flecha}>›</Text>
           </Pressable>
           <View style={styles.divisor} />
-          <Pressable style={styles.fila}>
+          <Pressable style={styles.fila} onPress={proximamente}>
             <View style={styles.filaTextos}>
               <Text style={styles.filaTitulo}>Seguridad</Text>
               <Text style={styles.filaSubtitulo}>Contraseña y huella</Text>
@@ -191,6 +295,87 @@ export default function Perfil() {
           </View>
         </SafeAreaView>
       )}
+
+      {/* Formulario para editar los datos del paciente */}
+      <Modal
+        visible={editando}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditando(false)}>
+        <KeyboardAvoidingView
+          style={styles.fondoModal}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={styles.modalTitulo}>Editar perfil</Text>
+
+              <Text style={styles.label}>Nombre</Text>
+              <TextInput
+                style={[styles.input, errorNombre !== '' && styles.inputError]}
+                value={nombre}
+                onChangeText={setNombre}
+                maxLength={30}
+              />
+              {errorNombre !== '' && <Text style={styles.errorTexto}>{errorNombre}</Text>}
+
+              <Text style={styles.label}>Apellido</Text>
+              <TextInput
+                style={[styles.input, errorApellido !== '' && styles.inputError]}
+                value={apellido}
+                onChangeText={setApellido}
+                maxLength={30}
+              />
+              {errorApellido !== '' && <Text style={styles.errorTexto}>{errorApellido}</Text>}
+
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={[styles.input, errorEmail !== '' && styles.inputError]}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {errorEmail !== '' && <Text style={styles.errorTexto}>{errorEmail}</Text>}
+
+              <Text style={styles.label}>Alergias</Text>
+              <TextInput
+                style={styles.input}
+                value={alergias}
+                onChangeText={setAlergias}
+                placeholder="Ej: penicilina"
+                placeholderTextColor="#6B675F"
+              />
+
+              <Text style={styles.label}>Cobertura médica</Text>
+              <TextInput
+                style={[styles.input, errorCobertura !== '' && styles.inputError]}
+                value={cobertura}
+                onChangeText={setCobertura}
+              />
+              {errorCobertura !== '' && <Text style={styles.errorTexto}>{errorCobertura}</Text>}
+
+              <Text style={styles.label}>Plan</Text>
+              <TextInput style={styles.input} value={plan} onChangeText={setPlan} />
+
+              <Text style={styles.label}>N° de afiliado</Text>
+              <TextInput
+                style={styles.input}
+                value={numeroAfiliado}
+                onChangeText={setNumeroAfiliado}
+              />
+
+              <View style={styles.filaBotones}>
+                <Pressable style={styles.botonCancelar} onPress={() => setEditando(false)}>
+                  <Text style={styles.botonCancelarTexto}>Cancelar</Text>
+                </Pressable>
+                <Pressable style={styles.botonGuardar} onPress={guardarCambios}>
+                  <Text style={styles.botonGuardarTexto}>Guardar</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -363,6 +548,79 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B675F',
     textAlign: 'center',
+  },
+  fondoModal: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  tarjetaModal: {
+    backgroundColor: '#242119',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '90%',
+  },
+  modalTitulo: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#A9A49B',
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#3D3A33',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  inputError: {
+    borderColor: '#D64545',
+  },
+  errorTexto: {
+    fontSize: 12,
+    color: '#E06A6A',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  filaBotones: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  botonCancelar: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLOR_PERFIL,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonCancelarTexto: {
+    color: COLOR_PERFIL,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  botonGuardar: {
+    flex: 1,
+    backgroundColor: COLOR_PERFIL,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonGuardarTexto: {
+    color: FONDO_PERFIL,
+    fontSize: 14,
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',

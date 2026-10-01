@@ -6,8 +6,20 @@
 // PERSONAS
 // ============================================================
 
-export const PACIENTE = {
+export type Paciente = {
+  nombre: string;
+  apellido: string;
+  iniciales: string;
+  email: string;
+  cobertura: string;
+  plan: string;
+  numeroAfiliado: string;
+  alergias: string;
+};
+
+export const PACIENTE: Paciente = {
   nombre: 'Valentín',
+  apellido: 'Martínez',
   iniciales: 'VM',
   email: 'valentin@test.com',
   cobertura: 'Swiss Medical',
@@ -174,16 +186,21 @@ export const TURNOS_PACIENTE: Turno[] = [
   },
 ];
 
-export type EstudioPendiente = {
+export type Estudio = {
   id: string;
   tipo: string;
   titulo: string;
   detalle: string;
 };
 
-export const ESTUDIOS_PENDIENTES: EstudioPendiente[] = [
+export const ESTUDIOS_PENDIENTES: Estudio[] = [
   { id: '1', tipo: 'LAB', titulo: 'Laboratorio completo', detalle: 'Orden vence el 30/09' },
   { id: '2', tipo: 'ECO', titulo: 'Ecografía abdominal', detalle: 'Turno a coordinar' },
+];
+
+export const ESTUDIOS_REALIZADOS: Estudio[] = [
+  { id: '3', tipo: 'RX', titulo: 'Radiografía de tórax', detalle: 'Realizado el 12/08 · sin observaciones' },
+  { id: '4', tipo: 'ECG', titulo: 'Electrocardiograma', detalle: 'Realizado el 03/06 · resultado normal' },
 ];
 
 export type ListaEspera = {

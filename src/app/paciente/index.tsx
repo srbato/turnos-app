@@ -11,13 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ESTUDIOS_PENDIENTES,
+  ESTUDIOS_REALIZADOS,
   EstadoTurno,
   LISTA_ESPERA,
-  MEDICAMENTOS,
-  PACIENTE,
   Turno,
 } from '../../datos';
 import { buscarProximoTurno, detalleFecha, formatearFecha } from '../../fechas';
+import { PacienteContext } from '../../PacienteContext';
 import { TurnosContext } from '../../TurnosContext';
 
 const COLOR_PACIENTE = '#2D6FE0';
@@ -50,6 +50,7 @@ export default function HubPaciente() {
   const { turnos, cancelarTurno } = useContext(TurnosContext);
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
   const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
+  const [estudiosVisible, setEstudiosVisible] = useState(false);
 
   const cerrarDetalle = () => {
     setTurnoSeleccionado(null);
@@ -65,7 +66,8 @@ export default function HubPaciente() {
 
   // Hay una alerta si el paciente toma algún medicamento marcado como riesgoso
   // (es la misma cuenta que hace la pantalla de medicamentos).
-  const hayAlertaMedicacion = MEDICAMENTOS.some((medicamento) => medicamento.riesgo);
+  const { paciente, medicamentos } = useContext(PacienteContext);
+  const hayAlertaMedicacion = medicamentos.some((medicamento) => medicamento.riesgo);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const proximoTurno = buscarProximoTurno(turnos);
@@ -76,10 +78,10 @@ export default function HubPaciente() {
         <View style={styles.encabezado}>
           <View>
             <Text style={styles.saludo}>{saludoSegunHora()},</Text>
-            <Text style={styles.nombre}>{PACIENTE.nombre}</Text>
+            <Text style={styles.nombre}>{paciente.nombre}</Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{PACIENTE.iniciales}</Text>
+            <Text style={styles.avatarTexto}>{paciente.iniciales}</Text>
           </View>
         </View>
 
@@ -144,7 +146,9 @@ export default function HubPaciente() {
           <View style={styles.tarjeta}>
             <View style={styles.tarjetaEncabezado}>
               <Text style={styles.tarjetaTitulo}>Estudios pendientes</Text>
-              <Text style={styles.verTodos}>Ver todos</Text>
+              <Pressable onPress={() => setEstudiosVisible(true)}>
+                <Text style={styles.verTodos}>Ver todos</Text>
+              </Pressable>
             </View>
             {ESTUDIOS_PENDIENTES.map((estudio, indice) => (
               <View
@@ -273,6 +277,55 @@ export default function HubPaciente() {
                 </Pressable>
               </>
             )}
+          </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* "Ver todos": estudios pendientes y realizados */}
+      <Modal
+        visible={estudiosVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEstudiosVisible(false)}>
+        <View style={styles.fondoModal}>
+          <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
+            <Text style={styles.modalMedico}>Mis estudios</Text>
+
+            <Text style={styles.seccionEstudios}>Pendientes</Text>
+            {ESTUDIOS_PENDIENTES.map((estudio) => (
+              <View key={estudio.id} style={styles.filaEstudio}>
+                <View style={styles.tipoEstudio}>
+                  <Text style={styles.tipoEstudioTexto}>{estudio.tipo}</Text>
+                </View>
+                <View style={styles.estudioDatos}>
+                  <Text style={styles.estudioTitulo}>{estudio.titulo}</Text>
+                  <Text style={styles.estudioDetalle}>{estudio.detalle}</Text>
+                </View>
+                <View style={styles.chipPendiente}>
+                  <Text style={styles.chipPendienteTexto}>Pendiente</Text>
+                </View>
+              </View>
+            ))}
+
+            <Text style={styles.seccionEstudios}>Realizados</Text>
+            {ESTUDIOS_REALIZADOS.map((estudio) => (
+              <View key={estudio.id} style={styles.filaEstudio}>
+                <View style={styles.tipoEstudio}>
+                  <Text style={styles.tipoEstudioTexto}>{estudio.tipo}</Text>
+                </View>
+                <View style={styles.estudioDatos}>
+                  <Text style={styles.estudioTitulo}>{estudio.titulo}</Text>
+                  <Text style={styles.estudioDetalle}>{estudio.detalle}</Text>
+                </View>
+                <View style={[styles.chipPendiente, styles.chipRealizado]}>
+                  <Text style={styles.chipPendienteTexto}>Realizado</Text>
+                </View>
+              </View>
+            ))}
+
+            <Pressable style={styles.botonCerrar} onPress={() => setEstudiosVisible(false)}>
+              <Text style={styles.botonPrimarioTexto}>Cerrar</Text>
+            </Pressable>
           </SafeAreaView>
         </View>
       </Modal>
@@ -512,6 +565,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
+  },
+  chipRealizado: {
+    backgroundColor: COLOR_CONFIRMADO,
+  },
+  seccionEstudios: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8A8A8A',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 16,
+    marginBottom: 4,
   },
   chipPendienteTexto: {
     color: '#FFFFFF',

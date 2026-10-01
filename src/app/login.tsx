@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useContext, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { MEDICOS } from '../datos';
 import { SesionContext } from '../SesionContext';
 
@@ -69,6 +69,11 @@ export default function Login() {
     const [mensajeError, setMensajeError] = useState('');
     const [mensajeExito, setMensajeExito] = useState('');
     const { setMedicoLogueado } = useContext(SesionContext);
+
+    // Opciones que todavía no funcionan (necesitan backend).
+    const proximamente = () => {
+        Alert.alert('Próximamente', 'Esta opción todavía no está disponible.');
+    }
 
     const irAlInicio = () => {
         if (rol === 'paciente') {
@@ -196,7 +201,7 @@ export default function Login() {
                         </View>
                         <Text style={styles.checkTexto}>Recordarme</Text>
                     </Pressable>
-                    <Pressable>
+                    <Pressable onPress={proximamente}>
                         <Text style={[styles.link, { color: tema.color }]}>
                             Olvidé mi contraseña
                         </Text>
@@ -227,7 +232,7 @@ export default function Login() {
                     {borderColor:tema.color},
                     pressed && styles.presionado,
                   ]}
-                  onPress={irAlInicio}
+                  onPress={proximamente}
                   >
                   <Text style={[styles.textoBotonAlternativo, { color: tema.color }]}>
                     {tema.alternativo}
@@ -238,7 +243,7 @@ export default function Login() {
 
               <View style={styles.pie}>
                 <Text style={styles.pieTexto}>¿No tenés cuenta?</Text>
-                <Pressable>
+                <Pressable onPress={proximamente}>
                   <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
                 </Pressable>
               </View>

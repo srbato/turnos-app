@@ -2,8 +2,9 @@ import { router } from 'expo-router';
 import { useContext, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MEDICAMENTOS, MEDICOS, PACIENTE } from '../../datos';
+import { MEDICOS } from '../../datos';
 import { buscarProximoTurno, formatearFecha } from '../../fechas';
+import { PacienteContext } from '../../PacienteContext';
 import { TurnosContext } from '../../TurnosContext';
 
 type Mensaje = {
@@ -14,7 +15,7 @@ type Mensaje = {
 
 // Las preguntas de la preconsulta, en orden. Cada respuesta avanza un paso.
 const PREGUNTAS = [
-  `Hola ${PACIENTE.nombre}. Contame, ¿cuál es el motivo principal de la consulta?`,
+  'Contame, ¿cuál es el motivo principal de la consulta?',
   '¿Desde hace cuánto te pasa?',
   '¿Tuviste alguno de estos síntomas? Marcá los que correspondan.',
   '¿Estás tomando algún medicamento que no esté en tu lista?',
@@ -32,19 +33,19 @@ const SINTOMAS_INICIALES: Sintoma[] = [
   { id: 'mareos', etiqueta: 'Mareos', marcado: false },
 ];
 
-const RESUMEN_CARGADO = [
-  `Medicación: ${MEDICAMENTOS.map((medicamento) => medicamento.nombre).join(', ')}`,
-  `Alergias: ${PACIENTE.alergias}`,
-];
-
 const MENSAJE_FINAL = '¡Gracias! Ya tengo tu preconsulta. Nos vemos en el turno.';
 
 const COLOR_PACIENTE = '#2D6FE0';
 const FONDO_PACIENTE = '#EAF2FE';
 
+// Primer mensaje del chat: saluda al paciente por su nombre.
+function saludo(nombre: string): Mensaje {
+  return { id: 'saludo', autor: 'medica', texto: `Hola ${nombre}.` };
+}
+
 // Arma el chat completo (preguntas + respuestas) de una preconsulta ya hecha.
-function armarChatCompleto(respuestas: string[]) {
-  const chat: Mensaje[] = [];
+function armarChatCompleto(nombre: string, respuestas: string[]) {
+  const chat: Mensaje[] = [saludo(nombre)];
   for (let i = 0; i < PREGUNTAS.length; i++) {
     chat.push({ id: 'pregunta' + i, autor: 'medica', texto: PREGUNTAS[i] });
     chat.push({ id: 'respuesta' + i, autor: 'paciente', texto: respuestas[i] });
@@ -55,6 +56,7 @@ function armarChatCompleto(respuestas: string[]) {
 
 export default function Preconsulta() {
   const { turnos, guardarPreconsulta } = useContext(TurnosContext);
+  const { paciente, medicamentos } = useContext(PacienteContext);
 
   // La preconsulta es para el próximo turno del paciente.
   const proximoTurno = buscarProximoTurno(turnos);
@@ -65,13 +67,18 @@ export default function Preconsulta() {
   );
   const [mensajes, setMensajes] = useState<Mensaje[]>(
     proximoTurno && proximoTurno.preconsulta.length > 0
-      ? armarChatCompleto(proximoTurno.preconsulta)
-      : [{ id: '1', autor: 'medica', texto: PREGUNTAS[0] }]
+      ? armarChatCompleto(paciente.nombre, proximoTurno.preconsulta)
+      : [saludo(paciente.nombre), { id: '1', autor: 'medica', texto: PREGUNTAS[0] }]
   );
   const [sintomas, setSintomas] = useState<Sintoma[]>(SINTOMAS_INICIALES);
   const [respuesta, setRespuesta] = useState('');
 
   const terminado = paso > PASOS_TOTALES;
+
+  const resumenCargado = [
+    `Medicación: ${medicamentos.map((medicamento) => medicamento.nombre).join(', ')}`,
+    `Alergias: ${paciente.alergias}`,
+  ];
 
   if (!proximoTurno) {
     return (
@@ -206,7 +213,7 @@ export default function Preconsulta() {
 
         <View style={styles.resumenCaja}>
           <Text style={styles.resumenTitulo}>Ya cargado en tu resumen</Text>
-          {RESUMEN_CARGADO.map((linea) => (
+          {resumenCargado.map((linea) => (
             <Text key={linea} style={styles.resumenLinea}>
               • {linea}
             </Text>

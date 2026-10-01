@@ -2,8 +2,9 @@ import { router } from 'expo-router';
 import { useContext, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { EstadoTurnoAgenda, MEDICAMENTOS, PACIENTE, Turno, TURNOS_HOY } from '../../datos';
+import { EstadoTurnoAgenda, Turno, TURNOS_HOY } from '../../datos';
 import { fechaHoraComoDate, formatearFecha } from '../../fechas';
+import { PacienteContext } from '../../PacienteContext';
 import { SesionContext } from '../../SesionContext';
 import { TurnosContext } from '../../TurnosContext';
 
@@ -48,6 +49,9 @@ function fechaDeHoy() {
 export default function AgendaMedico() {
   const { turnos } = useContext(TurnosContext);
   const { medicoLogueado } = useContext(SesionContext);
+  const { paciente, medicamentos, avisoEnviado } = useContext(PacienteContext);
+  const nombreCompleto = `${paciente.nombre} ${paciente.apellido}`;
+  const medicamentosRiesgo = medicamentos.filter((medicamento) => medicamento.riesgo);
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
 
   // Turnos que los pacientes sacaron desde la app con este médico
@@ -175,9 +179,9 @@ export default function AgendaMedico() {
                 <Text style={styles.duracionTexto}>{formatearFecha(turno.fecha).slice(0, 5)}</Text>
               </View>
               <View style={styles.tarjetaDatos}>
-                <Text style={styles.pacienteTexto}>{PACIENTE.nombre}</Text>
+                <Text style={styles.pacienteTexto}>{nombreCompleto}</Text>
                 <Text style={styles.subtituloTexto}>
-                  {PACIENTE.cobertura} · {preconsultaLista ? 'tocá para ver la preconsulta' : 'sin preconsulta'}
+                  {paciente.cobertura} · {preconsultaLista ? 'tocá para ver la preconsulta' : 'sin preconsulta'}
                 </Text>
               </View>
               <View
@@ -203,11 +207,20 @@ export default function AgendaMedico() {
           <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
             {turnoSeleccionado && (
               <ScrollView>
-                <Text style={styles.modalPaciente}>{PACIENTE.nombre}</Text>
+                <Text style={styles.modalPaciente}>{nombreCompleto}</Text>
                 <Text style={styles.modalDato}>
                   {formatearFecha(turnoSeleccionado.fecha)} · {turnoSeleccionado.hora} h ·{' '}
-                  {PACIENTE.cobertura} {PACIENTE.plan}
+                  {paciente.cobertura} {paciente.plan}
                 </Text>
+
+                {avisoEnviado && medicamentosRiesgo.length > 0 && (
+                  <View style={styles.modalAviso}>
+                    <Text style={styles.modalAvisoTexto}>
+                      ⚠ El paciente avisó una combinación riesgosa:{' '}
+                      {medicamentosRiesgo.map((medicamento) => medicamento.nombre).join(' + ')}
+                    </Text>
+                  </View>
+                )}
 
                 <Text style={styles.modalSeccion}>Preconsulta</Text>
                 {turnoSeleccionado.preconsulta.length === 0 && (
@@ -224,12 +237,12 @@ export default function AgendaMedico() {
                 <View style={styles.modalFila}>
                   <Text style={styles.modalEtiqueta}>Medicación habitual</Text>
                   <Text style={styles.modalTexto}>
-                    {MEDICAMENTOS.map((medicamento) => medicamento.nombre).join(', ')}
+                    {medicamentos.map((medicamento) => medicamento.nombre).join(', ')}
                   </Text>
                 </View>
                 <View style={styles.modalFila}>
                   <Text style={styles.modalEtiqueta}>Alergias</Text>
-                  <Text style={styles.modalTexto}>{PACIENTE.alergias}</Text>
+                  <Text style={styles.modalTexto}>{paciente.alergias}</Text>
                 </View>
 
                 <Pressable style={styles.botonCerrar} onPress={() => setTurnoSeleccionado(null)}>
@@ -437,6 +450,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#5A5A5A',
     marginTop: 4,
+  },
+  modalAviso: {
+    backgroundColor: FONDO_RIESGO_ALTO,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 16,
+  },
+  modalAvisoTexto: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLOR_RIESGO_ALTO,
   },
   modalSeccion: {
     fontSize: 12,

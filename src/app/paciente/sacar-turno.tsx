@@ -2,7 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useContext, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ESPECIALIDADES, Medico, MEDICOS, NOMBRE_CONSULTORIO, PACIENTE } from '../../datos';
+import { ESPECIALIDADES, Medico, MEDICOS, NOMBRE_CONSULTORIO } from '../../datos';
+import { PacienteContext } from '../../PacienteContext';
 import { TurnosContext } from '../../TurnosContext';
 
 type DiaDisponible = {
@@ -78,6 +79,7 @@ export default function SacarTurno() {
   // Qué lista de opciones está abierta: '' (ninguna), 'especialidad' o 'medico'.
   const [eligiendo, setEligiendo] = useState('');
   const { turnos, agregarTurno, reprogramarTurno } = useContext(TurnosContext);
+  const { paciente } = useContext(PacienteContext);
 
   // Si se llegó desde "Reprogramar", la URL trae el id del turno a cambiar.
   const { reprogramar } = useLocalSearchParams();
@@ -230,7 +232,7 @@ export default function SacarTurno() {
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.tarjetaEtiqueta}>Profesional</Text>
                 <Text style={styles.tarjetaValor}>{medico.nombre}</Text>
-                <Text style={styles.tarjetaSubvalor}>Atiende {PACIENTE.cobertura} {PACIENTE.plan}</Text>
+                <Text style={styles.tarjetaSubvalor}>Atiende {paciente.cobertura} {paciente.plan}</Text>
               </View>
               <Pressable onPress={() => setEligiendo(eligiendo === 'medico' ? '' : 'medico')}>
                 <Text style={styles.cambiar}>Cambiar</Text>
