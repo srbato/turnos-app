@@ -1,5 +1,10 @@
 import { Stack } from 'expo-router';
+import { TurnosProvider } from '../TurnosContext';
 
 export default function RootLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <TurnosProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </TurnosProvider>
+  );
 }

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MEDICA, PACIENTE } from '../../datos';
 
 type Mensaje = {
   id: string;
@@ -10,7 +11,7 @@ type Mensaje = {
 };
 
 const MENSAJES_INICIALES: Mensaje[] = [
-  { id: '1', autor: 'medica', texto: 'Hola Martín. Contame, ¿cuál es el motivo principal de la consulta?' },
+  { id: '1', autor: 'medica', texto: `Hola ${PACIENTE.nombre}. Contame, ¿cuál es el motivo principal de la consulta?` },
   { id: '2', autor: 'paciente', texto: 'Dolor de cabeza hace 5 días, sobre todo a la tarde.' },
   { id: '3', autor: 'medica', texto: '¿Tuviste alguno de estos síntomas junto con el dolor?' },
 ];
@@ -32,7 +33,6 @@ const FONDO_PACIENTE = '#EAF2FE';
 
 const PASO_ACTUAL = 3;
 const PASOS_TOTALES = 5;
-const INICIALES_MEDICO = 'LF';
 
 export default function Preconsulta() {
   const [mensajes, setMensajes] = useState<Mensaje[]>(MENSAJES_INICIALES);
@@ -59,7 +59,7 @@ export default function Preconsulta() {
           </Pressable>
           <View style={styles.encabezadoTextos}>
             <Text style={styles.titulo}>Preconsulta</Text>
-            <Text style={styles.subtitulo}>Dra. Lucía Fernández · mar 25/09</Text>
+            <Text style={styles.subtitulo}>{MEDICA.nombre} · mar 25/09</Text>
           </View>
           <View style={styles.pasoChip}>
             <Text style={styles.pasoChipTexto}>
@@ -84,7 +84,7 @@ export default function Preconsulta() {
           mensaje.autor === 'medica' ? (
             <View key={mensaje.id} style={styles.filaMedica}>
               <View style={styles.avatarMedica}>
-                <Text style={styles.avatarMedicaTexto}>{INICIALES_MEDICO}</Text>
+                <Text style={styles.avatarMedicaTexto}>{MEDICA.iniciales}</Text>
               </View>
               <View style={styles.burbujaMedica}>
                 <Text style={styles.burbujaMedicaTexto}>{mensaje.texto}</Text>

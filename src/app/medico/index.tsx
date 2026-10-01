@@ -1,78 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type EstadoTurno = 'confirmado' | 'pendiente' | 'en_espera' | 'bloqueado';
-
-type TurnoAgenda = {
-  id: string;
-  hora: string;
-  duracionMin: number;
-  paciente: string;
-  subtitulo: string;
-  estado: EstadoTurno;
-  riesgoAlto: boolean;
-};
-
-const TURNOS_HOY: TurnoAgenda[] = [
-  {
-    id: '1',
-    hora: '09:00',
-    duracionMin: 20,
-    paciente: 'Sofía Gutiérrez',
-    subtitulo: 'Control · OSDE 210 · preconsulta lista',
-    estado: 'confirmado',
-    riesgoAlto: false,
-  },
-  {
-    id: '2',
-    hora: '09:20',
-    duracionMin: 20,
-    paciente: 'Martín Bianchi',
-    subtitulo: 'Interacción medicamentosa detectada',
-    estado: 'confirmado',
-    riesgoAlto: true,
-  },
-  {
-    id: '3',
-    hora: '09:40',
-    duracionMin: 20,
-    paciente: 'Jorge Almirón',
-    subtitulo: 'Primera vez · PAMI · sin preconsulta',
-    estado: 'pendiente',
-    riesgoAlto: false,
-  },
-  {
-    id: '4',
-    hora: '10:00',
-    duracionMin: 20,
-    paciente: 'Camila Rossi',
-    subtitulo: 'Resultados de laboratorio · Galeno',
-    estado: 'en_espera',
-    riesgoAlto: false,
-  },
-  {
-    id: '5',
-    hora: '10:20',
-    duracionMin: 20,
-    paciente: 'Dra. Lucía Fernández',
-    subtitulo: 'Bloqueo · ateneo clínico',
-    estado: 'bloqueado',
-    riesgoAlto: false,
-  },
-  {
-    id: '6',
-    hora: '11:00',
-    duracionMin: 40,
-    paciente: 'Elsa Domínguez',
-    subtitulo: 'Sobreturno · 82 años · acompañada',
-    estado: 'confirmado',
-    riesgoAlto: false,
-  },
-];
-
-const NOMBRE_MEDICO = 'Dra. Lucía Fernández';
-const INICIALES_MEDICO = 'LF';
+import { EstadoTurnoAgenda, MEDICA, TURNOS_HOY } from '../../datos';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -83,14 +12,14 @@ const COLOR_BLOQUEADO = '#8A8A8A';
 const FONDO_BLOQUEADO = '#ECECEC';
 const FONDO_RIESGO_ALTO = '#FBDCDC';
 
-const COLORES_ESTADO: Record<EstadoTurno, string> = {
+const COLORES_ESTADO: Record<EstadoTurnoAgenda, string> = {
   confirmado: COLOR_CONFIRMADO,
   pendiente: COLOR_PENDIENTE,
   en_espera: COLOR_PENDIENTE,
   bloqueado: COLOR_BLOQUEADO,
 };
 
-const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
+const ETIQUETAS_ESTADO: Record<EstadoTurnoAgenda, string> = {
   confirmado: 'Confirmado',
   pendiente: 'Pendiente',
   en_espera: 'En espera',
@@ -124,7 +53,7 @@ export default function AgendaMedico() {
             <Text style={styles.titulo}>Tu agenda de hoy</Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{INICIALES_MEDICO}</Text>
+            <Text style={styles.avatarTexto}>{MEDICA.iniciales}</Text>
           </View>
         </View>
 

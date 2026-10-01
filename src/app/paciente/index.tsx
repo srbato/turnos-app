@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -9,91 +9,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type EstadoTurno = 'confirmado' | 'pendiente' | 'cancelado';
-
-type Turno = {
-  id: string;
-  medico: string;
-  especialidad: string;
-  consultorio: string;
-  fecha: string; // formato AAAA-MM-DD
-  hora: string; // formato HH:MM
-  sede: string;
-  estado: EstadoTurno;
-  instrucciones: string[];
-};
-
-type EstudioPendiente = {
-  id: string;
-  tipo: string;
-  titulo: string;
-  detalle: string;
-};
-
-type ListaEspera = {
-  posicion: number;
-  especialidad: string;
-};
-
-const TURNOS: Turno[] = [
-  {
-    id: '1',
-    medico: 'Dra. Lucía Fernández',
-    especialidad: 'Clínica médica',
-    consultorio: 'Consultorio 3',
-    fecha: '2026-09-29',
-    hora: '10:30',
-    sede: 'Consultorios Rivadavia',
-    estado: 'confirmado',
-    instrucciones: ['Ayuno de 8 horas antes del turno', 'Llevá la orden de Swiss Medical'],
-  },
-  {
-    id: '2',
-    medico: 'Dr. Ricardo Paz',
-    especialidad: 'Cardiología',
-    consultorio: 'Consultorio 5',
-    fecha: '2026-10-03',
-    hora: '09:00',
-    sede: 'Consultorios Rivadavia',
-    estado: 'pendiente',
-    instrucciones: [],
-  },
-  {
-    id: '3',
-    medico: 'Dra. Mariela Sosa',
-    especialidad: 'Pediatría',
-    consultorio: 'Consultorio 1',
-    fecha: '2026-09-20',
-    hora: '16:00',
-    sede: 'Consultorios Rivadavia',
-    estado: 'cancelado',
-    instrucciones: [],
-  },
-  {
-    id: '4',
-    medico: 'Dr. Gustavo Ibáñez',
-    especialidad: 'Traumatología',
-    consultorio: 'Consultorio 2',
-    fecha: '2026-10-10',
-    hora: '11:15',
-    sede: 'Consultorios Rivadavia',
-    estado: 'confirmado',
-    instrucciones: [],
-  },
-];
-
-const ESTUDIOS_PENDIENTES: EstudioPendiente[] = [
-  { id: '1', tipo: 'LAB', titulo: 'Laboratorio completo', detalle: 'Orden vence el 30/09' },
-  { id: '2', tipo: 'ECO', titulo: 'Ecografía abdominal', detalle: 'Turno a coordinar' },
-];
-
-const LISTA_ESPERA: ListaEspera | null = { posicion: 3, especialidad: 'Cardiología' };
-
-const ALERTAS_MEDICACION = 1;
-
-const NOMBRE_PACIENTE = 'Valentín';
-const INICIALES_PACIENTE = 'VM';
+import {
+  ESTUDIOS_PENDIENTES,
+  EstadoTurno,
+  LISTA_ESPERA,
+  MEDICAMENTOS,
+  PACIENTE,
+  Turno,
+} from '../../datos';
+import { detalleFecha, fechaHoraComoDate, formatearFecha } from '../../fechas';
+import { TurnosContext } from '../../TurnosContext';
 
 const COLOR_PACIENTE = '#2D6FE0';
 const FONDO_PACIENTE = '#EAF2FE';
@@ -114,35 +39,6 @@ const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   cancelado: 'Cancelado',
 };
 
-const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const MESES_ABREV = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-
-function parsearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-').map(Number);
-  return { anio, mes, dia };
-}
-
-function fechaHoraComoDate(fecha: string, hora: string) {
-  const { anio, mes, dia } = parsearFecha(fecha);
-  const [horas, minutos] = hora.split(':').map(Number);
-  return new Date(anio, mes - 1, dia, horas, minutos);
-}
-
-function detalleFecha(fecha: string) {
-  const { anio, mes, dia } = parsearFecha(fecha);
-  const fechaLocal = new Date(anio, mes - 1, dia);
-  return {
-    dia: fechaLocal.getDate(),
-    mes: MESES_ABREV[fechaLocal.getMonth()],
-    diaSemana: DIAS_SEMANA[fechaLocal.getDay()],
-  };
-}
-
-function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}/${anio}`;
-}
-
 function saludoSegunHora() {
   const hora = new Date().getHours();
   if (hora < 12) return 'Buen día';
@@ -151,11 +47,29 @@ function saludoSegunHora() {
 }
 
 export default function HubPaciente() {
+  const { turnos, cancelarTurno } = useContext(TurnosContext);
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
+  const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
+
+  const cerrarDetalle = () => {
+    setTurnoSeleccionado(null);
+    setConfirmandoCancelacion(false);
+  };
+
+  const confirmarCancelacion = () => {
+    if (turnoSeleccionado) {
+      cancelarTurno(turnoSeleccionado.id);
+    }
+    cerrarDetalle();
+  };
+
+  // Hay una alerta si el paciente toma algún medicamento marcado como riesgoso
+  // (es la misma cuenta que hace la pantalla de medicamentos).
+  const hayAlertaMedicacion = MEDICAMENTOS.some((medicamento) => medicamento.riesgo);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
-  const proximoTurno = [...TURNOS]
+  const proximoTurno = [...turnos]
     .filter((turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
@@ -167,10 +81,10 @@ export default function HubPaciente() {
         <View style={styles.encabezado}>
           <View>
             <Text style={styles.saludo}>{saludoSegunHora()},</Text>
-            <Text style={styles.nombre}>{NOMBRE_PACIENTE}</Text>
+            <Text style={styles.nombre}>{PACIENTE.nombre}</Text>
           </View>
           <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{INICIALES_PACIENTE}</Text>
+            <Text style={styles.avatarTexto}>{PACIENTE.iniciales}</Text>
           </View>
         </View>
 
@@ -222,7 +136,9 @@ export default function HubPaciente() {
                 onPress={() => setTurnoSeleccionado(proximoTurno)}>
                 <Text style={styles.botonPrimarioTexto}>Ver detalle</Text>
               </Pressable>
-              <Pressable style={styles.botonSecundario}>
+              <Pressable
+                style={styles.botonSecundario}
+                onPress={() => router.push(`/paciente/sacar-turno?reprogramar=${proximoTurno.id}`)}>
                 <Text style={styles.botonSecundarioTexto}>Reprogramar</Text>
               </Pressable>
             </View>
@@ -284,11 +200,8 @@ export default function HubPaciente() {
             style={styles.accesoMedicacion}
             onPress={() => router.push('/paciente/medicamentos')}>
             <Text style={styles.accesoMedicacionTitulo}>Mi medicación</Text>
-            {ALERTAS_MEDICACION > 0 && (
-              <Text style={styles.accesoMedicacionAlerta}>
-                {ALERTAS_MEDICACION} alerta{ALERTAS_MEDICACION === 1 ? '' : 's'} activa
-                {ALERTAS_MEDICACION === 1 ? '' : 's'}
-              </Text>
+            {hayAlertaMedicacion && (
+              <Text style={styles.accesoMedicacionAlerta}>1 alerta activa</Text>
             )}
           </Pressable>
         </View>
@@ -298,7 +211,7 @@ export default function HubPaciente() {
         visible={turnoSeleccionado !== null}
         animationType="slide"
         transparent
-        onRequestClose={() => setTurnoSeleccionado(null)}>
+        onRequestClose={cerrarDetalle}>
         <View style={styles.fondoModal}>
           <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
             {turnoSeleccionado && (
@@ -329,9 +242,34 @@ export default function HubPaciente() {
                     ))}
                   </View>
                 )}
-                <Pressable
-                  style={styles.botonCerrar}
-                  onPress={() => setTurnoSeleccionado(null)}>
+
+                {turnoSeleccionado.estado !== 'cancelado' && !confirmandoCancelacion && (
+                  <Pressable
+                    style={styles.botonCancelarTurno}
+                    onPress={() => setConfirmandoCancelacion(true)}>
+                    <Text style={styles.botonCancelarTurnoTexto}>Cancelar turno</Text>
+                  </Pressable>
+                )}
+
+                {confirmandoCancelacion && (
+                  <View style={styles.cajaConfirmacion}>
+                    <Text style={styles.textoConfirmacion}>
+                      ¿Seguro que querés cancelar este turno?
+                    </Text>
+                    <View style={styles.filaConfirmacion}>
+                      <Pressable
+                        style={styles.botonSecundario}
+                        onPress={() => setConfirmandoCancelacion(false)}>
+                        <Text style={styles.botonSecundarioTexto}>No</Text>
+                      </Pressable>
+                      <Pressable style={styles.botonSiCancelar} onPress={confirmarCancelacion}>
+                        <Text style={styles.botonPrimarioTexto}>Sí, cancelar</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                <Pressable style={styles.botonCerrar} onPress={cerrarDetalle}>
                   <Text style={styles.botonPrimarioTexto}>Cerrar</Text>
                 </Pressable>
               </>
@@ -345,7 +283,7 @@ export default function HubPaciente() {
           <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⌂</Text>
           <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Inicio</Text>
         </View>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/sacar-turno')}>
+        <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/turnos')}>
           <Text style={styles.tabIcono}>+</Text>
           <Text style={styles.tabTexto}>Turnos</Text>
         </Pressable>
@@ -697,8 +635,41 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 10,
   },
-  botonCerrar: {
+  botonCancelarTurno: {
     marginTop: 20,
+    borderWidth: 1,
+    borderColor: COLOR_CANCELADO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonCancelarTurnoTexto: {
+    color: COLOR_CANCELADO,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  cajaConfirmacion: {
+    marginTop: 20,
+  },
+  textoConfirmacion: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 10,
+  },
+  filaConfirmacion: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  botonSiCancelar: {
+    flex: 1,
+    backgroundColor: COLOR_CANCELADO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonCerrar: {
+    marginTop: 12,
     backgroundColor: COLOR_PACIENTE,
     borderRadius: 10,
     paddingVertical: 12,

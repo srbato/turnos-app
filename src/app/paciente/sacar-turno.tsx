@@ -1,7 +1,9 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useContext, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { NOMBRE_CONSULTORIO, PACIENTE } from '../../datos';
+import { TurnosContext } from '../../TurnosContext';
 
 type DiaDisponible = {
   fecha: string; // AAAA-MM-DD
@@ -71,11 +73,60 @@ const DIAS = proximosDias(4);
 
 export default function SacarTurno() {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(DIAS[1].fecha);
-  const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>('10:00');
+  const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null);
+  const { turnos, agregarTurno, reprogramarTurno } = useContext(TurnosContext);
+
+  // Si se llegó desde "Reprogramar", la URL trae el id del turno a cambiar.
+  const { reprogramar } = useLocalSearchParams();
+  const turnoAReprogramar = turnos.find((turno) => turno.id === reprogramar);
+
+  // Médico del turno: el del turno que se reprograma, o el Dr. Paz
+  // (por ahora es el único que se puede elegir al sacar un turno nuevo).
+  const medicoElegido = turnoAReprogramar ? turnoAReprogramar.medico : 'Dr. Ricardo Paz';
+
+  // Un horario está reservado si ya hay un turno (no cancelado) con el mismo
+  // médico, el mismo día y la misma hora.
+  function estaReservado(hora: string) {
+    const turnoEnEseHorario = turnos.find(
+      (turno) =>
+        turno.medico === medicoElegido &&
+        turno.fecha === fechaSeleccionada &&
+        turno.hora === hora &&
+        turno.estado !== 'cancelado'
+    );
+    return turnoEnEseHorario !== undefined;
+  }
 
   function elegirDia(fecha: string) {
     setFechaSeleccionada(fecha);
     setHoraSeleccionada(null);
+  }
+
+  function confirmarTurno() {
+    if (!horaSeleccionada) {
+      return;
+    }
+
+    if (turnoAReprogramar) {
+      reprogramarTurno(turnoAReprogramar.id, fechaSeleccionada, horaSeleccionada);
+      router.back();
+      return;
+    }
+
+    agregarTurno({
+      id: String(Date.now()),
+      medico: medicoElegido,
+      especialidad: 'Cardiología',
+      consultorio: 'Consultorio 5',
+      fecha: fechaSeleccionada,
+      hora: horaSeleccionada,
+      sede: NOMBRE_CONSULTORIO,
+      estado: 'pendiente',
+      instrucciones: [],
+    });
+
+    // Vuelve a la pantalla desde donde se abrió (el inicio o Mis turnos).
+    router.back();
   }
 
   const horariosManana = HORARIOS.filter((h) => h.turno === 'Mañana');
@@ -85,47 +136,64 @@ export default function SacarTurno() {
     <SafeAreaView style={styles.pantalla} edges={['top']}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <Pressable style={styles.volver} onPress={() => router.back()}>
-          <Text style={styles.volverTexto}>‹ Sacar turno</Text>
+          <Text style={styles.volverTexto}>
+            {turnoAReprogramar ? '‹ Reprogramar turno' : '‹ Sacar turno'}
+          </Text>
         </Pressable>
 
-        <View style={styles.pasos}>
-          <View style={styles.pasoCompleto}>
-            <Text style={styles.pasoCompletoCheck}>✓</Text>
-            <Text style={styles.pasoCompletoTexto}>Especialidad</Text>
+        {turnoAReprogramar ? (
+          <View style={styles.tarjetaSeleccionada}>
+            <View style={styles.tarjetaTextos}>
+              <Text style={styles.tarjetaEtiqueta}>Turno a reprogramar</Text>
+              <Text style={styles.tarjetaValor}>{turnoAReprogramar.medico}</Text>
+              <Text style={styles.tarjetaSubvalor}>
+                {turnoAReprogramar.especialidad} · Actual: {formatearFechaCorta(turnoAReprogramar.fecha)}{' '}
+                {turnoAReprogramar.hora} h
+              </Text>
+            </View>
           </View>
-          <Text style={styles.pasoGuion}>—</Text>
-          <View style={styles.pasoCompleto}>
-            <Text style={styles.pasoCompletoCheck}>✓</Text>
-            <Text style={styles.pasoCompletoTexto}>Médico</Text>
-          </View>
-          <Text style={styles.pasoGuion}>—</Text>
-          <View style={styles.pasoActivo}>
-            <Text style={styles.pasoActivoTexto}>3 Horario</Text>
-          </View>
-        </View>
+        ) : (
+          <>
+            <View style={styles.pasos}>
+              <View style={styles.pasoCompleto}>
+                <Text style={styles.pasoCompletoCheck}>✓</Text>
+                <Text style={styles.pasoCompletoTexto}>Especialidad</Text>
+              </View>
+              <Text style={styles.pasoGuion}>—</Text>
+              <View style={styles.pasoCompleto}>
+                <Text style={styles.pasoCompletoCheck}>✓</Text>
+                <Text style={styles.pasoCompletoTexto}>Médico</Text>
+              </View>
+              <Text style={styles.pasoGuion}>—</Text>
+              <View style={styles.pasoActivo}>
+                <Text style={styles.pasoActivoTexto}>3 Horario</Text>
+              </View>
+            </View>
 
-        <View style={styles.tarjeta}>
-          <View style={styles.tarjetaIcono}>
-            <Text style={styles.tarjetaIconoTexto}>CAR</Text>
-          </View>
-          <View style={styles.tarjetaTextos}>
-            <Text style={styles.tarjetaEtiqueta}>Especialidad</Text>
-            <Text style={styles.tarjetaValor}>Cardiología</Text>
-          </View>
-          <Text style={styles.cambiar}>Cambiar</Text>
-        </View>
+            <View style={styles.tarjeta}>
+              <View style={styles.tarjetaIcono}>
+                <Text style={styles.tarjetaIconoTexto}>CAR</Text>
+              </View>
+              <View style={styles.tarjetaTextos}>
+                <Text style={styles.tarjetaEtiqueta}>Especialidad</Text>
+                <Text style={styles.tarjetaValor}>Cardiología</Text>
+              </View>
+              <Text style={styles.cambiar}>Cambiar</Text>
+            </View>
 
-        <View style={styles.tarjetaSeleccionada}>
-          <View style={styles.avatarMedico}>
-            <Text style={styles.avatarMedicoTexto}>RP</Text>
-          </View>
-          <View style={styles.tarjetaTextos}>
-            <Text style={styles.tarjetaEtiqueta}>Profesional</Text>
-            <Text style={styles.tarjetaValor}>Dr. Ricardo Paz</Text>
-            <Text style={styles.tarjetaSubvalor}>Atiende Swiss Medical SMG20</Text>
-          </View>
-          <Text style={styles.cambiar}>Cambiar</Text>
-        </View>
+            <View style={styles.tarjetaSeleccionada}>
+              <View style={styles.avatarMedico}>
+                <Text style={styles.avatarMedicoTexto}>RP</Text>
+              </View>
+              <View style={styles.tarjetaTextos}>
+                <Text style={styles.tarjetaEtiqueta}>Profesional</Text>
+                <Text style={styles.tarjetaValor}>Dr. Ricardo Paz</Text>
+                <Text style={styles.tarjetaSubvalor}>Atiende {PACIENTE.cobertura} {PACIENTE.plan}</Text>
+              </View>
+              <Text style={styles.cambiar}>Cambiar</Text>
+            </View>
+          </>
+        )}
 
         <View style={styles.filaDias}>
           {DIAS.map((dia) => {
@@ -171,21 +239,22 @@ export default function SacarTurno() {
           <View style={styles.grillaHorarios}>
             {horariosManana.map((horario) => {
               const seleccionado = horario.hora === horaSeleccionada;
+              const libre = horario.disponible && !estaReservado(horario.hora);
               return (
                 <Pressable
                   key={horario.hora}
-                  disabled={!horario.disponible}
+                  disabled={!libre}
                   style={[
                     styles.horarioBoton,
                     seleccionado && styles.horarioBotonSeleccionado,
-                    !horario.disponible && styles.horarioBotonDeshabilitado,
+                    !libre && styles.horarioBotonDeshabilitado,
                   ]}
                   onPress={() => setHoraSeleccionada(horario.hora)}>
                   <Text
                     style={[
                       styles.horarioTexto,
                       seleccionado && styles.horarioTextoSeleccionado,
-                      !horario.disponible && styles.horarioTextoDeshabilitado,
+                      !libre && styles.horarioTextoDeshabilitado,
                     ]}>
                     {horario.hora}
                   </Text>
@@ -198,21 +267,22 @@ export default function SacarTurno() {
           <View style={styles.grillaHorarios}>
             {horariosTarde.map((horario) => {
               const seleccionado = horario.hora === horaSeleccionada;
+              const libre = horario.disponible && !estaReservado(horario.hora);
               return (
                 <Pressable
                   key={horario.hora}
-                  disabled={!horario.disponible}
+                  disabled={!libre}
                   style={[
                     styles.horarioBoton,
                     seleccionado && styles.horarioBotonSeleccionado,
-                    !horario.disponible && styles.horarioBotonDeshabilitado,
+                    !libre && styles.horarioBotonDeshabilitado,
                   ]}
                   onPress={() => setHoraSeleccionada(horario.hora)}>
                   <Text
                     style={[
                       styles.horarioTexto,
                       seleccionado && styles.horarioTextoSeleccionado,
-                      !horario.disponible && styles.horarioTextoDeshabilitado,
+                      !libre && styles.horarioTextoDeshabilitado,
                     ]}>
                     {horario.hora}
                   </Text>
@@ -229,10 +299,10 @@ export default function SacarTurno() {
         <Pressable
           disabled={!horaSeleccionada}
           style={[styles.botonConfirmar, !horaSeleccionada && styles.botonConfirmarDeshabilitado]}
-          onPress={() => router.push('/paciente')}>
+          onPress={confirmarTurno}>
           <Text style={styles.botonConfirmarTexto}>
             {horaSeleccionada
-              ? `Confirmar ${formatearFechaCorta(fechaSeleccionada)} · ${horaSeleccionada} h`
+              ? `${turnoAReprogramar ? 'Confirmar cambio' : 'Confirmar'} ${formatearFechaCorta(fechaSeleccionada)} · ${horaSeleccionada} h`
               : 'Seleccioná un horario'}
           </Text>
         </Pressable>

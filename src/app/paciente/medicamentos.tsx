@@ -1,45 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-type Medicamento = {
-  id: string;
-  abreviatura: string;
-  nombre: string;
-  detalle: string;
-  riesgo: boolean;
-};
-
-const MEDICAMENTOS: Medicamento[] = [
-  {
-    id: '1',
-    abreviatura: 'ENA',
-    nombre: 'Enalapril 10 mg',
-    detalle: '1 comprimido · 8:00 h · hipertensión',
-    riesgo: true,
-  },
-  {
-    id: '2',
-    abreviatura: 'IBU',
-    nombre: 'Ibuprofeno 400 mg',
-    detalle: 'Cada 8 h si hay dolor · automedicado',
-    riesgo: true,
-  },
-  {
-    id: '3',
-    abreviatura: 'LEV',
-    nombre: 'Levotiroxina 50 mcg',
-    detalle: '1 comprimido en ayunas · tiroides',
-    riesgo: false,
-  },
-  {
-    id: '4',
-    abreviatura: 'VIT',
-    nombre: 'Vitamina D 2000 UI',
-    detalle: '1 gota por día · con el almuerzo',
-    riesgo: false,
-  },
-];
+import { MEDICAMENTOS } from '../../datos';
 
 const COLOR_PACIENTE = '#2D6FE0';
 const FONDO_PACIENTE = '#EAF2FE';
@@ -137,7 +99,7 @@ export default function MisMedicamentos() {
           <Text style={styles.tabIcono}>⌂</Text>
           <Text style={styles.tabTexto}>Inicio</Text>
         </Pressable>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/sacar-turno')}>
+        <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/turnos')}>
           <Text style={styles.tabIcono}>+</Text>
           <Text style={styles.tabTexto}>Turnos</Text>
         </Pressable>

@@ -2,40 +2,41 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ADMINISTRADOR, MEDICA, NOMBRE_CONSULTORIO, PACIENTE, SECRETARIA } from '../datos';
 
 const PERFILES = {
   paciente: {
-    nombre: 'Valentín',
-    iniciales: 'VM',
-    email: 'valentin@test.com',
-    chip: 'Paciente · Swiss Medical',
+    nombre: PACIENTE.nombre,
+    iniciales: PACIENTE.iniciales,
+    email: PACIENTE.email,
+    chip: `Paciente · ${PACIENTE.cobertura}`,
     filaTitulo: 'Cobertura médica',
-    filaSubtitulo: 'Swiss Medical SMG20 · 62-4418902/01',
+    filaSubtitulo: `${PACIENTE.cobertura} ${PACIENTE.plan} · ${PACIENTE.numeroAfiliado}`,
     etiqueta: 'Paciente',
   },
   medico: {
-    nombre: 'Dra. Lucía Fernández',
-    iniciales: 'LF',
-    email: 'lucia.fernandez@consultoriosrivadavia.com',
-    chip: 'Médico · Clínica médica',
+    nombre: MEDICA.nombre,
+    iniciales: MEDICA.iniciales,
+    email: MEDICA.email,
+    chip: `Médico · ${MEDICA.especialidad}`,
     filaTitulo: 'Matrícula',
-    filaSubtitulo: 'MN 118.402',
+    filaSubtitulo: MEDICA.matricula,
     etiqueta: 'Médico',
   },
   secretaria: {
-    nombre: 'Norma Aguilar',
-    iniciales: 'NA',
-    email: 'norma.aguilar@consultoriosrivadavia.com',
-    chip: 'Secretaría · Consultorios Rivadavia',
+    nombre: SECRETARIA.nombre,
+    iniciales: SECRETARIA.iniciales,
+    email: SECRETARIA.email,
+    chip: `Secretaría · ${NOMBRE_CONSULTORIO}`,
     filaTitulo: 'Turno de trabajo',
-    filaSubtitulo: 'Lunes a viernes · 8:00 a 16:00',
+    filaSubtitulo: SECRETARIA.horario,
     etiqueta: 'Secretaría',
   },
   administrador: {
-    nombre: 'Gustavo Aráoz',
-    iniciales: 'GA',
-    email: 'gustavo.araoz@consultoriosrivadavia.com',
-    chip: 'Administrador · Consultorios Rivadavia',
+    nombre: ADMINISTRADOR.nombre,
+    iniciales: ADMINISTRADOR.iniciales,
+    email: ADMINISTRADOR.email,
+    chip: `Administrador · ${NOMBRE_CONSULTORIO}`,
     filaTitulo: 'Acceso',
     filaSubtitulo: 'Gestión completa del consultorio',
     etiqueta: 'Administrador',
@@ -144,7 +145,7 @@ export default function Perfil() {
           <Text style={styles.botonCerrarSesionTexto}>Cerrar sesión</Text>
         </Pressable>
 
-        <Text style={styles.version}>versión 2.4.1 · Consultorios Rivadavia</Text>
+        <Text style={styles.version}>versión 2.4.1 · {NOMBRE_CONSULTORIO}</Text>
       </ScrollView>
 
       {rol === 'paciente' && (
@@ -153,7 +154,7 @@ export default function Perfil() {
             <Text style={styles.tabIcono}>⌂</Text>
             <Text style={styles.tabTexto}>Inicio</Text>
           </Pressable>
-          <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/sacar-turno')}>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/turnos')}>
             <Text style={styles.tabIcono}>+</Text>
             <Text style={styles.tabTexto}>Turnos</Text>
           </Pressable>
@@ -174,6 +175,14 @@ export default function Perfil() {
             <Text style={styles.tabIcono}>▤</Text>
             <Text style={styles.tabTexto}>Agenda</Text>
           </Pressable>
+          <View style={styles.tabItem}>
+            <Text style={styles.tabIcono}>◍</Text>
+            <Text style={styles.tabTexto}>Pacientes</Text>
+          </View>
+          <View style={styles.tabItem}>
+            <Text style={styles.tabIcono}>℞</Text>
+            <Text style={styles.tabTexto}>Recetas</Text>
+          </View>
           <View style={styles.tabItem}>
             <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⚙</Text>
             <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Perfil</Text>

@@ -1,7 +1,16 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-function OpcionRol(props) {
+type PropsOpcionRol = {
+  letra: string;
+  titulo: string;
+  subtitulo: string;
+  colorFondo: string;
+  colorCuadro: string;
+  onPress: () => void;
+};
+
+function OpcionRol(props: PropsOpcionRol) {
   return(
     <Pressable
       style={({ pressed }) => [
