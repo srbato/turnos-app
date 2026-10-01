@@ -31,12 +31,14 @@ const COLORES_ESTADO: Record<EstadoTurno, string> = {
   confirmado: COLOR_CONFIRMADO,
   pendiente: COLOR_PENDIENTE,
   cancelado: COLOR_CANCELADO,
+  atendido: '#8A8A8A',
 };
 
 const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   confirmado: 'Confirmado',
   pendiente: 'Pendiente',
   cancelado: 'Cancelado',
+  atendido: 'Realizado',
 };
 
 function saludoSegunHora() {
@@ -70,7 +72,8 @@ export default function HubPaciente() {
   const hayAlertaMedicacion = medicamentos.some((medicamento) => medicamento.riesgo);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
-  const proximoTurno = buscarProximoTurno(turnos);
+  const misTurnos = turnos.filter((turno) => turno.idPaciente === paciente.id);
+  const proximoTurno = buscarProximoTurno(misTurnos);
 
   return (
     <SafeAreaView style={styles.pantalla} edges={['top']}>
@@ -246,7 +249,9 @@ export default function HubPaciente() {
                   </View>
                 )}
 
-                {turnoSeleccionado.estado !== 'cancelado' && !confirmandoCancelacion && (
+                {turnoSeleccionado.estado !== 'cancelado' &&
+                  turnoSeleccionado.estado !== 'atendido' &&
+                  !confirmandoCancelacion && (
                   <Pressable
                     style={styles.botonCancelarTurno}
                     onPress={() => setConfirmandoCancelacion(true)}>

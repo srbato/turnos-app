@@ -1,14 +1,16 @@
 import { createContext, ReactNode, useState } from 'react';
-import { Turno, TURNOS_PACIENTE } from './datos';
+import { EstadoTurno, Turno, TURNOS } from './datos';
 
-// Guarda los turnos del paciente mientras la app está abierta, para que todas
-// las pantallas vean la misma lista (por ejemplo: sacar turno agrega uno y el
-// inicio lo muestra). Si se cierra la app, se vuelve a los datos de prueba.
+// Guarda los turnos (de todos los pacientes) mientras la app está abierta, para
+// que todas las pantallas vean la misma lista (por ejemplo: el paciente saca un
+// turno y el médico lo ve en su agenda). Si se cierra la app, se vuelve a los
+// datos de prueba.
 
 export const TurnosContext = createContext({
-  turnos: TURNOS_PACIENTE,
+  turnos: TURNOS,
   agregarTurno: (turnoNuevo: Turno) => {},
   cancelarTurno: (id: string) => {},
+  cambiarEstadoTurno: (id: string, estadoNuevo: EstadoTurno) => {},
   reprogramarTurno: (id: string, fecha: string, hora: string) => {},
   guardarPreconsulta: (id: string, respuestas: string[]) => {},
 });
@@ -18,7 +20,7 @@ type PropsTurnosProvider = {
 };
 
 export function TurnosProvider(props: PropsTurnosProvider) {
-  const [turnos, setTurnos] = useState(TURNOS_PACIENTE);
+  const [turnos, setTurnos] = useState(TURNOS);
 
   const agregarTurno = (turnoNuevo: Turno) => {
     setTurnos([...turnos, turnoNuevo]);
@@ -29,6 +31,18 @@ export function TurnosProvider(props: PropsTurnosProvider) {
       if (turno.id === id) {
         const turnoCancelado: Turno = { ...turno, estado: 'cancelado' };
         return turnoCancelado;
+      }
+      return turno;
+    });
+    setTurnos(turnosActualizados);
+  };
+
+  // La usa el médico para confirmar un turno o marcarlo como atendido.
+  const cambiarEstadoTurno = (id: string, estadoNuevo: EstadoTurno) => {
+    const turnosActualizados = turnos.map((turno) => {
+      if (turno.id === id) {
+        const turnoActualizado: Turno = { ...turno, estado: estadoNuevo };
+        return turnoActualizado;
       }
       return turno;
     });
@@ -59,7 +73,14 @@ export function TurnosProvider(props: PropsTurnosProvider) {
 
   return (
     <TurnosContext.Provider
-      value={{ turnos, agregarTurno, cancelarTurno, reprogramarTurno, guardarPreconsulta }}>
+      value={{
+        turnos,
+        agregarTurno,
+        cancelarTurno,
+        cambiarEstadoTurno,
+        reprogramarTurno,
+        guardarPreconsulta,
+      }}>
       {props.children}
     </TurnosContext.Provider>
   );

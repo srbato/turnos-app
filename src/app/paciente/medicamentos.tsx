@@ -77,6 +77,7 @@ export default function MisMedicamentos() {
       nombre: nombre.trim(),
       detalle: detalle.trim(),
       riesgo: esRiesgoso,
+      indicadoPor: '',
     });
     cerrarFormulario();
   }
@@ -153,6 +154,9 @@ export default function MisMedicamentos() {
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.tarjetaNombre}>{medicamento.nombre}</Text>
                 <Text style={styles.tarjetaDetalle}>{medicamento.detalle}</Text>
+                {medicamento.indicadoPor !== '' && (
+                  <Text style={styles.indicadoPor}>Indicado por {medicamento.indicadoPor}</Text>
+                )}
                 {idConfirmandoQuitar !== medicamento.id && (
                   <Pressable onPress={() => setIdConfirmandoQuitar(medicamento.id)}>
                     <Text style={styles.quitar}>Quitar</Text>
@@ -249,9 +253,15 @@ export default function MisMedicamentos() {
             />
             {errorDetalle !== '' && <Text style={styles.errorTexto}>{errorDetalle}</Text>}
 
+            <Text style={styles.label}>Riesgo</Text>
             <View style={styles.filaSwitch}>
               <Text style={styles.textoSwitch}>Puede ser riesgoso con otros medicamentos</Text>
-              <Switch value={esRiesgoso} onValueChange={setEsRiesgoso} />
+              <Switch
+                value={esRiesgoso}
+                onValueChange={setEsRiesgoso}
+                trackColor={{ false: '#D5D8DD', true: COLOR_PACIENTE }}
+                thumbColor="#FFFFFF"
+              />
             </View>
 
             <View style={styles.filaBotones}>
@@ -283,7 +293,7 @@ export default function MisMedicamentos() {
               No dejes de tomar ninguno por tu cuenta: avisale a tu médico y consultalo en tu
               próximo turno.
             </Text>
-            <Pressable style={styles.botonGuardar} onPress={() => setInfoVisible(false)}>
+            <Pressable style={styles.botonEntendido} onPress={() => setInfoVisible(false)}>
               <Text style={styles.botonGuardarTexto}>Entendido</Text>
             </Pressable>
           </View>
@@ -402,6 +412,12 @@ const styles = StyleSheet.create({
   filaTarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  indicadoPor: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR_PACIENTE,
+    marginTop: 2,
   },
   quitar: {
     fontSize: 12,
@@ -537,6 +553,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
+    borderWidth: 1,
+    borderColor: '#C7D6F5',
+    borderRadius: 10,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 8,
+    marginBottom: 12,
   },
   textoSwitch: {
     flex: 1,
@@ -549,6 +572,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
+  },
+  // Botón solo (sin otro al lado): no lleva flex, si no se aplasta.
+  botonEntendido: {
+    backgroundColor: COLOR_PACIENTE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
   },
   botonGuardarTexto: {
     color: '#FFFFFF',

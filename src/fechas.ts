@@ -27,17 +27,27 @@ export function detalleFecha(fecha: string) {
   };
 }
 
+// Pasa una fecha (Date) a texto 'AAAA-MM-DD', el formato que usan los turnos.
+export function fechaComoTexto(fecha: Date) {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+}
+
 export function formatearFecha(fecha: string) {
   const [anio, mes, dia] = fecha.split('-');
   return `${dia}/${mes}/${anio}`;
 }
 
-// El próximo turno: el más cercano que no está cancelado y todavía no pasó.
+// El próximo turno: el más cercano que no está cancelado ni atendido y todavía no pasó.
 // Si no hay ninguno, devuelve undefined.
 export function buscarProximoTurno(turnos: Turno[]) {
   const ahora = new Date();
   return [...turnos]
-    .filter((turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
+    .filter(
+      (turno) =>
+        turno.estado !== 'cancelado' &&
+        turno.estado !== 'atendido' &&
+        fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
+    )
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
     )[0];

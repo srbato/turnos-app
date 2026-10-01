@@ -2,8 +2,8 @@ import { router } from 'expo-router';
 import { useContext, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { EstadoTurnoAgenda, Turno, TURNOS_HOY } from '../../datos';
-import { fechaHoraComoDate, formatearFecha } from '../../fechas';
+import { EstadoTurno, HOY, Paciente, TEMAS_PRECONSULTA, Turno } from '../../datos';
+import { detalleFecha, fechaComoTexto, fechaHoraComoDate, formatearFecha } from '../../fechas';
 import { PacienteContext } from '../../PacienteContext';
 import { SesionContext } from '../../SesionContext';
 import { TurnosContext } from '../../TurnosContext';
@@ -13,74 +13,179 @@ const FONDO_GRAFITO = '#1E2126';
 const COLOR_CONFIRMADO = '#2F9E52';
 const COLOR_PENDIENTE = '#E0A123';
 const COLOR_RIESGO_ALTO = '#D64545';
-const COLOR_BLOQUEADO = '#8A8A8A';
-const FONDO_BLOQUEADO = '#ECECEC';
+const COLOR_GRIS = '#8A8A8A';
 const FONDO_RIESGO_ALTO = '#FBDCDC';
 
-const COLORES_ESTADO: Record<EstadoTurnoAgenda, string> = {
+const COLORES_ESTADO: Record<EstadoTurno, string> = {
   confirmado: COLOR_CONFIRMADO,
   pendiente: COLOR_PENDIENTE,
-  en_espera: COLOR_PENDIENTE,
-  bloqueado: COLOR_BLOQUEADO,
+  cancelado: COLOR_GRIS,
+  atendido: COLOR_GRIS,
 };
 
-const ETIQUETAS_ESTADO: Record<EstadoTurnoAgenda, string> = {
+const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   confirmado: 'Confirmado',
   pendiente: 'Pendiente',
-  en_espera: 'En espera',
-  bloqueado: 'Bloqueado',
+  cancelado: 'Cancelado',
+  atendido: 'Atendido',
 };
 
-const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+// Filtros de la lista: '' muestra todos.
+const FILTROS = [
+  { estado: '', etiqueta: 'Todos' },
+  { estado: 'pendiente', etiqueta: 'Pendientes' },
+  { estado: 'confirmado', etiqueta: 'Confirmados' },
+  { estado: 'atendido', etiqueta: 'Atendidos' },
+];
+
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ];
 
-// Títulos de cada respuesta de la preconsulta.
-// Tienen que estar en el mismo orden que las preguntas de paciente/preconsulta.tsx.
-const TEMAS_PRECONSULTA = ['Motivo', 'Desde cuándo', 'Síntomas', 'Otra medicación', 'Comentarios'];
+// Cantidad de días que se pueden ver en la agenda (hoy incluido).
+const DIAS_DE_AGENDA = 14;
 
-function fechaDeHoy() {
+// Lista de fechas ('AAAA-MM-DD') desde hoy, para el selector de días.
+function diasDeLaAgenda() {
+  const dias: string[] = [];
   const hoy = new Date();
-  return `${DIAS_SEMANA[hoy.getDay()]} ${hoy.getDate()} de ${MESES[hoy.getMonth()]}`;
+  for (let i = 0; i < DIAS_DE_AGENDA; i++) {
+    dias.push(fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i)));
+  }
+  return dias;
+}
+
+// Ej: 'Jueves 1 de octubre'
+function fechaLarga(fecha: string) {
+  const detalle = detalleFecha(fecha);
+  const mes = Number(fecha.split('-')[1]);
+  return `${detalle.diaSemana} ${detalle.dia} de ${MESES[mes - 1]}`;
+}
+
+function ordenarPorHora(turnos: Turno[]) {
+  return [...turnos].sort(
+    (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
+  );
+}
+
+type PropsTarjetaTurno = {
+  turno: Turno;
+  paciente: Paciente | undefined;
+  riesgo: boolean;
+  onPress: () => void;
+};
+
+// Tarjeta de un turno en la agenda.
+function TarjetaTurno(props: PropsTarjetaTurno) {
+  const nombre = props.paciente ? `${props.paciente.nombre} ${props.paciente.apellido}` : 'Paciente';
+  const cobertura = props.paciente ? props.paciente.cobertura : '';
+  const preconsulta = props.turno.preconsulta.length > 0 ? 'preconsulta lista' : 'sin preconsulta';
+  const atendido = props.turno.estado === 'atendido';
+  // Un turno ya atendido no se marca como riesgo: se muestra en gris.
+  const mostrarRiesgo = props.riesgo && !atendido;
+
+  let subtitulo = `${cobertura} · ${preconsulta}`;
+  if (mostrarRiesgo && props.paciente && props.paciente.alerta !== '') {
+    subtitulo = props.paciente.alerta;
+  } else if (mostrarRiesgo) {
+    subtitulo = 'Avisó una combinación riesgosa';
+  }
+
+  return (
+    <Pressable
+      style={[styles.tarjeta, mostrarRiesgo && styles.tarjetaRiesgoAlto, atendido && styles.tarjetaAtendida]}
+      onPress={props.onPress}>
+      <View style={styles.tarjetaHora}>
+        <Text style={styles.horaTexto}>{props.turno.hora}</Text>
+        <Text style={styles.duracionTexto}>20 min</Text>
+      </View>
+      <View style={styles.tarjetaDatos}>
+        <Text style={styles.pacienteTexto}>{nombre}</Text>
+        <Text style={[styles.subtituloTexto, mostrarRiesgo && styles.subtituloRiesgoAlto]}>
+          {subtitulo}
+        </Text>
+      </View>
+      <View
+        style={[
+          styles.chipEstado,
+          { backgroundColor: mostrarRiesgo ? FONDO_RIESGO_ALTO : COLORES_ESTADO[props.turno.estado] },
+        ]}>
+        <Text style={[styles.chipEstadoTexto, mostrarRiesgo && { color: COLOR_RIESGO_ALTO }]}>
+          {mostrarRiesgo ? 'Riesgo alto' : ETIQUETAS_ESTADO[props.turno.estado]}
+        </Text>
+      </View>
+    </Pressable>
+  );
 }
 
 export default function AgendaMedico() {
-  const { turnos } = useContext(TurnosContext);
+  const { turnos, cancelarTurno, cambiarEstadoTurno } = useContext(TurnosContext);
   const { medicoLogueado } = useContext(SesionContext);
-  const { paciente, medicamentos, avisoEnviado } = useContext(PacienteContext);
-  const nombreCompleto = `${paciente.nombre} ${paciente.apellido}`;
+  const { pacientes, paciente, medicamentos, avisoEnviado } = useContext(PacienteContext);
   const medicamentosRiesgo = medicamentos.filter((medicamento) => medicamento.riesgo);
-  const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
 
-  // Turnos que los pacientes sacaron desde la app con este médico
-  // (no cancelados y que todavía no pasaron), del más cercano al más lejano.
-  const ahora = new Date();
-  const turnosDeLaApp = turnos
-    .filter(
-      (turno) =>
-        turno.medico === medicoLogueado.nombre &&
-        turno.estado !== 'cancelado' &&
-        fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
-    )
-    .sort(
-      (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
-    );
+  const [diaElegido, setDiaElegido] = useState(HOY);
+  const [filtro, setFiltro] = useState('');
+  // Se guarda el id (y no el turno) para que el Modal muestre siempre el estado actualizado.
+  const [idTurnoSeleccionado, setIdTurnoSeleccionado] = useState('');
+  const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
+
+  function buscarPaciente(idPaciente: string) {
+    return pacientes.find((pacienteDeLaLista) => pacienteDeLaLista.id === idPaciente);
+  }
+
+  // Un paciente es de riesgo si tiene una alerta cargada, o si es el paciente
+  // de la app y avisó una combinación riesgosa de medicamentos.
+  function tieneRiesgo(idPaciente: string) {
+    const pacienteDelTurno = buscarPaciente(idPaciente);
+    if (pacienteDelTurno && pacienteDelTurno.alerta !== '') {
+      return true;
+    }
+    return idPaciente === paciente.id && avisoEnviado && medicamentosRiesgo.length > 0;
+  }
+
+  function cerrarDetalle() {
+    setIdTurnoSeleccionado('');
+    setConfirmandoCancelacion(false);
+  }
+
+  function confirmarCancelacion(id: string) {
+    cancelarTurno(id);
+    cerrarDetalle();
+  }
 
   // Se calcula en cada render: no hace falta useEffect para esto.
-  const turnosDelDia = TURNOS_HOY.filter((turno) => turno.estado !== 'bloqueado');
+  // Turnos de este médico que no están cancelados.
+  const turnosDelMedico = turnos.filter(
+    (turno) => turno.medico === medicoLogueado.nombre && turno.estado !== 'cancelado'
+  );
+  const turnosDelDia = ordenarPorHora(turnosDelMedico.filter((turno) => turno.fecha === diaElegido));
+  const turnosFiltrados = turnosDelDia.filter((turno) => filtro === '' || turno.estado === filtro);
+
   const confirmados = turnosDelDia.filter((turno) => turno.estado === 'confirmado').length;
   const pendientes = turnosDelDia.filter((turno) => turno.estado === 'pendiente').length;
-  const riesgoAlto = turnosDelDia.filter((turno) => turno.riesgoAlto).length;
+  const riesgoAlto = turnosDelDia.filter(
+    (turno) => turno.estado !== 'atendido' && tieneRiesgo(turno.idPaciente)
+  ).length;
+
+  // Datos del turno que se está mirando en el Modal.
+  const turnoSeleccionado = turnos.find((turno) => turno.id === idTurnoSeleccionado);
+  const pacienteSeleccionado = turnoSeleccionado ? buscarPaciente(turnoSeleccionado.idPaciente) : undefined;
+  const esPacienteDeLaApp = turnoSeleccionado !== undefined && turnoSeleccionado.idPaciente === paciente.id;
+  const sePuedeModificar =
+    turnoSeleccionado !== undefined &&
+    (turnoSeleccionado.estado === 'pendiente' || turnoSeleccionado.estado === 'confirmado');
 
   return (
     <View style={styles.pantalla}>
       <SafeAreaView style={styles.encabezado} edges={['top']}>
         <View style={styles.encabezadoFila}>
           <View>
-            <Text style={styles.fecha}>{fechaDeHoy()}</Text>
-            <Text style={styles.titulo}>Tu agenda de hoy</Text>
+            <Text style={styles.fecha}>{fechaLarga(diaElegido)}</Text>
+            <Text style={styles.titulo}>
+              {diaElegido === HOY ? 'Tu agenda de hoy' : 'Tu agenda'}
+            </Text>
           </View>
           <View style={styles.avatar}>
             <Text style={styles.avatarTexto}>{medicoLogueado.iniciales}</Text>
@@ -108,112 +213,101 @@ export default function AgendaMedico() {
       </SafeAreaView>
 
       <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
-        <View style={styles.listaEncabezado}>
-          <Text style={styles.listaTitulo}>Mañana · 08:00 a 13:00</Text>
-          <Text style={styles.filtrar}>Filtrar</Text>
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filaDias}>
+          {diasDeLaAgenda().map((dia) => {
+            const elegido = dia === diaElegido;
+            const cantidad = turnosDelMedico.filter((turno) => turno.fecha === dia).length;
+            return (
+              <Pressable
+                key={dia}
+                style={[styles.diaCaja, elegido && styles.diaCajaElegida]}
+                onPress={() => setDiaElegido(dia)}>
+                <Text style={[styles.diaNombre, elegido && styles.diaTextoElegido]}>
+                  {dia === HOY ? 'HOY' : detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
+                </Text>
+                <Text style={[styles.diaNumero, elegido && styles.diaTextoElegido]}>
+                  {detalleFecha(dia).dia}
+                </Text>
+                <Text style={[styles.diaCantidad, elegido && styles.diaTextoElegido]}>
+                  {cantidad > 0 ? `${cantidad} t.` : '–'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
-        {TURNOS_HOY.length === 0 ? (
-          <View style={styles.estadoVacio}>
-            <Text style={styles.estadoVacioTexto}>No tenés turnos cargados para hoy.</Text>
-          </View>
-        ) : (
-          TURNOS_HOY.map((turno) => (
+        <View style={styles.filaFiltros}>
+          {FILTROS.map((opcion) => (
             <Pressable
-              key={turno.id}
-              style={[styles.tarjeta, turno.riesgoAlto && styles.tarjetaRiesgoAlto]}>
-              <View style={styles.tarjetaHora}>
-                <Text style={styles.horaTexto}>{turno.hora}</Text>
-                <Text style={styles.duracionTexto}>{turno.duracionMin} min</Text>
-              </View>
-              <View style={styles.tarjetaDatos}>
-                <Text style={styles.pacienteTexto}>{turno.paciente}</Text>
-                <Text style={[styles.subtituloTexto, turno.riesgoAlto && styles.subtituloRiesgoAlto]}>
-                  {turno.subtitulo}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.chipEstado,
-                  {
-                    backgroundColor: turno.riesgoAlto
-                      ? FONDO_RIESGO_ALTO
-                      : turno.estado === 'bloqueado'
-                        ? FONDO_BLOQUEADO
-                        : COLORES_ESTADO[turno.estado],
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.chipEstadoTexto,
-                    (turno.riesgoAlto || turno.estado === 'bloqueado') && {
-                      color: turno.riesgoAlto ? COLOR_RIESGO_ALTO : COLOR_BLOQUEADO,
-                    },
-                  ]}>
-                  {turno.riesgoAlto ? 'Riesgo alto' : ETIQUETAS_ESTADO[turno.estado]}
-                </Text>
-              </View>
+              key={opcion.etiqueta}
+              style={[styles.filtroChip, filtro === opcion.estado && styles.filtroChipElegido]}
+              onPress={() => setFiltro(opcion.estado)}>
+              <Text style={[styles.filtroTexto, filtro === opcion.estado && styles.filtroTextoElegido]}>
+                {opcion.etiqueta}
+              </Text>
             </Pressable>
-          ))
-        )}
-
-        <View style={[styles.listaEncabezado, styles.listaEncabezadoSeparado]}>
-          <Text style={styles.listaTitulo}>Próximos días</Text>
+          ))}
         </View>
 
-        {turnosDeLaApp.length === 0 && (
+        {turnosFiltrados.length === 0 && (
           <View style={styles.estadoVacio}>
-            <Text style={styles.estadoVacioTexto}>No tenés turnos sacados desde la app.</Text>
+            <Text style={styles.estadoVacioTexto}>
+              {turnosDelDia.length === 0
+                ? 'No tenés turnos para este día.'
+                : 'No hay turnos con este filtro.'}
+            </Text>
           </View>
         )}
 
-        {turnosDeLaApp.map((turno) => {
-          const preconsultaLista = turno.preconsulta.length > 0;
-          return (
-            <Pressable
-              key={turno.id}
-              style={styles.tarjeta}
-              onPress={() => setTurnoSeleccionado(turno)}>
-              <View style={styles.tarjetaHora}>
-                <Text style={styles.horaTexto}>{turno.hora}</Text>
-                <Text style={styles.duracionTexto}>{formatearFecha(turno.fecha).slice(0, 5)}</Text>
-              </View>
-              <View style={styles.tarjetaDatos}>
-                <Text style={styles.pacienteTexto}>{nombreCompleto}</Text>
-                <Text style={styles.subtituloTexto}>
-                  {paciente.cobertura} · {preconsultaLista ? 'tocá para ver la preconsulta' : 'sin preconsulta'}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.chipEstado,
-                  { backgroundColor: preconsultaLista ? COLOR_CONFIRMADO : FONDO_BLOQUEADO },
-                ]}>
-                <Text style={[styles.chipEstadoTexto, !preconsultaLista && { color: COLOR_BLOQUEADO }]}>
-                  {preconsultaLista ? 'Preconsulta lista' : 'Sin preconsulta'}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
+        {turnosFiltrados.map((turno) => (
+          <TarjetaTurno
+            key={turno.id}
+            turno={turno}
+            paciente={buscarPaciente(turno.idPaciente)}
+            riesgo={tieneRiesgo(turno.idPaciente)}
+            onPress={() => setIdTurnoSeleccionado(turno.id)}
+          />
+        ))}
       </ScrollView>
 
       <Modal
-        visible={turnoSeleccionado !== null}
+        visible={turnoSeleccionado !== undefined}
         animationType="slide"
         transparent
-        onRequestClose={() => setTurnoSeleccionado(null)}>
+        onRequestClose={cerrarDetalle}>
         <View style={styles.fondoModal}>
           <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
-            {turnoSeleccionado && (
+            {turnoSeleccionado && pacienteSeleccionado && (
               <ScrollView>
-                <Text style={styles.modalPaciente}>{nombreCompleto}</Text>
+                <View style={styles.modalEncabezado}>
+                  <Text style={styles.modalPaciente}>
+                    {pacienteSeleccionado.nombre} {pacienteSeleccionado.apellido}
+                  </Text>
+                  <View
+                    style={[
+                      styles.chipEstado,
+                      { backgroundColor: COLORES_ESTADO[turnoSeleccionado.estado] },
+                    ]}>
+                    <Text style={styles.chipEstadoTexto}>
+                      {ETIQUETAS_ESTADO[turnoSeleccionado.estado]}
+                    </Text>
+                  </View>
+                  <Pressable style={styles.botonX} onPress={cerrarDetalle}>
+                    <Text style={styles.botonXTexto}>✕</Text>
+                  </Pressable>
+                </View>
                 <Text style={styles.modalDato}>
                   {formatearFecha(turnoSeleccionado.fecha)} · {turnoSeleccionado.hora} h ·{' '}
-                  {paciente.cobertura} {paciente.plan}
+                  {pacienteSeleccionado.cobertura} {pacienteSeleccionado.plan}
                 </Text>
 
-                {avisoEnviado && medicamentosRiesgo.length > 0 && (
+                {pacienteSeleccionado.alerta !== '' && (
+                  <View style={styles.modalAviso}>
+                    <Text style={styles.modalAvisoTexto}>⚠ {pacienteSeleccionado.alerta}</Text>
+                  </View>
+                )}
+
+                {esPacienteDeLaApp && avisoEnviado && medicamentosRiesgo.length > 0 && (
                   <View style={styles.modalAviso}>
                     <Text style={styles.modalAvisoTexto}>
                       ⚠ El paciente avisó una combinación riesgosa:{' '}
@@ -237,17 +331,66 @@ export default function AgendaMedico() {
                 <View style={styles.modalFila}>
                   <Text style={styles.modalEtiqueta}>Medicación habitual</Text>
                   <Text style={styles.modalTexto}>
-                    {medicamentos.map((medicamento) => medicamento.nombre).join(', ')}
+                    {esPacienteDeLaApp
+                      ? medicamentos.map((medicamento) => medicamento.nombre).join(', ')
+                      : 'No cargó su medicación en la app.'}
                   </Text>
                 </View>
                 <View style={styles.modalFila}>
                   <Text style={styles.modalEtiqueta}>Alergias</Text>
-                  <Text style={styles.modalTexto}>{paciente.alergias}</Text>
+                  <Text style={styles.modalTexto}>{pacienteSeleccionado.alergias}</Text>
                 </View>
 
-                <Pressable style={styles.botonCerrar} onPress={() => setTurnoSeleccionado(null)}>
-                  <Text style={styles.botonCerrarTexto}>Cerrar</Text>
-                </Pressable>
+                {sePuedeModificar && !confirmandoCancelacion && (
+                  <View style={styles.acciones}>
+                    {turnoSeleccionado.estado === 'pendiente' ? (
+                      // Pendiente: confirmar (principal) y atendido, uno al lado del otro.
+                      <View style={styles.filaAcciones}>
+                        <Pressable
+                          style={styles.botonConfirmar}
+                          onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'confirmado')}>
+                          <Text style={styles.botonCerrarTexto}>Confirmar</Text>
+                        </Pressable>
+                        <Pressable
+                          style={styles.botonAtendidoSecundario}
+                          onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'atendido')}>
+                          <Text style={styles.botonAtendidoSecundarioTexto}>Atendido</Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      // Confirmado: lo único que queda es marcarlo como atendido.
+                      <Pressable
+                        style={styles.botonAtendido}
+                        onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'atendido')}>
+                        <Text style={styles.botonCerrarTexto}>Marcar como atendido</Text>
+                      </Pressable>
+                    )}
+
+                    <Pressable
+                      style={styles.linkCancelar}
+                      onPress={() => setConfirmandoCancelacion(true)}>
+                      <Text style={styles.linkCancelarTexto}>Cancelar turno</Text>
+                    </Pressable>
+                  </View>
+                )}
+
+                {confirmandoCancelacion && (
+                  <View style={styles.cajaConfirmacion}>
+                    <Text style={styles.textoConfirmacion}>¿Seguro que querés cancelar este turno?</Text>
+                    <View style={styles.filaConfirmacion}>
+                      <Pressable
+                        style={styles.botonNo}
+                        onPress={() => setConfirmandoCancelacion(false)}>
+                        <Text style={styles.botonNoTexto}>No</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.botonSiCancelar}
+                        onPress={() => confirmarCancelacion(turnoSeleccionado.id)}>
+                        <Text style={styles.botonCerrarTexto}>Sí, cancelar</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
               </ScrollView>
             )}
           </SafeAreaView>
@@ -259,14 +402,14 @@ export default function AgendaMedico() {
           <Text style={[styles.tabIcono, styles.tabIconoActivo]}>▤</Text>
           <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Agenda</Text>
         </View>
-        <View style={styles.tabItem}>
+        <Pressable style={styles.tabItem} onPress={() => router.push('/medico/pacientes')}>
           <Text style={styles.tabIcono}>◍</Text>
           <Text style={styles.tabTexto}>Pacientes</Text>
-        </View>
-        <View style={styles.tabItem}>
+        </Pressable>
+        <Pressable style={styles.tabItem} onPress={() => router.push('/medico/recetas')}>
           <Text style={styles.tabIcono}>℞</Text>
           <Text style={styles.tabTexto}>Recetas</Text>
-        </View>
+        </Pressable>
         <Pressable style={styles.tabItem} onPress={() => router.push('/perfil?rol=medico')}>
           <Text style={styles.tabIcono}>⚙</Text>
           <Text style={styles.tabTexto}>Perfil</Text>
@@ -344,24 +487,65 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 24,
   },
-  listaEncabezado: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  filaDias: {
     marginBottom: 12,
   },
-  listaEncabezadoSeparado: {
-    marginTop: 14,
+  diaCaja: {
+    width: 56,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginRight: 8,
   },
-  listaTitulo: {
-    fontSize: 14,
+  diaCajaElegida: {
+    backgroundColor: COLOR_MEDICO,
+  },
+  diaNombre: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8A8A8A',
+  },
+  diaNumero: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#1A1A1A',
+    marginTop: 2,
   },
-  filtrar: {
-    fontSize: 13,
+  diaCantidad: {
+    fontSize: 10,
+    color: '#8A8A8A',
+    marginTop: 2,
+  },
+  diaTextoElegido: {
+    color: '#FFFFFF',
+  },
+  filaFiltros: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 12,
+  },
+  filtroChip: {
+    flex: 1,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D5D8DD',
+    borderRadius: 999,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  filtroChipElegido: {
+    backgroundColor: COLOR_MEDICO,
+    borderColor: COLOR_MEDICO,
+  },
+  filtroTexto: {
+    fontSize: 11,
     fontWeight: '600',
-    color: COLOR_MEDICO,
+    color: '#5A5A5A',
+  },
+  filtroTextoElegido: {
+    color: '#FFFFFF',
   },
   tarjeta: {
     flexDirection: 'row',
@@ -375,6 +559,9 @@ const styles = StyleSheet.create({
   },
   tarjetaRiesgoAlto: {
     borderColor: COLOR_RIESGO_ALTO,
+  },
+  tarjetaAtendida: {
+    opacity: 0.6,
   },
   tarjetaHora: {
     width: 56,
@@ -441,7 +628,14 @@ const styles = StyleSheet.create({
     padding: 24,
     maxHeight: '85%',
   },
+  modalEncabezado: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
   modalPaciente: {
+    flex: 1,
     fontSize: 20,
     fontWeight: '700',
     color: '#1A1A1A',
@@ -484,9 +678,92 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginTop: 2,
   },
-  botonCerrar: {
-    marginTop: 20,
+  botonX: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F0F1F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  botonXTexto: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#5A5A5A',
+  },
+  acciones: {
+    marginTop: 24,
+  },
+  filaAcciones: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  botonConfirmar: {
+    flex: 1,
+    backgroundColor: COLOR_CONFIRMADO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonAtendidoSecundario: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLOR_MEDICO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonAtendidoSecundarioTexto: {
+    color: COLOR_MEDICO,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Botón solo (ocupa todo el ancho): no lleva flex, si no se aplasta.
+  botonAtendido: {
     backgroundColor: COLOR_MEDICO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  linkCancelar: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    marginTop: 4,
+  },
+  linkCancelarTexto: {
+    color: COLOR_RIESGO_ALTO,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  cajaConfirmacion: {
+    marginTop: 20,
+  },
+  textoConfirmacion: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 10,
+  },
+  filaConfirmacion: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  botonNo: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLOR_MEDICO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonNoTexto: {
+    color: COLOR_MEDICO,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  botonSiCancelar: {
+    flex: 1,
+    backgroundColor: COLOR_RIESGO_ALTO,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',

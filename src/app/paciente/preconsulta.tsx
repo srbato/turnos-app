@@ -59,7 +59,8 @@ export default function Preconsulta() {
   const { paciente, medicamentos } = useContext(PacienteContext);
 
   // La preconsulta es para el próximo turno del paciente.
-  const proximoTurno = buscarProximoTurno(turnos);
+  const misTurnos = turnos.filter((turno) => turno.idPaciente === paciente.id);
+  const proximoTurno = buscarProximoTurno(misTurnos);
 
   // Si ya la completó, se muestra el chat terminado; si no, empieza en el paso 1.
   const [paso, setPaso] = useState(

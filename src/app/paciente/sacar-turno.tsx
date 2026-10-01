@@ -90,8 +90,8 @@ export default function SacarTurno() {
 
   const medicosDeLaEspecialidad = MEDICOS.filter((m) => m.especialidad === medico.especialidad);
 
-  // Un horario está reservado si ya hay un turno (no cancelado) con el mismo
-  // médico, el mismo día y la misma hora.
+  // Un horario está reservado si ya hay un turno (no cancelado, de cualquier
+  // paciente) con el mismo médico, el mismo día y la misma hora.
   function estaReservado(hora: string) {
     const turnoEnEseHorario = turnos.find(
       (turno) =>
@@ -135,6 +135,7 @@ export default function SacarTurno() {
 
     agregarTurno({
       id: String(Date.now()),
+      idPaciente: paciente.id,
       medico: medico.nombre,
       especialidad: medico.especialidad,
       consultorio: medico.consultorio,

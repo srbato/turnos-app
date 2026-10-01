@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EstadoTurno, Turno } from '../../datos';
 import { detalleFecha, fechaHoraComoDate } from '../../fechas';
+import { PacienteContext } from '../../PacienteContext';
 import { TurnosContext } from '../../TurnosContext';
 
 const COLOR_PACIENTE = '#2D6FE0';
@@ -17,12 +18,14 @@ const COLORES_ESTADO: Record<EstadoTurno, string> = {
   confirmado: COLOR_CONFIRMADO,
   pendiente: COLOR_PENDIENTE,
   cancelado: COLOR_CANCELADO,
+  atendido: COLOR_REALIZADO,
 };
 
 const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   confirmado: 'Confirmado',
   pendiente: 'Pendiente',
   cancelado: 'Cancelado',
+  atendido: 'Realizado',
 };
 
 type PropsFilaTurno = {
@@ -66,18 +69,24 @@ function FilaTurno(props: PropsFilaTurno) {
 
 export default function MisTurnos() {
   const { turnos, cancelarTurno } = useContext(TurnosContext);
+  const { paciente } = useContext(PacienteContext);
   // id del turno que está pidiendo confirmación para cancelarse ('' si ninguno).
   const [idConfirmandoCancelacion, setIdConfirmandoCancelacion] = useState('');
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
-  const turnosOrdenados = [...turnos].sort(
+  const misTurnos = turnos.filter((turno) => turno.idPaciente === paciente.id);
+  const turnosOrdenados = [...misTurnos].sort(
     (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
   );
   const proximos = turnosOrdenados.filter(
-    (turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
+    (turno) =>
+      turno.estado !== 'cancelado' &&
+      turno.estado !== 'atendido' &&
+      fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
   );
-  // Los que no son próximos: ya pasaron o están cancelados. Del más reciente al más viejo.
+  // Los que no son próximos: ya pasaron, se atendieron o están cancelados.
+  // Del más reciente al más viejo.
   const anteriores = turnosOrdenados.filter((turno) => !proximos.includes(turno)).reverse();
 
   function confirmarCancelacion(id: string) {

@@ -153,6 +153,7 @@ export default function Perfil() {
     }
 
     actualizarPaciente({
+      ...paciente,
       nombre: nombre.trim(),
       apellido: apellido.trim(),
       iniciales: (nombre.trim()[0] + apellido.trim()[0]).toUpperCase(),
@@ -281,14 +282,14 @@ export default function Perfil() {
             <Text style={styles.tabIcono}>▤</Text>
             <Text style={styles.tabTexto}>Agenda</Text>
           </Pressable>
-          <View style={styles.tabItem}>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/medico/pacientes')}>
             <Text style={styles.tabIcono}>◍</Text>
             <Text style={styles.tabTexto}>Pacientes</Text>
-          </View>
-          <View style={styles.tabItem}>
+          </Pressable>
+          <Pressable style={styles.tabItem} onPress={() => router.push('/medico/recetas')}>
             <Text style={styles.tabIcono}>℞</Text>
             <Text style={styles.tabTexto}>Recetas</Text>
-          </View>
+          </Pressable>
           <View style={styles.tabItem}>
             <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⚙</Text>
             <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Perfil</Text>
