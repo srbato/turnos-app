@@ -15,6 +15,14 @@ import { confirmarIdentidad } from '@/utilidades/biometria';
 
 const COLOR_PERFIL = '#C9A24C';
 
+// En iPhone, un diálogo de permisos o la cámara no se pueden abrir mientras otro Modal se está cerrando:
+// se espera a que termine la animación antes de pedir el permiso.
+const ESPERA_CIERRE_MODAL_MS = 600;
+
+function esperar(milisegundos: number) {
+  return new Promise((resolver) => setTimeout(resolver, milisegundos));
+}
+
 // Contraseña de prueba del paciente (la misma del login). Con backend se verificaría en el servidor.
 const CONTRASENA_ACTUAL_MOCK = 'p';
 
@@ -63,6 +71,7 @@ export default function EditarPerfil() {
   async function tomarFoto() {
     setOpcionesFotoAbiertas(false);
     setErrorFoto('');
+    await esperar(ESPERA_CIERRE_MODAL_MS);
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
     if (!permiso.granted) {
       setErrorFoto(textos.errorCamara);
@@ -74,6 +83,7 @@ export default function EditarPerfil() {
   async function elegirDeGaleria() {
     setOpcionesFotoAbiertas(false);
     setErrorFoto('');
+    await esperar(ESPERA_CIERRE_MODAL_MS);
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permiso.granted) {
       setErrorFoto(textos.errorGaleria);

@@ -11,7 +11,13 @@ export default function RootLayout() {
       <PerfilPacienteProvider>
         <TurnosProvider>
           <MedicamentosProvider>
-            <Stack screenOptions={{ headerShown: false }} />
+            <Stack screenOptions={{ headerShown: false }}>
+              {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
+              <Stack.Screen name="paciente/index" options={{ animation: 'fade' }} />
+              <Stack.Screen name="paciente/mis-turnos" options={{ animation: 'fade' }} />
+              <Stack.Screen name="paciente/medicamentos" options={{ animation: 'fade' }} />
+              <Stack.Screen name="perfil" options={{ animation: 'fade' }} />
+            </Stack>
           </MedicamentosProvider>
         </TurnosProvider>
       </PerfilPacienteProvider>

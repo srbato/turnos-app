@@ -14,8 +14,9 @@ const SECCIONES: { id: Seccion; icono: string; texto: string; ruta: Href }[] = [
   { id: 'perfil', icono: '◐', texto: 'Perfil', ruta: '/perfil?rol=paciente' },
 ];
 
-// Menú de abajo del paciente. Va en las pantallas principales; no en los flujos
-// de Sacar turno y Reprogramar, para que un toque sin querer no los interrumpa.
+// Menú de abajo del paciente. Va en las pantallas principales; no en los flujos de Sacar turno y
+// Reprogramar, para que un toque sin querer no los interrumpa.
+// Cambia de sección con replace (no push), así las secciones no se apilan una sobre otra.
 // activa es opcional: pantallas como Estudios no corresponden a ninguna sección del menú.
 export function MenuPaciente({ activa }: { activa?: Seccion }) {
   return (
@@ -27,7 +28,7 @@ export function MenuPaciente({ activa }: { activa?: Seccion }) {
             key={seccion.id}
             style={styles.tabItem}
             disabled={esActiva}
-            onPress={() => router.navigate(seccion.ruta)}>
+            onPress={() => router.replace(seccion.ruta)}>
             <Text style={[styles.tabIcono, esActiva && styles.tabIconoActivo]}>{seccion.icono}</Text>
             <Text style={[styles.tabTexto, esActiva && styles.tabTextoActivo]}>{seccion.texto}</Text>
           </Pressable>

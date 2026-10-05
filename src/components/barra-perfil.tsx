@@ -53,7 +53,7 @@ export function BarraPerfil({ rol, pantalla, tema }: Props) {
             key={item.clave}
             style={styles.tabItem}
             disabled={esActiva && pantalla === 'perfil'}
-            onPress={() => router.navigate(item.ruta)}>
+            onPress={() => router.replace(item.ruta)}>
             <Text style={[styles.tabIcono, { color: esActiva ? COLOR_PERFIL : tema.textoTenue }]}>
               {item.icono}
             </Text>
