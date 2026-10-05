@@ -1,17 +1,18 @@
 import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { IconoAnimado } from '@/components/icono-animado';
 import { COLOR_PACIENTE } from '@/constantes/colores';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
 
 type Seccion = 'inicio' | 'turnos' | 'salud' | 'perfil';
 
 // Se usa "as Href" en Turnos porque los tipos generados de expo-router no reconocen esa ruta (Tabs).
-const SECCIONES: { id: Seccion; icono: string; texto: string; ruta: Href }[] = [
-  { id: 'inicio', icono: '⌂', texto: 'Inicio', ruta: '/paciente' },
-  { id: 'turnos', icono: '+', texto: 'Turnos', ruta: '/paciente/mis-turnos' as Href },
-  { id: 'salud', icono: '℞', texto: 'Medicamentos', ruta: '/paciente/medicamentos' },
-  { id: 'perfil', icono: '◐', texto: 'Perfil', ruta: '/perfil?rol=paciente' },
+const SECCIONES: { id: Seccion; icono: string; iconoActivo: string; texto: string; ruta: Href }[] = [
+  { id: 'inicio', icono: '☖', iconoActivo: '☗', texto: 'Inicio', ruta: '/paciente' },
+  { id: 'turnos', icono: '☐', iconoActivo: '☑', texto: 'Turnos', ruta: '/paciente/mis-turnos' as Href },
+  { id: 'salud', icono: '℞', iconoActivo: '⚕', texto: 'Medicamentos', ruta: '/paciente/medicamentos' },
+  { id: 'perfil', icono: '◐', iconoActivo: '⚙', texto: 'Perfil', ruta: '/perfil?rol=paciente' },
 ];
 
 // Menú de abajo del paciente. Va en las pantallas principales; no en los flujos de Sacar turno y
@@ -29,7 +30,12 @@ export function MenuPaciente({ activa }: { activa?: Seccion }) {
             style={styles.tabItem}
             disabled={esActiva}
             onPress={() => router.replace(seccion.ruta)}>
-            <Text style={[styles.tabIcono, esActiva && styles.tabIconoActivo]}>{seccion.icono}</Text>
+            <IconoAnimado
+              icono={seccion.icono}
+              iconoActivo={seccion.iconoActivo}
+              activo={esActiva}
+              style={[styles.tabIcono, esActiva && styles.tabIconoActivo]}
+            />
             <Text style={[styles.tabTexto, esActiva && styles.tabTextoActivo]}>{seccion.texto}</Text>
           </Pressable>
         );

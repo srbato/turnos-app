@@ -1,6 +1,7 @@
 import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { IconoAnimado } from '@/components/icono-animado';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
 import type { Tema } from '@/constantes/tema';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
@@ -11,19 +12,19 @@ const COLOR_PERFIL = '#C9A24C';
 type Rol = 'paciente' | 'medico' | 'secretaria' | 'administrador';
 type Clave = 'inicio' | 'turnos' | 'medicamentos' | 'agenda' | 'perfil';
 
-type Item = { icono: string; clave: Clave; ruta: Href };
+type Item = { icono: string; iconoActivo: string; clave: Clave; ruta: Href };
 
 // Cada rol tiene su propia barra. Solo el paciente tiene editor de perfil por ahora.
 const ITEMS_POR_ROL: Partial<Record<Rol, Item[]>> = {
   paciente: [
-    { icono: '⌂', clave: 'inicio', ruta: '/paciente' },
-    { icono: '+', clave: 'turnos', ruta: '/paciente/mis-turnos' as Href },
-    { icono: '℞', clave: 'medicamentos', ruta: '/paciente/medicamentos' },
-    { icono: '⚙', clave: 'perfil', ruta: '/perfil?rol=paciente' },
+    { icono: '☖', iconoActivo: '☗', clave: 'inicio', ruta: '/paciente' },
+    { icono: '☐', iconoActivo: '☑', clave: 'turnos', ruta: '/paciente/mis-turnos' as Href },
+    { icono: '℞', iconoActivo: '⚕', clave: 'medicamentos', ruta: '/paciente/medicamentos' },
+    { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=paciente' },
   ],
   medico: [
-    { icono: '▤', clave: 'agenda', ruta: '/medico' },
-    { icono: '⚙', clave: 'perfil', ruta: '/perfil?rol=medico' },
+    { icono: '▤', iconoActivo: '▤', clave: 'agenda', ruta: '/medico' },
+    { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=medico' },
   ],
 };
 
@@ -54,9 +55,12 @@ export function BarraPerfil({ rol, pantalla, tema }: Props) {
             style={styles.tabItem}
             disabled={esActiva && pantalla === 'perfil'}
             onPress={() => router.replace(item.ruta)}>
-            <Text style={[styles.tabIcono, { color: esActiva ? COLOR_PERFIL : tema.textoTenue }]}>
-              {item.icono}
-            </Text>
+            <IconoAnimado
+              icono={item.icono}
+              iconoActivo={item.iconoActivo}
+              activo={esActiva}
+              style={[styles.tabIcono, { color: esActiva ? COLOR_PERFIL : tema.textoTenue }]}
+            />
             <Text
               style={[
                 styles.tabTexto,

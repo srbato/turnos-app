@@ -5,6 +5,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { BarraPerfil } from '@/components/barra-perfil';
+import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
 import { DNI_PACIENTE, usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
@@ -158,7 +159,8 @@ export default function EditarPerfil() {
   ];
 
   return (
-    <View style={[styles.pantalla, { backgroundColor: tema.fondo }]}>
+    // El contenido sube cuando aparece el teclado, así no tapa los campos.
+    <PantallaConTeclado style={[styles.pantalla, { backgroundColor: tema.fondo }]}>
       <ScrollView style={styles.contenido} contentContainerStyle={styles.contenidoInterno}>
         {/* Vuelve a Mi perfil yendo directo a esa ruta, sin depender del historial. */}
         <Pressable onPress={() => router.navigate('/perfil?rol=paciente')}>
@@ -283,7 +285,7 @@ export default function EditarPerfil() {
       </Modal>
 
       <Modal visible={contrasenaAbierta} animationType="fade" transparent onRequestClose={cerrarContrasena}>
-        <View style={styles.fondoModal}>
+        <PantallaConTeclado style={styles.fondoModal}>
           <View style={[styles.tarjetaModal, { backgroundColor: tema.tarjeta }]}>
             <Text style={[styles.modalTitulo, { color: tema.texto }]}>{textos.cambiarContrasena}</Text>
 
@@ -307,9 +309,9 @@ export default function EditarPerfil() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </PantallaConTeclado>
       </Modal>
-    </View>
+    </PantallaConTeclado>
   );
 }
 
