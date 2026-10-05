@@ -10,6 +10,7 @@ export type Turno = {
   fecha: string; // formato AAAA-MM-DD
   hora: string; // formato HH:MM
   sede: string;
+  cobertura: string;
   estado: EstadoTurno;
   instrucciones: string[];
 };
@@ -17,6 +18,8 @@ export type Turno = {
 type TurnosContextType = {
   turnos: Turno[];
   agregarTurno: (turno: Turno) => void;
+  reprogramarTurno: (id: string, fecha: string, hora: string) => void;
+  cancelarTurno: (id: string) => void;
 };
 
 const TURNOS_INICIALES: Turno[] = [
@@ -28,6 +31,7 @@ const TURNOS_INICIALES: Turno[] = [
     fecha: '2026-09-29',
     hora: '10:30',
     sede: 'Consultorios Rivadavia',
+    cobertura: 'Swiss Medical SMG20',
     estado: 'confirmado',
     instrucciones: ['Ayuno de 8 horas antes del turno', 'Llevá la orden de Swiss Medical'],
   },
@@ -39,6 +43,7 @@ const TURNOS_INICIALES: Turno[] = [
     fecha: '2026-10-03',
     hora: '09:00',
     sede: 'Consultorios Rivadavia',
+    cobertura: 'Swiss Medical SMG20',
     estado: 'pendiente',
     instrucciones: [],
   },
@@ -50,6 +55,7 @@ const TURNOS_INICIALES: Turno[] = [
     fecha: '2026-09-20',
     hora: '16:00',
     sede: 'Consultorios Rivadavia',
+    cobertura: 'OSDE 210',
     estado: 'cancelado',
     instrucciones: [],
   },
@@ -61,6 +67,7 @@ const TURNOS_INICIALES: Turno[] = [
     fecha: '2026-10-10',
     hora: '11:15',
     sede: 'Consultorios Rivadavia',
+    cobertura: 'Swiss Medical SMG20',
     estado: 'confirmado',
     instrucciones: [],
   },
@@ -76,10 +83,37 @@ export function TurnosProvider({ children }: { children: ReactNode }) {
     function agregarTurno(turno: Turno) {
       setTurnos((anteriores) => [...anteriores, turno]);
     }
-    return { turnos, agregarTurno };
+    // Cambia fecha y hora del mismo turno (mismo id). Queda pendiente hasta que la secretaría lo reconfirme.
+    function reprogramarTurno(id: string, fecha: string, hora: string) {
+      setTurnos((anteriores) =>
+        anteriores.map((turno) =>
+          turno.id === id ? { ...turno, fecha, hora, estado: 'pendiente' } : turno
+        )
+      );
+    }
+    function cancelarTurno(id: string) {
+      setTurnos((anteriores) =>
+        anteriores.map((turno) => (turno.id === id ? { ...turno, estado: 'cancelado' } : turno))
+      );
+    }
+    return { turnos, agregarTurno, reprogramarTurno, cancelarTurno };
   }, [turnos]);
 
   return <TurnosContext.Provider value={value}>{children}</TurnosContext.Provider>;
+}
+
+// Horas ya tomadas de un médico en una fecha. Los turnos cancelados liberan el horario.
+// idIgnorado sirve al reprogramar: el horario del propio turno no cuenta como ocupado.
+export function horasOcupadas(turnos: Turno[], medico: string, fecha: string, idIgnorado?: string) {
+  return turnos
+    .filter(
+      (turno) =>
+        turno.medico === medico &&
+        turno.fecha === fecha &&
+        turno.estado !== 'cancelado' &&
+        turno.id !== idIgnorado
+    )
+    .map((turno) => turno.hora);
 }
 
 export function useTurnos() {

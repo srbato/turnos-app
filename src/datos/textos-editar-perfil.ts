@@ -1,0 +1,99 @@
+// Textos de la pantalla Editar perfil en cada idioma.
+import type { Idioma } from '@/contextos/PreferenciasContext';
+
+type TextosEditar = {
+  titulo: string;
+  foto: string;
+  cambiarFoto: string;
+  quitarFoto: string;
+  datos: string;
+  nombre: string;
+  email: string;
+  telefono: string;
+  domicilio: string;
+  dni: string;
+  dniNota: string;
+  obrasSociales: string;
+  obrasSocialesNota: string;
+  guardar: string;
+  errorNombre: string;
+  errorEmail: string;
+  seguridad: string;
+  cambiarContrasena: string;
+  cambiarContrasenaDetalle: string;
+  contrasenaActual: string;
+  contrasenaNueva: string;
+  contrasenaRepetir: string;
+  cancelar: string;
+  confirmar: string;
+  errorActual: string;
+  errorLargo: string;
+  errorNoCoincide: string;
+  errorBiometria: string;
+  contrasenaCambiada: string;
+};
+
+export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
+  es: {
+    titulo: 'Editar perfil',
+    foto: 'Foto de perfil',
+    cambiarFoto: 'Elegir de la galería',
+    quitarFoto: 'Quitar foto',
+    datos: 'Datos personales',
+    nombre: 'Nombre y apellido',
+    email: 'Email',
+    telefono: 'Teléfono',
+    domicilio: 'Domicilio',
+    dni: 'DNI',
+    dniNota: 'Verificado con RENAPER. No se puede modificar.',
+    obrasSociales: 'Obras sociales',
+    obrasSocialesNota: 'Vamos a mostrarte solo los médicos que atienden las que marques.',
+    guardar: 'Guardar cambios',
+    errorNombre: 'El nombre no puede quedar vacío.',
+    errorEmail: 'Ingresá un email válido.',
+    seguridad: 'Seguridad',
+    cambiarContrasena: 'Cambiar contraseña',
+    cambiarContrasenaDetalle: 'Te vamos a pedir Face ID o huella para confirmar',
+    contrasenaActual: 'Contraseña actual',
+    contrasenaNueva: 'Contraseña nueva',
+    contrasenaRepetir: 'Repetí la contraseña nueva',
+    cancelar: 'Cancelar',
+    confirmar: 'Confirmar',
+    errorActual: 'La contraseña actual no es correcta.',
+    errorLargo: 'La contraseña nueva debe tener al menos 6 caracteres.',
+    errorNoCoincide: 'Las contraseñas nuevas no coinciden.',
+    errorBiometria: 'No pudimos verificar tu identidad. No se hicieron cambios.',
+    contrasenaCambiada: 'Contraseña actualizada.',
+  },
+  en: {
+    titulo: 'Edit profile',
+    foto: 'Profile picture',
+    cambiarFoto: 'Choose from gallery',
+    quitarFoto: 'Remove photo',
+    datos: 'Personal details',
+    nombre: 'Full name',
+    email: 'Email',
+    telefono: 'Phone',
+    domicilio: 'Address',
+    dni: 'ID number',
+    dniNota: 'Verified with RENAPER. It cannot be changed.',
+    obrasSociales: 'Health insurance',
+    obrasSocialesNota: 'We will only show you doctors who accept the ones you select.',
+    guardar: 'Save changes',
+    errorNombre: 'The name cannot be empty.',
+    errorEmail: 'Enter a valid email.',
+    seguridad: 'Security',
+    cambiarContrasena: 'Change password',
+    cambiarContrasenaDetalle: 'We will ask for Face ID or fingerprint to confirm',
+    contrasenaActual: 'Current password',
+    contrasenaNueva: 'New password',
+    contrasenaRepetir: 'Repeat the new password',
+    cancelar: 'Cancel',
+    confirmar: 'Confirm',
+    errorActual: 'The current password is not correct.',
+    errorLargo: 'The new password must be at least 6 characters.',
+    errorNoCoincide: 'The new passwords do not match.',
+    errorBiometria: 'We could not verify your identity. No changes were made.',
+    contrasenaCambiada: 'Password updated.',
+  },
+};

@@ -3,11 +3,13 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ResumenEspecialidad } from '@/components/resumen-turno';
 import { COLOR_MEDICO, FONDO_PACIENTE } from '@/constantes/colores';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { coberturaQueAtiende, medicosParaPaciente, type Medico } from '@/datos/catalogo';
 
 export default function ElegirMedico() {
   const { especialidad, elegirMedico } = useSacarTurno();
+  const { coberturaIds } = usePerfilPaciente();
 
   // Si se entra a esta URL directo (sin haber elegido especialidad), se vuelve al paso 1.
   if (!especialidad) {
@@ -15,7 +17,7 @@ export default function ElegirMedico() {
   }
 
   // Solo los médicos que aceptan alguna cobertura del paciente.
-  const medicos = medicosParaPaciente(especialidad.id);
+  const medicos = medicosParaPaciente(especialidad.id, coberturaIds);
 
   function elegir(medico: Medico) {
     elegirMedico(medico);
@@ -40,7 +42,9 @@ export default function ElegirMedico() {
       ListEmptyComponent={
         <View style={styles.vacio}>
           <Text style={styles.vacioTexto}>
-            No hay profesionales de {especialidad.nombre} que atiendan tus coberturas.
+            {coberturaIds.length === 0
+              ? 'Todavía no cargaste tu obra social. Agregala en Perfil > Editar perfil.'
+              : `No hay profesionales de ${especialidad.nombre} que atiendan tus obras sociales.`}
           </Text>
         </View>
       }
@@ -51,7 +55,7 @@ export default function ElegirMedico() {
           </View>
           <View style={styles.textos}>
             <Text style={styles.nombre}>{item.nombre}</Text>
-            <Text style={styles.cobertura}>Atiende {coberturaQueAtiende(item)}</Text>
+            <Text style={styles.cobertura}>Atiende {coberturaQueAtiende(item, coberturaIds)}</Text>
           </View>
           <Text style={styles.flecha}>›</Text>
         </Pressable>

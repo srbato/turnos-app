@@ -1,88 +1,32 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { AvatarPaciente } from '@/components/avatar-paciente';
+import { MenuPaciente } from '@/components/menu-paciente';
+import { CancelarTurnoModal, DetalleTurnoModal } from '@/components/modales-turno';
 import {
-  Button,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-
-import { useTurnos, type EstadoTurno, type Turno } from '@/contextos/TurnosContext';
-
-type EstudioPendiente = {
-  id: string;
-  tipo: string;
-  titulo: string;
-  detalle: string;
-};
+  COLOR_CANCELADO,
+  COLOR_PACIENTE,
+  COLOR_PENDIENTE,
+  FONDO_PACIENTE,
+} from '@/constantes/colores';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { ESTUDIOS } from '@/datos/estudios';
+import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
+import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 type ListaEspera = {
   posicion: number;
   especialidad: string;
 };
 
-const ESTUDIOS_PENDIENTES: EstudioPendiente[] = [
-  { id: '1', tipo: 'LAB', titulo: 'Laboratorio completo', detalle: 'Orden vence el 30/09' },
-  { id: '2', tipo: 'ECO', titulo: 'Ecografía abdominal', detalle: 'Turno a coordinar' },
-];
+const ESTUDIOS_PENDIENTES = ESTUDIOS.filter((estudio) => estudio.estado === 'pendiente');
 
 const LISTA_ESPERA: ListaEspera | null = { posicion: 3, especialidad: 'Cardiología' };
 
-const ALERTAS_MEDICACION = 1;
-
-const NOMBRE_PACIENTE = 'Valentín';
-const INICIALES_PACIENTE = 'VM';
-
-const COLOR_PACIENTE = '#2D6FE0';
-const FONDO_PACIENTE = '#EAF2FE';
-const COLOR_CONFIRMADO = '#2F9E52';
-const COLOR_PENDIENTE = '#E0A123';
-const COLOR_CANCELADO = '#D64545';
 const FONDO_PENDIENTE = '#FCF1DC'; // tinte claro del ámbar, para chips y fondos suaves
-
-const COLORES_ESTADO: Record<EstadoTurno, string> = {
-  confirmado: COLOR_CONFIRMADO,
-  pendiente: COLOR_PENDIENTE,
-  cancelado: COLOR_CANCELADO,
-};
-
-const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
-  confirmado: 'Confirmado',
-  pendiente: 'Pendiente',
-  cancelado: 'Cancelado',
-};
-
-const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const MESES_ABREV = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-
-function parsearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-').map(Number);
-  return { anio, mes, dia };
-}
-
-function fechaHoraComoDate(fecha: string, hora: string) {
-  const { anio, mes, dia } = parsearFecha(fecha);
-  const [horas, minutos] = hora.split(':').map(Number);
-  return new Date(anio, mes - 1, dia, horas, minutos);
-}
-
-function detalleFecha(fecha: string) {
-  const { anio, mes, dia } = parsearFecha(fecha);
-  const fechaLocal = new Date(anio, mes - 1, dia);
-  return {
-    dia: fechaLocal.getDate(),
-    mes: MESES_ABREV[fechaLocal.getMonth()],
-    diaSemana: DIAS_SEMANA[fechaLocal.getDay()],
-  };
-}
-
-function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}/${anio}`;
-}
 
 function saludoSegunHora() {
   const hora = new Date().getHours();
@@ -93,7 +37,10 @@ function saludoSegunHora() {
 
 export default function HubPaciente() {
   const { turnos } = useTurnos();
+  const { nombre } = usePerfilPaciente();
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
+  // Turno pendiente de confirmar su cancelación; lo comparten el botón del home y el del detalle.
+  const [turnoACancelar, setTurnoACancelar] = useState<Turno | null>(null);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
@@ -109,11 +56,9 @@ export default function HubPaciente() {
         <View style={styles.encabezado}>
           <View>
             <Text style={styles.saludo}>{saludoSegunHora()},</Text>
-            <Text style={styles.nombre}>{NOMBRE_PACIENTE}</Text>
+            <Text style={styles.nombre}>{nombre.split(' ')[0]}</Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{INICIALES_PACIENTE}</Text>
-          </View>
+          <AvatarPaciente tamano={48} colorFondo={COLOR_PACIENTE} colorTexto="#FFFFFF" />
         </View>
 
         {!proximoTurno ? (
@@ -121,6 +66,11 @@ export default function HubPaciente() {
             <Text style={styles.estadoVacioTexto}>
               Todavía no tenés turnos. Cuando saques uno, lo vas a ver acá.
             </Text>
+            <Pressable
+              style={styles.botonNuevoTurno}
+              onPress={() => router.push('/paciente/sacar-turno')}>
+              <Text style={styles.botonPrimarioTexto}>Sacar un nuevo turno</Text>
+            </Pressable>
           </View>
         ) : (
           <View style={styles.tarjetaProximo}>
@@ -164,18 +114,29 @@ export default function HubPaciente() {
                 onPress={() => setTurnoSeleccionado(proximoTurno)}>
                 <Text style={styles.botonPrimarioTexto}>Ver detalle</Text>
               </Pressable>
-              <Pressable style={styles.botonSecundario}>
+              <Pressable
+                style={styles.botonSecundario}
+                onPress={() => router.push({ pathname: '/paciente/reprogramar/[id]', params: { id: proximoTurno.id } })}>
                 <Text style={styles.botonSecundarioTexto}>Reprogramar</Text>
               </Pressable>
             </View>
+            <Pressable style={styles.botonCancelar} onPress={() => setTurnoACancelar(proximoTurno)}>
+              <Text style={styles.botonCancelarTexto}>Cancelar turno</Text>
+            </Pressable>
           </View>
         )}
+
+        <Pressable style={styles.botonMisTurnos} onPress={() => router.push('/paciente/mis-turnos' as Href)}>
+          <Text style={styles.botonMisTurnosTexto}>Mis turnos</Text>
+        </Pressable>
 
         {ESTUDIOS_PENDIENTES.length > 0 && (
           <View style={styles.tarjeta}>
             <View style={styles.tarjetaEncabezado}>
-              <Text style={styles.tarjetaTitulo}>Estudios pendientes</Text>
-              <Text style={styles.verTodos}>Ver todos</Text>
+              <Text style={styles.tarjetaTitulo}>Mis estudios</Text>
+              <Pressable onPress={() => router.push('/paciente/estudios' as Href)}>
+                <Text style={styles.verTodos}>Ver todos</Text>
+              </Pressable>
             </View>
             {ESTUDIOS_PENDIENTES.map((estudio, indice) => (
               <View
@@ -225,79 +186,19 @@ export default function HubPaciente() {
           <Pressable
             style={styles.accesoMedicacion}
             onPress={() => router.push('/paciente/medicamentos')}>
-            <Text style={styles.accesoMedicacionTitulo}>Mi medicación</Text>
-            {ALERTAS_MEDICACION > 0 && (
-              <Text style={styles.accesoMedicacionAlerta}>
-                {ALERTAS_MEDICACION} alerta{ALERTAS_MEDICACION === 1 ? '' : 's'} activa
-                {ALERTAS_MEDICACION === 1 ? '' : 's'}
-              </Text>
-            )}
+            <Text style={styles.accesoMedicacionTitulo}>Mis medicamentos</Text>
           </Pressable>
         </View>
       </ScrollView>
 
-      <Modal
-        visible={turnoSeleccionado !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setTurnoSeleccionado(null)}>
-        <View style={styles.fondoModal}>
-          <View style={styles.tarjetaModal}>
-            {turnoSeleccionado && (
-              <>
-                <Text style={styles.modalMedico}>{turnoSeleccionado.medico}</Text>
-                <Text style={styles.modalDato}>
-                  {turnoSeleccionado.especialidad} · {turnoSeleccionado.consultorio}
-                </Text>
-                <Text style={styles.modalDato}>
-                  {formatearFecha(turnoSeleccionado.fecha)} · {turnoSeleccionado.hora} h
-                </Text>
-                <Text style={styles.modalDato}>{turnoSeleccionado.sede}</Text>
-                <View
-                  style={[
-                    styles.chipEstado,
-                    { backgroundColor: COLORES_ESTADO[turnoSeleccionado.estado] },
-                  ]}>
-                  <Text style={styles.chipEstadoTexto}>
-                    {ETIQUETAS_ESTADO[turnoSeleccionado.estado]}
-                  </Text>
-                </View>
-                {turnoSeleccionado.instrucciones.length > 0 && (
-                  <View style={styles.modalAvisoCaja}>
-                    {turnoSeleccionado.instrucciones.map((instruccion) => (
-                      <Text key={instruccion} style={styles.avisoTexto}>
-                        • {instruccion}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-                <View style={styles.botonCerrar}>
-                  <Button title="Cerrar" onPress={() => setTurnoSeleccionado(null)} />
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
+      <DetalleTurnoModal
+        turno={turnoSeleccionado}
+        onCerrar={() => setTurnoSeleccionado(null)}
+        onCancelar={setTurnoACancelar}
+      />
+      <CancelarTurnoModal turno={turnoACancelar} onCerrar={() => setTurnoACancelar(null)} />
 
-      <View style={styles.tabBar}>
-        <View style={styles.tabItem}>
-          <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⌂</Text>
-          <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Inicio</Text>
-        </View>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/sacar-turno')}>
-          <Text style={styles.tabIcono}>+</Text>
-          <Text style={styles.tabTexto}>Turnos</Text>
-        </Pressable>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/paciente/medicamentos')}>
-          <Text style={styles.tabIcono}>℞</Text>
-          <Text style={styles.tabTexto}>Salud</Text>
-        </Pressable>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/perfil?rol=paciente')}>
-          <Text style={styles.tabIcono}>◐</Text>
-          <Text style={styles.tabTexto}>Perfil</Text>
-        </Pressable>
-      </View>
+      <MenuPaciente activa="inicio" />
     </View>
   );
 }
@@ -305,6 +206,7 @@ export default function HubPaciente() {
 const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
+    paddingTop: MARGEN_SUPERIOR,
     backgroundColor: FONDO_PACIENTE,
   },
   contenido: {
@@ -325,19 +227,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#1A1A1A',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLOR_PACIENTE,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarTexto: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   tarjetaProximo: {
     backgroundColor: '#FFFFFF',
@@ -591,12 +480,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  accesoMedicacionAlerta: {
-    color: COLOR_CANCELADO,
-    fontSize: 12,
-    marginTop: 2,
-    fontWeight: '600',
-  },
   estadoVacio: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -604,67 +487,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  botonNuevoTurno: {
+    alignSelf: 'stretch',
+    backgroundColor: COLOR_PACIENTE,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 14,
+  },
   estadoVacioTexto: {
     fontSize: 14,
     color: '#5A5A5A',
     textAlign: 'center',
   },
-  fondoModal: {
-    flex: 1,
-    backgroundColor: 'rgba(26, 24, 21, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  tarjetaModal: {
+  botonMisTurnos: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
+    borderWidth: 1,
+    borderColor: COLOR_PACIENTE,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  modalMedico: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  modalDato: {
+  botonMisTurnosTexto: {
+    color: COLOR_PACIENTE,
     fontSize: 15,
-    color: '#3A3A3A',
-    marginBottom: 4,
+    fontWeight: '700',
   },
-  modalAvisoCaja: {
-    backgroundColor: FONDO_PENDIENTE,
+  botonCancelar: {
+    borderWidth: 1,
+    borderColor: COLOR_CANCELADO,
     borderRadius: 10,
-    padding: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
     marginTop: 10,
   },
-  botonCerrar: {
-    marginTop: 20,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
-    paddingVertical: 10,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  tabIcono: {
-    fontSize: 20,
-    color: '#9A9A9A',
-  },
-  tabIconoActivo: {
-    color: COLOR_PACIENTE,
-  },
-  tabTexto: {
-    fontSize: 11,
-    color: '#9A9A9A',
-    marginTop: 2,
-  },
-  tabTextoActivo: {
-    color: COLOR_PACIENTE,
+  botonCancelarTexto: {
+    color: COLOR_CANCELADO,
+    fontSize: 14,
     fontWeight: '700',
   },
 });

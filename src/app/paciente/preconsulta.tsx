@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 type Mensaje = {
   id: string;
@@ -143,6 +144,7 @@ export default function Preconsulta() {
 const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
+    paddingTop: MARGEN_SUPERIOR,
     backgroundColor: FONDO_PACIENTE,
   },
   encabezado: {
@@ -304,6 +306,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingBottom: 12 + MARGEN_INFERIOR,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     gap: 10,

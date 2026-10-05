@@ -21,15 +21,13 @@ export type Medico = {
 };
 
 export const SEDE = 'Consultorios Rivadavia';
+export const DIRECCION_SEDE = 'Av. Rivadavia 4820';
 
 export const COBERTURAS: Cobertura[] = [
   { id: 'swiss-smg20', nombre: 'Swiss Medical SMG20' },
   { id: 'osde-210', nombre: 'OSDE 210' },
   { id: 'galeno-220', nombre: 'Galeno 220' },
 ];
-
-// Coberturas del paciente logueado: puede tener más de una.
-export const COBERTURAS_PACIENTE: string[] = ['swiss-smg20', 'osde-210'];
 
 export const ESPECIALIDADES: Especialidad[] = [
   { id: 'cardiologia', nombre: 'Cardiología', codigo: 'CAR' },
@@ -93,17 +91,17 @@ export function nombreCobertura(id: string) {
   return COBERTURAS.find((cobertura) => cobertura.id === id)?.nombre ?? id;
 }
 
-// Médicos de una especialidad que aceptan al menos una cobertura del paciente.
-export function medicosParaPaciente(especialidadId: string) {
+// Médicos de una especialidad que aceptan al menos una de las coberturas del paciente.
+export function medicosParaPaciente(especialidadId: string, coberturasPaciente: string[]) {
   return MEDICOS.filter(
     (medico) =>
       medico.especialidadId === especialidadId &&
-      medico.coberturaIds.some((id) => COBERTURAS_PACIENTE.includes(id))
+      medico.coberturaIds.some((id) => coberturasPaciente.includes(id))
   );
 }
 
 // Primera cobertura del paciente que el médico acepta (la que se muestra en "Atiende ...").
-export function coberturaQueAtiende(medico: Medico) {
-  const id = medico.coberturaIds.find((cobertura) => COBERTURAS_PACIENTE.includes(cobertura));
+export function coberturaQueAtiende(medico: Medico, coberturasPaciente: string[]) {
+  const id = medico.coberturaIds.find((cobertura) => coberturasPaciente.includes(cobertura));
   return id ? nombreCobertura(id) : '';
 }

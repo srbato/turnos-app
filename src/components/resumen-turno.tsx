@@ -1,16 +1,18 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_MEDICO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { coberturaQueAtiende, type Especialidad, type Medico } from '@/datos/catalogo';
 
+// onCambiar es opcional: en Reprogramar la especialidad y el médico están fijos y no se muestra el link.
 type PropsEspecialidad = {
   especialidad: Especialidad;
-  onCambiar: () => void;
+  onCambiar?: () => void;
 };
 
 type PropsMedico = {
   medico: Medico;
-  onCambiar: () => void;
+  onCambiar?: () => void;
 };
 
 // Tarjeta de un paso ya elegido, con el link "Cambiar" que vuelve a ese paso.
@@ -24,14 +26,18 @@ export function ResumenEspecialidad({ especialidad, onCambiar }: PropsEspecialid
         <Text style={styles.etiqueta}>Especialidad</Text>
         <Text style={styles.valor}>{especialidad.nombre}</Text>
       </View>
-      <Pressable onPress={onCambiar}>
-        <Text style={styles.cambiar}>Cambiar</Text>
-      </Pressable>
+      {onCambiar && (
+        <Pressable onPress={onCambiar}>
+          <Text style={styles.cambiar}>Cambiar</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 export function ResumenMedico({ medico, onCambiar }: PropsMedico) {
+  const { coberturaIds } = usePerfilPaciente();
+
   return (
     <View style={[styles.tarjeta, styles.tarjetaSeleccionada]}>
       <View style={styles.avatar}>
@@ -40,11 +46,13 @@ export function ResumenMedico({ medico, onCambiar }: PropsMedico) {
       <View style={styles.textos}>
         <Text style={styles.etiqueta}>Profesional</Text>
         <Text style={styles.valor}>{medico.nombre}</Text>
-        <Text style={styles.subvalor}>Atiende {coberturaQueAtiende(medico)}</Text>
+        <Text style={styles.subvalor}>Atiende {coberturaQueAtiende(medico, coberturaIds)}</Text>
       </View>
-      <Pressable onPress={onCambiar}>
-        <Text style={styles.cambiar}>Cambiar</Text>
-      </Pressable>
+      {onCambiar && (
+        <Pressable onPress={onCambiar}>
+          <Text style={styles.cambiar}>Cambiar</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

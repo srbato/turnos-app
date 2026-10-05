@@ -1,0 +1,96 @@
+import { router, type Href } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { MARGEN_INFERIOR } from '@/constantes/pantalla';
+import type { Tema } from '@/constantes/tema';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
+
+const COLOR_PERFIL = '#C9A24C';
+
+type Rol = 'paciente' | 'medico' | 'secretaria' | 'administrador';
+type Clave = 'inicio' | 'turnos' | 'medicamentos' | 'agenda' | 'perfil';
+
+type Item = { icono: string; clave: Clave; ruta: Href };
+
+// Cada rol tiene su propia barra. Solo el paciente tiene editor de perfil por ahora.
+const ITEMS_POR_ROL: Partial<Record<Rol, Item[]>> = {
+  paciente: [
+    { icono: '⌂', clave: 'inicio', ruta: '/paciente' },
+    { icono: '+', clave: 'turnos', ruta: '/paciente/mis-turnos' as Href },
+    { icono: '℞', clave: 'medicamentos', ruta: '/paciente/medicamentos' },
+    { icono: '⚙', clave: 'perfil', ruta: '/perfil?rol=paciente' },
+  ],
+  medico: [
+    { icono: '▤', clave: 'agenda', ruta: '/medico' },
+    { icono: '⚙', clave: 'perfil', ruta: '/perfil?rol=medico' },
+  ],
+};
+
+type Props = {
+  rol: Rol;
+  // En Editar perfil el ítem Perfil queda resaltado, pero se puede tocar para volver a Mi perfil.
+  pantalla: 'perfil' | 'editar';
+  tema: Tema;
+};
+
+// Barra de abajo de las pantallas de perfil (Mi perfil y Editar perfil), con el tema elegido.
+export function BarraPerfil({ rol, pantalla, tema }: Props) {
+  const { idioma } = usePreferencias();
+  const textos = TEXTOS_PERFIL[idioma];
+  const items = ITEMS_POR_ROL[rol] ?? [];
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={[styles.tabBar, { backgroundColor: tema.fondo, borderTopColor: tema.borde }]}>
+      {items.map((item) => {
+        const esActiva = item.clave === 'perfil';
+        return (
+          <Pressable
+            key={item.clave}
+            style={styles.tabItem}
+            disabled={esActiva && pantalla === 'perfil'}
+            onPress={() => router.navigate(item.ruta)}>
+            <Text style={[styles.tabIcono, { color: esActiva ? COLOR_PERFIL : tema.textoTenue }]}>
+              {item.icono}
+            </Text>
+            <Text
+              style={[
+                styles.tabTexto,
+                { color: esActiva ? COLOR_PERFIL : tema.textoTenue },
+                esActiva && styles.tabTextoActivo,
+              ]}>
+              {textos.tabs[item.clave]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    paddingVertical: 10,
+    paddingBottom: 10 + MARGEN_INFERIOR,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  tabIcono: {
+    fontSize: 20,
+  },
+  tabTexto: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  tabTextoActivo: {
+    fontWeight: '700',
+  },
+});

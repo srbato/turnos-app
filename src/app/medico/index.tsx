@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 type EstadoTurno = 'confirmado' | 'pendiente' | 'en_espera' | 'bloqueado';
 
@@ -223,6 +224,7 @@ export default function AgendaMedico() {
 const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
+    paddingTop: MARGEN_SUPERIOR,
     backgroundColor: '#F4F5F7',
   },
   encabezado: {
@@ -376,6 +378,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#EDEDED',
     paddingVertical: 10,
+    paddingBottom: 10 + MARGEN_INFERIOR,
   },
   tabItem: {
     flex: 1,

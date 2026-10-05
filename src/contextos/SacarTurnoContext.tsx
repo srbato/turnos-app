@@ -15,9 +15,16 @@ type SacarTurnoContextType = {
 
 const SacarTurnoContext = createContext<SacarTurnoContextType | undefined>(undefined);
 
-export function SacarTurnoProvider({ children }: { children: ReactNode }) {
-  const [especialidad, setEspecialidad] = useState<Especialidad | null>(null);
-  const [medico, setMedico] = useState<Medico | null>(null);
+type PropsProvider = {
+  children: ReactNode;
+  // Para entrar al flujo con la selección ya hecha (volver a pedir turno con un profesional).
+  especialidadInicial?: Especialidad;
+  medicoInicial?: Medico;
+};
+
+export function SacarTurnoProvider({ children, especialidadInicial, medicoInicial }: PropsProvider) {
+  const [especialidad, setEspecialidad] = useState<Especialidad | null>(especialidadInicial ?? null);
+  const [medico, setMedico] = useState<Medico | null>(medicoInicial ?? null);
   const [fecha, setFecha] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
 

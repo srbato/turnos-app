@@ -1,8 +1,10 @@
-import { router, Stack, usePathname } from 'expo-router';
+import { router, Stack, useGlobalSearchParams, usePathname } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { SacarTurnoProvider } from '@/contextos/SacarTurnoContext';
+import { ESPECIALIDADES, MEDICOS } from '@/datos/catalogo';
+import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 const PASOS = ['Especialidad', 'Médico', 'Horario'];
 
@@ -13,9 +15,7 @@ function pasoActualSegunRuta(ruta: string) {
   return 1;
 }
 
-function Pasos() {
-  const pasoActual = pasoActualSegunRuta(usePathname());
-
+function Pasos({ pasoActual }: { pasoActual: number }) {
   return (
     <View style={styles.pasos}>
       {PASOS.map((nombre, indice) => {
@@ -55,16 +55,23 @@ function volver() {
 }
 
 export default function SacarTurnoLayout() {
+  const pasoActual = pasoActualSegunRuta(usePathname());
+
+  // Si se entra con ?medicoId=..., el flujo arranca con ese médico y su especialidad ya elegidos.
+  const { medicoId } = useGlobalSearchParams<{ medicoId?: string }>();
+  const medicoInicial = MEDICOS.find((m) => m.id === medicoId);
+  const especialidadInicial = ESPECIALIDADES.find((e) => e.id === medicoInicial?.especialidadId);
+
   // El Provider va acá y no en una pantalla: así no se desmonta al navegar entre pasos
   // y la selección se mantiene. Al salir del flujo el layout se desmonta y la selección se descarta.
   return (
-    <SacarTurnoProvider>
+    <SacarTurnoProvider especialidadInicial={especialidadInicial} medicoInicial={medicoInicial}>
       <View style={styles.pantalla}>
         <View style={styles.encabezado}>
           <Pressable onPress={volver}>
-            <Text style={styles.volverTexto}>‹ Sacar turno</Text>
+            <Text style={styles.volverTexto}>{pasoActual === 1 ? '‹ Sacar turno' : '‹ Volver'}</Text>
           </Pressable>
-          <Pasos />
+          <Pasos pasoActual={pasoActual} />
         </View>
         <Stack
           screenOptions={{
@@ -80,6 +87,7 @@ export default function SacarTurnoLayout() {
 const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
+    paddingTop: MARGEN_SUPERIOR,
     backgroundColor: FONDO_PACIENTE,
   },
   encabezado: {

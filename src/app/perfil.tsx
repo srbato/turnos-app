@@ -2,6 +2,15 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AvatarPaciente } from '@/components/avatar-paciente';
+import { BarraPerfil } from '@/components/barra-perfil';
+import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { TEMA_CLARO, TEMA_OSCURO, type Tema } from '@/constantes/tema';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { usePreferencias, type Idioma } from '@/contextos/PreferenciasContext';
+import { nombreCobertura } from '@/datos/catalogo';
+import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
+
 const ROLES = ['paciente', 'medico', 'secretaria', 'administrador'] as const;
 type Rol = (typeof ROLES)[number];
 
@@ -14,9 +23,6 @@ type InfoPerfil = {
   nombre: string;
   iniciales: string;
   email: string;
-  chip: string;
-  filaTitulo: string;
-  filaSubtitulo: string;
 };
 
 const PERFILES: Record<Rol, InfoPerfil> = {
@@ -24,170 +30,260 @@ const PERFILES: Record<Rol, InfoPerfil> = {
     nombre: 'Valentín',
     iniciales: 'VM',
     email: 'valentin@test.com',
-    chip: 'Paciente · Swiss Medical',
-    filaTitulo: 'Cobertura médica',
-    filaSubtitulo: 'Swiss Medical SMG20 · 62-4418902/01',
   },
   medico: {
     nombre: 'Dra. Lucía Fernández',
     iniciales: 'LF',
     email: 'lucia.fernandez@consultoriosrivadavia.com',
-    chip: 'Médico · Clínica médica',
-    filaTitulo: 'Matrícula',
-    filaSubtitulo: 'MN 118.402',
   },
   secretaria: {
     nombre: 'Norma Aguilar',
     iniciales: 'NA',
     email: 'norma.aguilar@consultoriosrivadavia.com',
-    chip: 'Secretaría · Consultorios Rivadavia',
-    filaTitulo: 'Turno de trabajo',
-    filaSubtitulo: 'Lunes a viernes · 8:00 a 16:00',
   },
   administrador: {
     nombre: 'Gustavo Aráoz',
     iniciales: 'GA',
     email: 'gustavo.araoz@consultoriosrivadavia.com',
-    chip: 'Administrador · Consultorios Rivadavia',
-    filaTitulo: 'Acceso',
-    filaSubtitulo: 'Gestión completa del consultorio',
   },
 };
 
-const ETIQUETAS_ROL: Record<Rol, string> = {
-  paciente: 'Paciente',
-  medico: 'Médico',
-  secretaria: 'Secretaría',
-  administrador: 'Administrador',
-};
-
-const TABS_POR_ROL: Partial<Record<Rol, { icono: string; texto: string; ruta: Href }[]>> = {
-  paciente: [
-    { icono: '⌂', texto: 'Inicio', ruta: '/paciente' },
-    { icono: '+', texto: 'Turnos', ruta: '/paciente/sacar-turno' },
-    { icono: '℞', texto: 'Salud', ruta: '/paciente/medicamentos' },
-  ],
-  medico: [
-    { icono: '▤', texto: 'Agenda', ruta: '/medico' },
-  ],
-};
+const IDIOMAS: { id: Idioma; etiqueta: string }[] = [
+  { id: 'es', etiqueta: 'Español' },
+  { id: 'en', etiqueta: 'English' },
+];
 
 const COLOR_PERFIL = '#C9A24C';
-const FONDO_PERFIL = '#1A1815';
 
 export default function Perfil() {
   const { rol: rolParam } = useLocalSearchParams();
   const rol = normalizarRol(rolParam);
-  const info = PERFILES[rol];
-  const tabs = TABS_POR_ROL[rol] ?? [];
+  const perfilPaciente = usePerfilPaciente();
+  // El paciente edita su perfil: sus datos vienen del contexto. Los demás roles usan datos fijos.
+  const info = rol === 'paciente' ? { ...PERFILES.paciente, ...perfilPaciente } : PERFILES[rol];
 
-  const [recordatorios, setRecordatorios] = useState(true);
+  // Las preferencias vienen del contexto: se guardan en el dispositivo y se aplican acá.
+  const { idioma, modoOscuro, recordatorios, cambiarIdioma, alternarModoOscuro, alternarRecordatorios } =
+    usePreferencias();
+  const tema = modoOscuro ? TEMA_OSCURO : TEMA_CLARO;
+  const textos = TEXTOS_PERFIL[idioma];
+
+  // El paciente muestra las obras sociales que eligió en Editar perfil.
+  const obrasSociales = perfilPaciente.coberturaIds.map(nombreCobertura);
+  const chip =
+    rol === 'paciente'
+      ? `${textos.roles.paciente}${obrasSociales.length > 0 ? ' · ' + obrasSociales[0] : ''}`
+      : textos.chips[rol];
+  const filaSubtitulo =
+    rol === 'paciente' ? obrasSociales.join(' · ') || '—' : textos.filaSubtitulos[rol];
+
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
+  // Solo el paciente tiene editor de perfil por ahora; para los demás roles estas filas no hacen nada.
+  const irAlEditor =
+    rol === 'paciente' ? () => router.push('/paciente/editar-perfil' as Href) : undefined;
+
   return (
-    <View style={styles.pantalla}>
+    <View style={[styles.pantalla, { backgroundColor: tema.fondo }]}>
       <ScrollView style={styles.contenido} contentContainerStyle={styles.contenidoInterno}>
         <View style={styles.encabezado}>
-          <Text style={styles.tituloPantalla}>Mi perfil</Text>
-          <Pressable>
-            <Text style={styles.editar}>Editar</Text>
-          </Pressable>
+          <Text style={[styles.tituloPantalla, { color: tema.texto }]}>{textos.tituloPantalla}</Text>
         </View>
 
         <View style={styles.filaPerfil}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{info.iniciales}</Text>
-          </View>
+          {rol === 'paciente' ? (
+            <View style={styles.avatarPaciente}>
+              <AvatarPaciente tamano={64} colorTexto={COLOR_PERFIL} colorBorde={COLOR_PERFIL} />
+            </View>
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarTexto}>{info.iniciales}</Text>
+            </View>
+          )}
           <View style={styles.datosPerfil}>
-            <Text style={styles.nombre}>{info.nombre}</Text>
-            <Text style={styles.email}>{info.email}</Text>
+            <Text style={[styles.nombre, { color: tema.texto }]}>{info.nombre}</Text>
+            <Text style={[styles.email, { color: tema.textoSecundario }]}>{info.email}</Text>
             <View style={styles.chip}>
-              <Text style={styles.chipTexto}>{info.chip}</Text>
+              <Text style={styles.chipTexto}>{chip}</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.grupo}>
-          <Pressable style={styles.fila}>
-            <View style={styles.filaTextos}>
-              <Text style={styles.filaTitulo}>Datos personales</Text>
-              <Text style={styles.filaSubtitulo}>DNI, contacto y domicilio</Text>
-            </View>
-            <Text style={styles.flecha}>›</Text>
-          </Pressable>
-          <View style={styles.divisor} />
-          <Pressable style={styles.fila}>
-            <View style={styles.filaTextos}>
-              <Text style={styles.filaTitulo}>{info.filaTitulo}</Text>
-              <Text style={styles.filaSubtitulo}>{info.filaSubtitulo}</Text>
-            </View>
-            <Text style={styles.flecha}>›</Text>
-          </Pressable>
-          <View style={styles.divisor} />
-          <Pressable style={styles.fila}>
-            <View style={styles.filaTextos}>
-              <Text style={styles.filaTitulo}>Seguridad</Text>
-              <Text style={styles.filaSubtitulo}>Contraseña y huella</Text>
-            </View>
-            <Text style={styles.flecha}>›</Text>
-          </Pressable>
+        <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
+          {/* El editor es solo del paciente por ahora. */}
+          {rol === 'paciente' && (
+            <>
+              <Fila
+                tema={tema}
+                titulo={textos.editarPerfil}
+                subtitulo={textos.editarPerfilDetalle}
+                conFlecha
+                onPress={irAlEditor}
+              />
+              <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
+            </>
+          )}
+          <Fila
+            tema={tema}
+            titulo={textos.datosPersonales}
+            subtitulo={textos.datosPersonalesDetalle}
+            conFlecha
+            onPress={irAlEditor}
+          />
+          <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
+          <Fila
+            tema={tema}
+            titulo={textos.filaTitulos[rol]}
+            subtitulo={filaSubtitulo}
+            conFlecha
+            onPress={irAlEditor}
+          />
+          <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
+          <Fila
+            tema={tema}
+            titulo={textos.seguridad}
+            subtitulo={textos.seguridadDetalle}
+            conFlecha
+            onPress={irAlEditor}
+          />
         </View>
 
-        <View style={styles.grupo}>
+        <Text style={[styles.seccionTitulo, { color: tema.textoSecundario }]}>
+          {textos.preferencias}
+        </Text>
+        <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
           <View style={styles.filaToggle}>
             <View style={styles.filaTextos}>
-              <Text style={styles.filaTitulo}>Recordatorios de turno</Text>
-              <Text style={styles.filaSubtitulo}>WhatsApp y notificaciones</Text>
+              <Text style={[styles.filaTitulo, { color: tema.texto }]}>{textos.idioma}</Text>
+              <Text style={[styles.filaSubtitulo, { color: tema.textoSecundario }]}>
+                {textos.idiomaDetalle}
+              </Text>
             </View>
-            <Toggle activo={recordatorios} onCambiar={() => setRecordatorios(!recordatorios)} />
-          </View>
-          <View style={styles.divisor} />
-          <View style={styles.filaToggle}>
-            <View style={styles.filaTextos}>
-              <Text style={styles.filaTitulo}>Alertas de medicación</Text>
-              <Text style={styles.filaSubtitulo}>Avisos de interacciones</Text>
+            <View style={styles.selectorIdioma}>
+              {IDIOMAS.map((opcion) => {
+                const seleccionado = opcion.id === idioma;
+                return (
+                  <Pressable
+                    key={opcion.id}
+                    style={[
+                      styles.opcionIdioma,
+                      { borderColor: COLOR_PERFIL },
+                      seleccionado && styles.opcionIdiomaActiva,
+                    ]}
+                    onPress={() => cambiarIdioma(opcion.id)}>
+                    <Text
+                      style={[
+                        styles.opcionIdiomaTexto,
+                        seleccionado && styles.opcionIdiomaTextoActivo,
+                      ]}>
+                      {opcion.etiqueta}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
-            <Toggle
-              activo={alertasMedicacion}
-              onCambiar={() => setAlertasMedicacion(!alertasMedicacion)}
-            />
           </View>
+          <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
+          <FilaToggle
+            tema={tema}
+            titulo={textos.modoOscuro}
+            subtitulo={textos.modoOscuroDetalle}
+            activo={modoOscuro}
+            onCambiar={alternarModoOscuro}
+          />
+          <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
+          <FilaToggle
+            tema={tema}
+            titulo={textos.recordatorios}
+            subtitulo={textos.recordatoriosDetalle}
+            activo={recordatorios}
+            onCambiar={alternarRecordatorios}
+          />
+          {/* Las alertas de medicación (interacciones) son para el médico: el paciente no las ve. */}
+          {rol !== 'paciente' && (
+            <>
+              <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
+              <FilaToggle
+                tema={tema}
+                titulo={textos.alertas}
+                subtitulo={textos.alertasDetalle}
+                activo={alertasMedicacion}
+                onCambiar={() => setAlertasMedicacion(!alertasMedicacion)}
+              />
+            </>
+          )}
         </View>
 
-        <Pressable style={styles.filaCambiarPerfil} onPress={() => router.push('/')}>
-          <Text style={styles.filaTitulo}>Cambiar de perfil</Text>
-          <Text style={styles.cambiarPerfilValor}>{ETIQUETAS_ROL[rol]} ▾</Text>
-        </Pressable>
+        {/* El rol se lee de la cuenta: el paciente no elige ni cambia de perfil. */}
+        {rol !== 'paciente' && (
+          <Pressable
+            style={[styles.filaCambiarPerfil, { backgroundColor: tema.tarjeta }]}
+            onPress={() => router.push('/')}>
+            <Text style={[styles.filaTitulo, { color: tema.texto }]}>{textos.cambiarPerfil}</Text>
+            <Text style={styles.cambiarPerfilValor}>{textos.roles[rol]} ▾</Text>
+          </Pressable>
+        )}
 
         <Pressable style={styles.botonCerrarSesion} onPress={() => router.push('/')}>
-          <Text style={styles.botonCerrarSesionTexto}>Cerrar sesión</Text>
+          <Text style={styles.botonCerrarSesionTexto}>{textos.cerrarSesion}</Text>
         </Pressable>
 
-        <Text style={styles.version}>versión 2.4.1 · Consultorios Rivadavia</Text>
+        <Text style={[styles.version, { color: tema.textoTenue }]}>{textos.version}</Text>
       </ScrollView>
 
-      {tabs.length > 0 && (
-        <View style={styles.tabBar}>
-          {tabs.map((tab) => (
-            <Pressable key={tab.texto} style={styles.tabItem} onPress={() => router.push(tab.ruta)}>
-              <Text style={styles.tabIcono}>{tab.icono}</Text>
-              <Text style={styles.tabTexto}>{tab.texto}</Text>
-            </Pressable>
-          ))}
-          <View style={styles.tabItem}>
-            <Text style={[styles.tabIcono, styles.tabIconoActivo]}>⚙</Text>
-            <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Perfil</Text>
-          </View>
-        </View>
-      )}
+      <BarraPerfil rol={rol} pantalla="perfil" tema={tema} />
     </View>
   );
 }
 
-function Toggle({ activo, onCambiar }: { activo: boolean; onCambiar: () => void }) {
+type PropsFila = {
+  tema: Tema;
+  titulo: string;
+  subtitulo: string;
+  conFlecha?: boolean;
+  onPress?: () => void;
+};
+
+function Fila({ tema, titulo, subtitulo, conFlecha, onPress }: PropsFila) {
+  return (
+    <Pressable style={styles.fila} onPress={onPress}>
+      <View style={styles.filaTextos}>
+        <Text style={[styles.filaTitulo, { color: tema.texto }]}>{titulo}</Text>
+        <Text style={[styles.filaSubtitulo, { color: tema.textoSecundario }]}>{subtitulo}</Text>
+      </View>
+      {conFlecha && <Text style={[styles.flecha, { color: tema.textoTenue }]}>›</Text>}
+    </Pressable>
+  );
+}
+
+type PropsFilaToggle = {
+  tema: Tema;
+  titulo: string;
+  subtitulo: string;
+  activo: boolean;
+  onCambiar: () => void;
+};
+
+function FilaToggle({ tema, titulo, subtitulo, activo, onCambiar }: PropsFilaToggle) {
+  return (
+    <View style={styles.filaToggle}>
+      <View style={styles.filaTextos}>
+        <Text style={[styles.filaTitulo, { color: tema.texto }]}>{titulo}</Text>
+        <Text style={[styles.filaSubtitulo, { color: tema.textoSecundario }]}>{subtitulo}</Text>
+      </View>
+      <Toggle tema={tema} activo={activo} onCambiar={onCambiar} />
+    </View>
+  );
+}
+
+function Toggle({ tema, activo, onCambiar }: { tema: Tema; activo: boolean; onCambiar: () => void }) {
   return (
     <Pressable
-      style={[styles.toggleTrack, activo && styles.toggleTrackActivo]}
+      style={[
+        styles.toggleTrack,
+        { backgroundColor: tema.switchApagado },
+        activo && styles.toggleTrackActivo,
+      ]}
       onPress={onCambiar}>
       <View style={[styles.toggleThumb, activo && styles.toggleThumbActivo]} />
     </Pressable>
@@ -197,7 +293,7 @@ function Toggle({ activo, onCambiar }: { activo: boolean; onCambiar: () => void 
 const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PERFIL,
+    paddingTop: MARGEN_SUPERIOR,
   },
   contenido: {
     flex: 1,
@@ -215,12 +311,6 @@ const styles = StyleSheet.create({
   tituloPantalla: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  editar: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLOR_PERFIL,
   },
   filaPerfil: {
     flexDirection: 'row',
@@ -237,6 +327,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
+  avatarPaciente: {
+    marginRight: 16,
+  },
   avatarTexto: {
     color: COLOR_PERFIL,
     fontSize: 20,
@@ -248,11 +341,9 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   email: {
     fontSize: 13,
-    color: '#A9A49B',
     marginTop: 2,
   },
   chip: {
@@ -269,8 +360,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLOR_PERFIL,
   },
+  seccionTitulo: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
   grupo: {
-    backgroundColor: '#242119',
     borderRadius: 14,
     marginBottom: 16,
     paddingHorizontal: 16,
@@ -294,26 +392,42 @@ const styles = StyleSheet.create({
   filaTitulo: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
   },
   filaSubtitulo: {
     fontSize: 12,
-    color: '#A9A49B',
     marginTop: 2,
   },
   flecha: {
     fontSize: 18,
-    color: '#6B675F',
   },
   divisor: {
     height: 1,
-    backgroundColor: '#33302A',
+  },
+  selectorIdioma: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  opcionIdioma: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  opcionIdiomaActiva: {
+    backgroundColor: COLOR_PERFIL,
+  },
+  opcionIdiomaTexto: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR_PERFIL,
+  },
+  opcionIdiomaTextoActivo: {
+    color: '#1A1815',
   },
   toggleTrack: {
     width: 44,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#3D3A33',
     padding: 2,
     justifyContent: 'center',
   },
@@ -334,7 +448,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#242119',
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -360,34 +473,6 @@ const styles = StyleSheet.create({
   },
   version: {
     fontSize: 11,
-    color: '#6B675F',
     textAlign: 'center',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#1A1815',
-    borderTopWidth: 1,
-    borderTopColor: '#33302A',
-    paddingVertical: 10,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  tabIcono: {
-    fontSize: 20,
-    color: '#6B675F',
-  },
-  tabIconoActivo: {
-    color: COLOR_PERFIL,
-  },
-  tabTexto: {
-    fontSize: 11,
-    color: '#6B675F',
-    marginTop: 2,
-  },
-  tabTextoActivo: {
-    color: COLOR_PERFIL,
-    fontWeight: '700',
   },
 });
