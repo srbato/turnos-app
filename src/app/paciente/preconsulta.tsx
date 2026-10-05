@@ -1,6 +1,14 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
@@ -171,7 +179,8 @@ export default function PantallaPreconsulta() {
   const encabezadoFecha = `${detalleFecha(turno.fecha).diaSemana} ${formatearFecha(turno.fecha)} · ${turno.hora} h`;
 
   return (
-    <View style={styles.pantalla}>
+    // KeyboardAvoidingView sube el contenido cuando aparece el teclado, así no tapa el campo de respuesta.
+    <KeyboardAvoidingView style={styles.pantalla} behavior="padding">
       <View style={styles.encabezado}>
         <View style={styles.encabezadoFila}>
           <Pressable onPress={volver}>
@@ -336,7 +345,7 @@ export default function PantallaPreconsulta() {
           </Pressable>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

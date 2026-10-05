@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useMedicamentos, type MedicamentoPropio } from '@/contextos/MedicamentosContext';
@@ -83,7 +92,8 @@ export default function MedicamentosPropios() {
       </Pressable>
 
       <Modal visible={formularioAbierto} animationType="fade" transparent onRequestClose={cerrarFormulario}>
-        <View style={styles.fondoModal}>
+        {/* El formulario sube cuando aparece el teclado. */}
+        <KeyboardAvoidingView style={styles.fondoModal} behavior="padding">
           <View style={styles.tarjetaModal}>
             <Text style={styles.modalTitulo}>
               {medicamentoEditando ? 'Editar medicamento' : 'Agregar medicamento'}
@@ -134,7 +144,7 @@ export default function MedicamentosPropios() {
               </Pressable>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal
