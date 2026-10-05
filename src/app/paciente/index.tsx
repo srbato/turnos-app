@@ -10,19 +10,7 @@ import {
   View,
 } from 'react-native';
 
-type EstadoTurno = 'confirmado' | 'pendiente' | 'cancelado';
-
-type Turno = {
-  id: string;
-  medico: string;
-  especialidad: string;
-  consultorio: string;
-  fecha: string; // formato AAAA-MM-DD
-  hora: string; // formato HH:MM
-  sede: string;
-  estado: EstadoTurno;
-  instrucciones: string[];
-};
+import { useTurnos, type EstadoTurno, type Turno } from '@/contextos/TurnosContext';
 
 type EstudioPendiente = {
   id: string;
@@ -35,53 +23,6 @@ type ListaEspera = {
   posicion: number;
   especialidad: string;
 };
-
-const TURNOS: Turno[] = [
-  {
-    id: '1',
-    medico: 'Dra. Lucía Fernández',
-    especialidad: 'Clínica médica',
-    consultorio: 'Consultorio 3',
-    fecha: '2026-09-29',
-    hora: '10:30',
-    sede: 'Consultorios Rivadavia',
-    estado: 'confirmado',
-    instrucciones: ['Ayuno de 8 horas antes del turno', 'Llevá la orden de Swiss Medical'],
-  },
-  {
-    id: '2',
-    medico: 'Dr. Ricardo Paz',
-    especialidad: 'Cardiología',
-    consultorio: 'Consultorio 5',
-    fecha: '2026-10-03',
-    hora: '09:00',
-    sede: 'Consultorios Rivadavia',
-    estado: 'pendiente',
-    instrucciones: [],
-  },
-  {
-    id: '3',
-    medico: 'Dra. Mariela Sosa',
-    especialidad: 'Pediatría',
-    consultorio: 'Consultorio 1',
-    fecha: '2026-09-20',
-    hora: '16:00',
-    sede: 'Consultorios Rivadavia',
-    estado: 'cancelado',
-    instrucciones: [],
-  },
-  {
-    id: '4',
-    medico: 'Dr. Gustavo Ibáñez',
-    especialidad: 'Traumatología',
-    consultorio: 'Consultorio 2',
-    fecha: '2026-10-10',
-    hora: '11:15',
-    sede: 'Consultorios Rivadavia',
-    estado: 'confirmado',
-    instrucciones: [],
-  },
-];
 
 const ESTUDIOS_PENDIENTES: EstudioPendiente[] = [
   { id: '1', tipo: 'LAB', titulo: 'Laboratorio completo', detalle: 'Orden vence el 30/09' },
@@ -151,11 +92,12 @@ function saludoSegunHora() {
 }
 
 export default function HubPaciente() {
+  const { turnos } = useTurnos();
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
-  const proximoTurno = [...TURNOS]
+  const proximoTurno = [...turnos]
     .filter((turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
