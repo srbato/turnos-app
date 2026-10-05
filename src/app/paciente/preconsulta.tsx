@@ -49,7 +49,7 @@ function volver() {
 export default function PantallaPreconsulta() {
   const { turnoId } = useLocalSearchParams<{ turnoId?: string }>();
   const { turnos } = useTurnos();
-  const { nombre } = usePerfilPaciente();
+  const { nombre, alergias: alergiasDelPerfil } = usePerfilPaciente();
   const { medicamentos } = useMedicamentos();
   const { buscarPorTurno, enviarPreconsulta } = usePreconsultas();
   const { misRecetas } = useRecetas();
@@ -76,7 +76,11 @@ export default function PantallaPreconsulta() {
     ...misRecetas.map((receta) => receta.medicamento),
     ...medicamentos.map((medicamento) => medicamento.nombre),
   ];
-  const contexto = { nombre: nombre.split(' ')[0], medicamentosCargados };
+  const contexto = {
+    nombre: nombre.split(' ')[0],
+    medicamentosCargados,
+    alergiasCargadas: alergiasDelPerfil.trim(),
+  };
 
   // Al entrar (si no había una preconsulta enviada) el asistente saluda y hace la primera pregunta.
   useEffect(() => {
@@ -120,6 +124,9 @@ export default function PantallaPreconsulta() {
     setEscribiendo(false);
     if (siguiente === PASOS.length) {
       setSintomasTexto(nuevasRespuestas.sintomas.join(', '));
+      if (nuevasRespuestas.alergias === '') {
+        setRespuestas({ ...nuevasRespuestas, alergias: alergiasDelPerfil.trim() });
+      }
       setFase('resumen');
     }
   }

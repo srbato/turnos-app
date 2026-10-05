@@ -11,6 +11,7 @@ import { PASOS, SINTOMAS_DE_ALARMA, type RespuestasPreconsulta } from '@/datos/p
 type Contexto = {
   nombre: string;
   medicamentosCargados: string[]; // los que ya tiene en la app (recetados y propios)
+  alergiasCargadas: string; // las que figuran en su perfil ('' si no cargó ninguna)
 };
 
 const ESPERA_SIMULADA_MS = 700;
@@ -55,7 +56,13 @@ export async function pedirRespuestaIA(
       mensajes.push('¿Tomás algún medicamento actualmente?');
     }
   } else if (indicePaso === 4) {
-    mensajes.push('¿Tenés alguna alergia (a medicamentos, alimentos u otras cosas)?');
+    if (contexto.alergiasCargadas !== '') {
+      mensajes.push(
+        `En tu perfil figura: ${contexto.alergiasCargadas}. ¿Querés agregar o corregir algo? Si está todo bien, podés saltear la pregunta.`
+      );
+    } else {
+      mensajes.push('¿Tenés alguna alergia (a medicamentos, alimentos u otras cosas)?');
+    }
   } else if (indicePaso === 5) {
     mensajes.push('¿Querés contarle algo más a tu médico? Por ejemplo, antecedentes o dudas que tengas.');
   } else if (indicePaso === PASOS.length) {

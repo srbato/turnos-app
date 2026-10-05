@@ -38,6 +38,8 @@ export default function EditarPerfil() {
   const [email, setEmail] = useState(perfil.email);
   const [telefono, setTelefono] = useState(perfil.telefono);
   const [domicilio, setDomicilio] = useState(perfil.domicilio);
+  const [alergias, setAlergias] = useState(perfil.alergias);
+  const [numerosAfiliado, setNumerosAfiliado] = useState<Record<string, string>>(perfil.numerosAfiliado);
   const [fotoUri, setFotoUri] = useState<string | null>(perfil.fotoUri);
   const [coberturaIds, setCoberturaIds] = useState<string[]>(perfil.coberturaIds);
   const [opcionesFotoAbiertas, setOpcionesFotoAbiertas] = useState(false);
@@ -102,7 +104,8 @@ export default function EditarPerfil() {
   }
 
   function guardar() {
-    if (nombre.trim() === '') {
+    // Se pide nombre y apellido (al menos dos palabras), un email válido y alguna obra social.
+    if (nombre.trim().split(/\s+/).length < 2) {
       setMensaje({ texto: textos.errorNombre, esError: true });
       return;
     }
@@ -110,11 +113,22 @@ export default function EditarPerfil() {
       setMensaje({ texto: textos.errorEmail, esError: true });
       return;
     }
+    if (coberturaIds.length === 0) {
+      setMensaje({ texto: textos.errorCobertura, esError: true });
+      return;
+    }
+    // Solo se guardan los N° de afiliado de las obras sociales que quedaron marcadas.
+    const numerosDeMarcadas: Record<string, string> = {};
+    coberturaIds.forEach((id) => {
+      numerosDeMarcadas[id] = (numerosAfiliado[id] ?? '').trim();
+    });
     perfil.actualizarPerfil({
       nombre: nombre.trim(),
       email: email.trim(),
       telefono: telefono.trim(),
       domicilio: domicilio.trim(),
+      alergias: alergias.trim(),
+      numerosAfiliado: numerosDeMarcadas,
       fotoUri,
       coberturaIds,
     });
@@ -184,7 +198,7 @@ export default function EditarPerfil() {
         <Text style={[styles.seccionTitulo, { color: tema.textoSecundario }]}>{textos.datos}</Text>
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.nombre}</Text>
-          <TextInput style={estiloCampo} value={nombre} onChangeText={setNombre} />
+          <TextInput style={estiloCampo} value={nombre} onChangeText={setNombre} maxLength={60} />
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.email}</Text>
           <TextInput
@@ -205,6 +219,16 @@ export default function EditarPerfil() {
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.domicilio}</Text>
           <TextInput style={estiloCampo} value={domicilio} onChangeText={setDomicilio} />
+
+          <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.alergias}</Text>
+          <TextInput
+            style={estiloCampo}
+            value={alergias}
+            onChangeText={setAlergias}
+            placeholder={textos.alergiasEjemplo}
+            placeholderTextColor={tema.textoTenue}
+            maxLength={120}
+          />
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.dni}</Text>
           <View style={[styles.campo, styles.campoBloqueado, { borderColor: tema.borde }]}>
@@ -228,6 +252,18 @@ export default function EditarPerfil() {
                     {marcada && <Text style={styles.checkboxTilde}>✓</Text>}
                   </View>
                 </Pressable>
+                {marcada && (
+                  <TextInput
+                    style={[estiloCampo, styles.campoAfiliado]}
+                    value={numerosAfiliado[cobertura.id] ?? ''}
+                    onChangeText={(valor) =>
+                      setNumerosAfiliado({ ...numerosAfiliado, [cobertura.id]: valor })
+                    }
+                    placeholder={textos.numeroAfiliado}
+                    placeholderTextColor={tema.textoTenue}
+                    maxLength={20}
+                  />
+                )}
               </View>
             );
           })}
@@ -407,6 +443,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
+    marginBottom: 12,
+  },
+  campoAfiliado: {
+    marginTop: 0,
     marginBottom: 12,
   },
   campoBloqueado: {

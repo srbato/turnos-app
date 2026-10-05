@@ -38,6 +38,13 @@ export function datosParaMedico(
       email: perfil.email,
       cobertura: coberturas.length > 0 ? coberturas.join(' / ') : 'Sin cobertura cargada',
       plan: '',
+      // Un N° de afiliado por cada obra social que lo tenga cargado.
+      numeroAfiliado:
+        perfil.coberturaIds
+          .filter((id) => perfil.numerosAfiliado[id])
+          .map((id) => `${nombreCobertura(id)}: ${perfil.numerosAfiliado[id]}`)
+          .join(' · ') || 'No cargado',
+      alergias: perfil.alergias.trim() || 'No informó',
     };
   });
   const paciente = pacientes.find((p) => p.id === ID_PACIENTE_APP) as Paciente;

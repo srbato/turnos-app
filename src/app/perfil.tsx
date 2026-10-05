@@ -81,16 +81,20 @@ export default function Perfil() {
   const textos = TEXTOS_PERFIL[idioma];
 
   // El paciente muestra las obras sociales que eligió en Editar perfil.
-  const obrasSociales = perfilPaciente.coberturaIds.map(nombreCobertura);
+  // Cada obra social va con su N° de afiliado, si lo cargó.
+  const obrasSociales = perfilPaciente.coberturaIds.map((id) => {
+    const numero = perfilPaciente.numerosAfiliado[id];
+    return numero ? `${nombreCobertura(id)} · ${numero}` : nombreCobertura(id);
+  });
   const chip =
     rol === 'paciente'
-      ? `${textos.roles.paciente}${obrasSociales.length > 0 ? ' · ' + obrasSociales[0] : ''}`
+      ? `${textos.roles.paciente}${obrasSociales.length > 0 ? ' · ' + nombreCobertura(perfilPaciente.coberturaIds[0]) : ''}`
       : rol === 'medico'
         ? `${textos.roles.medico} · ${medicoLogueado.especialidad}`
         : textos.chips[rol];
   const filaSubtitulo =
     rol === 'paciente'
-      ? obrasSociales.join(' · ') || '—'
+      ? obrasSociales.join('\n') || '—'
       : rol === 'medico'
         ? medicoLogueado.matricula
         : textos.filaSubtitulos[rol];

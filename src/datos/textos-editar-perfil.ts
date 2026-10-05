@@ -15,6 +15,9 @@ type TextosEditar = {
   email: string;
   telefono: string;
   domicilio: string;
+  alergias: string;
+  alergiasEjemplo: string;
+  numeroAfiliado: string;
   dni: string;
   dniNota: string;
   obrasSociales: string;
@@ -22,6 +25,7 @@ type TextosEditar = {
   guardar: string;
   errorNombre: string;
   errorEmail: string;
+  errorCobertura: string;
   seguridad: string;
   cambiarContrasena: string;
   cambiarContrasenaDetalle: string;
@@ -52,13 +56,17 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     email: 'Email',
     telefono: 'Teléfono',
     domicilio: 'Domicilio',
+    alergias: 'Alergias',
+    alergiasEjemplo: 'Ej: penicilina (escribí "ninguna" si no tenés)',
+    numeroAfiliado: 'N° de afiliado',
     dni: 'DNI',
     dniNota: 'Verificado con RENAPER. No se puede modificar.',
     obrasSociales: 'Obras sociales',
     obrasSocialesNota: 'Vamos a mostrarte solo los médicos que atienden las que marques.',
     guardar: 'Guardar cambios',
-    errorNombre: 'El nombre no puede quedar vacío.',
+    errorNombre: 'Ingresá tu nombre y apellido.',
     errorEmail: 'Ingresá un email válido.',
+    errorCobertura: 'Elegí al menos una obra social.',
     seguridad: 'Seguridad',
     cambiarContrasena: 'Cambiar contraseña',
     cambiarContrasenaDetalle: 'Te vamos a pedir Face ID o huella para confirmar',
@@ -87,13 +95,17 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     email: 'Email',
     telefono: 'Phone',
     domicilio: 'Address',
+    alergias: 'Allergies',
+    alergiasEjemplo: 'E.g. penicillin (write "none" if you have none)',
+    numeroAfiliado: 'Member number',
     dni: 'ID number',
     dniNota: 'Verified with RENAPER. It cannot be changed.',
     obrasSociales: 'Health insurance',
     obrasSocialesNota: 'We will only show you doctors who accept the ones you select.',
     guardar: 'Save changes',
-    errorNombre: 'The name cannot be empty.',
+    errorNombre: 'Enter your first and last name.',
     errorEmail: 'Enter a valid email.',
+    errorCobertura: 'Choose at least one health insurance.',
     seguridad: 'Security',
     cambiarContrasena: 'Change password',
     cambiarContrasenaDetalle: 'We will ask for Face ID or fingerprint to confirm',

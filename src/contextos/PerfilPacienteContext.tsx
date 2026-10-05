@@ -11,6 +11,8 @@ export type PerfilPaciente = {
   domicilio: string;
   fotoUri: string | null; // foto elegida de la galería (data URI), o null para mostrar las iniciales
   coberturaIds: string[]; // obras sociales del paciente (ids de datos/catalogo)
+  numerosAfiliado: Record<string, string>; // N° de afiliado de cada obra social (clave = id de la obra social)
+  alergias: string; // texto libre; lo ve el médico
 };
 
 type PerfilPacienteContextType = PerfilPaciente & {
@@ -26,6 +28,8 @@ const PERFIL_INICIAL: PerfilPaciente = {
   domicilio: '',
   fotoUri: null,
   coberturaIds: ['swiss-smg20', 'osde-210'],
+  numerosAfiliado: { 'swiss-smg20': '62-4418902/01' },
+  alergias: 'penicilina',
 };
 
 const PerfilPacienteContext = createContext<PerfilPacienteContextType | undefined>(undefined);

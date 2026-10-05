@@ -16,6 +16,8 @@ export default function MedicamentosPropios() {
   const [nombre, setNombre] = useState('');
   const [dosis, setDosis] = useState('');
   const [motivo, setMotivo] = useState('');
+  const [errorNombre, setErrorNombre] = useState('');
+  const [errorDosis, setErrorDosis] = useState('');
 
   function abrirFormularioNuevo() {
     setMedicamentoEditando(null);
@@ -27,6 +29,8 @@ export default function MedicamentosPropios() {
     setNombre(medicamento.nombre);
     setDosis(medicamento.dosis);
     setMotivo(medicamento.motivo);
+    setErrorNombre('');
+    setErrorDosis('');
     setFormularioAbierto(true);
   }
 
@@ -36,9 +40,19 @@ export default function MedicamentosPropios() {
     setNombre('');
     setDosis('');
     setMotivo('');
+    setErrorNombre('');
+    setErrorDosis('');
   }
 
   function guardar() {
+    // El nombre y la dosis son obligatorios; el motivo es opcional.
+    const faltaNombre = nombre.trim() === '';
+    const faltaDosis = dosis.trim() === '';
+    setErrorNombre(faltaNombre ? 'El nombre es obligatorio' : '');
+    setErrorDosis(faltaDosis ? 'Indicá la dosis o cada cuánto lo tomás' : '');
+    if (faltaNombre || faltaDosis) {
+      return;
+    }
     const datos = { nombre: nombre.trim(), dosis: dosis.trim(), motivo: motivo.trim() };
     if (medicamentoEditando) {
       editarMedicamento({ ...datos, id: medicamentoEditando.id });
@@ -52,8 +66,6 @@ export default function MedicamentosPropios() {
     setMedicamentoAEliminar(medicamentoEditando);
     cerrarFormulario();
   }
-
-  const puedeGuardar = nombre.trim().length > 0;
 
   return (
     <View style={styles.pantalla}>
@@ -98,7 +110,9 @@ export default function MedicamentosPropios() {
               onChangeText={setNombre}
               placeholder="Ej. Paracetamol 500 mg"
               placeholderTextColor="#9A9A9A"
+              maxLength={40}
             />
+            {errorNombre !== '' && <Text style={styles.errorTexto}>{errorNombre}</Text>}
 
             <Text style={styles.campoEtiqueta}>Dosis y frecuencia</Text>
             <TextInput
@@ -107,7 +121,9 @@ export default function MedicamentosPropios() {
               onChangeText={setDosis}
               placeholder="Ej. 1 comprimido cada 8 h"
               placeholderTextColor="#9A9A9A"
+              maxLength={60}
             />
+            {errorDosis !== '' && <Text style={styles.errorTexto}>{errorDosis}</Text>}
 
             <Text style={styles.campoEtiqueta}>Motivo</Text>
             <TextInput
@@ -129,8 +145,7 @@ export default function MedicamentosPropios() {
                 <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
               </Pressable>
               <Pressable
-                disabled={!puedeGuardar}
-                style={[styles.botonPrimario, !puedeGuardar && styles.botonPrimarioDeshabilitado]}
+                style={styles.botonPrimario}
                 onPress={guardar}>
                 <Text style={styles.botonPrimarioTexto}>Guardar</Text>
               </Pressable>
@@ -230,6 +245,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLOR_PACIENTE,
   },
+  errorTexto: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR_CANCELADO,
+    marginTop: -8,
+    marginBottom: 12,
+  },
   botonAgregar: {
     backgroundColor: COLOR_PACIENTE,
     paddingVertical: 16,
@@ -322,9 +344,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
-  },
-  botonPrimarioDeshabilitado: {
-    backgroundColor: '#A9BEE8',
   },
   botonPrimarioTexto: {
     color: '#FFFFFF',
