@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
-import { RECETAS, recetaVigente, vencimientoReceta, type Receta } from '@/datos/recetas';
+import { useRecetas } from '@/contextos/RecetasContext';
+import { recetaVigente, vencimientoReceta, type Receta } from '@/datos/recetas';
 import { formatearFecha } from '@/utilidades/turnos';
 
 // Tab "Recetados": medicamentos que asignó el médico, cada uno con su receta.
 export default function MedicamentosRecetados() {
+  const { misRecetas } = useRecetas();
   const [recetaSeleccionada, setRecetaSeleccionada] = useState<Receta | null>(null);
 
   // Las recetas vigentes van primero.
-  const recetas = [...RECETAS].sort((a, b) => Number(recetaVigente(b)) - Number(recetaVigente(a)));
+  const recetas = [...misRecetas].sort((a, b) => Number(recetaVigente(b)) - Number(recetaVigente(a)));
 
   return (
     <View style={styles.pantalla}>

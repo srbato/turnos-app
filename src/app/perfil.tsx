@@ -7,6 +7,7 @@ import { BarraPerfil } from '@/components/barra-perfil';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO, type Tema } from '@/constantes/tema';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { usePreferencias, type Idioma } from '@/contextos/PreferenciasContext';
 import { nombreCobertura } from '@/datos/catalogo';
 import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
@@ -59,8 +60,19 @@ export default function Perfil() {
   const { rol: rolParam } = useLocalSearchParams();
   const rol = normalizarRol(rolParam);
   const perfilPaciente = usePerfilPaciente();
+  const { medicoLogueado } = useSesion();
   // El paciente edita su perfil: sus datos vienen del contexto. Los demás roles usan datos fijos.
-  const info = rol === 'paciente' ? { ...PERFILES.paciente, ...perfilPaciente } : PERFILES[rol];
+  // El médico muestra los datos del médico que inició sesión.
+  let info: InfoPerfil = PERFILES[rol];
+  if (rol === 'paciente') {
+    info = { ...PERFILES.paciente, ...perfilPaciente };
+  } else if (rol === 'medico') {
+    info = {
+      nombre: medicoLogueado.nombre,
+      iniciales: medicoLogueado.iniciales,
+      email: medicoLogueado.email,
+    };
+  }
 
   // Las preferencias vienen del contexto: se guardan en el dispositivo y se aplican acá.
   const { idioma, modoOscuro, recordatorios, cambiarIdioma, alternarModoOscuro, alternarRecordatorios } =
@@ -73,9 +85,15 @@ export default function Perfil() {
   const chip =
     rol === 'paciente'
       ? `${textos.roles.paciente}${obrasSociales.length > 0 ? ' · ' + obrasSociales[0] : ''}`
-      : textos.chips[rol];
+      : rol === 'medico'
+        ? `${textos.roles.medico} · ${medicoLogueado.especialidad}`
+        : textos.chips[rol];
   const filaSubtitulo =
-    rol === 'paciente' ? obrasSociales.join(' · ') || '—' : textos.filaSubtitulos[rol];
+    rol === 'paciente'
+      ? obrasSociales.join(' · ') || '—'
+      : rol === 'medico'
+        ? medicoLogueado.matricula
+        : textos.filaSubtitulos[rol];
 
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 

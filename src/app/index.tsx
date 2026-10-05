@@ -1,7 +1,16 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-function OpcionRol(props) {
+type PropsOpcionRol = {
+  letra: string;
+  titulo: string;
+  subtitulo: string;
+  colorFondo: string;
+  colorCuadro: string;
+  onPress: () => void;
+};
+
+function OpcionRol(props: PropsOpcionRol) {
   return(
     <Pressable
       style={({ pressed }) => [
@@ -75,7 +84,8 @@ export default function SeleccionRol (){
 
       <View style={styles.pie}>
         <Text style={styles.pieTexto}>¿Primera vez? </Text>
-        <Pressable>
+        <Pressable
+          onPress={() => Alert.alert('Próximamente', 'Esta opción todavía no está disponible.')}>
           <Text style={styles.pieLink}>Registrate como paciente</Text>
         </Pressable>
       </View>

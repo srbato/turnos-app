@@ -38,7 +38,7 @@ function saludoSegunHora() {
 }
 
 export default function HubPaciente() {
-  const { turnos } = useTurnos();
+  const { misTurnos } = useTurnos();
   const { nombre } = usePerfilPaciente();
   const { buscarPorTurno } = usePreconsultas();
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
@@ -48,8 +48,8 @@ export default function HubPaciente() {
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
-  const proximoTurno = [...turnos]
-    .filter((turno) => turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
+  const proximoTurno = [...misTurnos]
+    .filter((turno) => turno.estado !== 'cancelado' && turno.estado !== 'atendido' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
     )[0];

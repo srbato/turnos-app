@@ -14,6 +14,7 @@ import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { coberturaQueAtiende, SEDE } from '@/datos/catalogo';
+import { ID_PACIENTE_APP } from '@/datos/consultorio';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
 
 export default function ElegirHorario() {
@@ -37,6 +38,7 @@ export default function ElegirHorario() {
     if (!especialidad || !medico || !hora) return;
     agregarTurno({
       id: String(Date.now()),
+      idPaciente: ID_PACIENTE_APP,
       medico: medico.nombre,
       especialidad: especialidad.nombre,
       consultorio: medico.consultorio,

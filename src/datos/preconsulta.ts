@@ -70,3 +70,13 @@ export const ETIQUETAS_CAMPOS: Record<keyof RespuestasPreconsulta, string> = {
   alergias: 'Alergias',
   adicional: 'Algo más',
 };
+
+// Las respuestas de una preconsulta como filas (título + valor) para mostrarlas al médico.
+export function filasPreconsulta(respuestas: RespuestasPreconsulta) {
+  const campos = Object.keys(ETIQUETAS_CAMPOS) as (keyof RespuestasPreconsulta)[];
+  return campos.map((campo) => {
+    const valor = respuestas[campo];
+    const texto = Array.isArray(valor) ? valor.join(', ') : valor;
+    return { titulo: ETIQUETAS_CAMPOS[campo], valor: texto === '' ? 'No informó' : texto };
+  });
+}

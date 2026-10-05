@@ -8,6 +8,7 @@ import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
+import { useRecetas } from '@/contextos/RecetasContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import {
   ETIQUETAS_CAMPOS,
@@ -16,7 +17,6 @@ import {
   SINTOMAS,
   type RespuestasPreconsulta,
 } from '@/datos/preconsulta';
-import { RECETAS } from '@/datos/recetas';
 import { pedirRespuestaIA } from '@/servicios/preconsulta-ia';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
@@ -52,6 +52,7 @@ export default function PantallaPreconsulta() {
   const { nombre } = usePerfilPaciente();
   const { medicamentos } = useMedicamentos();
   const { buscarPorTurno, enviarPreconsulta } = usePreconsultas();
+  const { misRecetas } = useRecetas();
 
   const turno = turnos.find((t) => t.id === turnoId);
   const existente = turno ? buscarPorTurno(turno.id) : undefined;
@@ -72,7 +73,7 @@ export default function PantallaPreconsulta() {
 
   // Medicación que ya tiene en la app: la que le recetó el médico y la que cargó él mismo.
   const medicamentosCargados = [
-    ...RECETAS.map((receta) => receta.medicamento),
+    ...misRecetas.map((receta) => receta.medicamento),
     ...medicamentos.map((medicamento) => medicamento.nombre),
   ];
   const contexto = { nombre: nombre.split(' ')[0], medicamentosCargados };

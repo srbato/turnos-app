@@ -46,9 +46,9 @@ export const MEDICOS: Medico[] = [
     coberturaIds: ['swiss-smg20', 'galeno-220'],
   },
   {
-    id: 'beltran',
-    nombre: 'Dra. Ana Beltrán',
-    iniciales: 'AB',
+    id: 'torres',
+    nombre: 'Dra. Ana Torres',
+    iniciales: 'AT',
     especialidadId: 'cardiologia',
     consultorio: 'Consultorio 4',
     coberturaIds: ['osde-210'],

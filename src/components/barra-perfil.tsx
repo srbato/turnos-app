@@ -10,7 +10,7 @@ import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 const COLOR_PERFIL = '#C9A24C';
 
 type Rol = 'paciente' | 'medico' | 'secretaria' | 'administrador';
-type Clave = 'inicio' | 'turnos' | 'medicamentos' | 'agenda' | 'perfil';
+type Clave = 'inicio' | 'turnos' | 'medicamentos' | 'agenda' | 'pacientes' | 'recetas' | 'perfil';
 
 type Item = { icono: string; iconoActivo: string; clave: Clave; ruta: Href };
 
@@ -24,6 +24,8 @@ const ITEMS_POR_ROL: Partial<Record<Rol, Item[]>> = {
   ],
   medico: [
     { icono: '▤', iconoActivo: '▤', clave: 'agenda', ruta: '/medico' },
+    { icono: '◍', iconoActivo: '◍', clave: 'pacientes', ruta: '/medico/pacientes' },
+    { icono: '℞', iconoActivo: '℞', clave: 'recetas', ruta: '/medico/recetas' },
     { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=medico' },
   ],
 };

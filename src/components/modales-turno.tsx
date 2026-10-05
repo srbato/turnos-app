@@ -145,7 +145,7 @@ function volverAPedirTurno(turno: Turno) {
 
 // Solo se reprograma o cancela un turno que no está cancelado y todavía no pasó.
 function puedeModificarse(turno: Turno) {
-  return turno.estado !== 'cancelado' && fechaHoraComoDate(turno.fecha, turno.hora) >= new Date();
+  return turno.estado !== 'cancelado' && turno.estado !== 'atendido' && fechaHoraComoDate(turno.fecha, turno.hora) >= new Date();
 }
 
 type PropsCancelar = {

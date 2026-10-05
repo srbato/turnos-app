@@ -1,16 +1,21 @@
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes/colores';
+import type { Turno } from '@/contextos/TurnosContext';
+
+const COLOR_ATENDIDO = '#5A6B7D'; // gris azulado: el turno ya se realizó
 import type { EstadoTurno } from '@/contextos/TurnosContext';
 
 export const COLORES_ESTADO: Record<EstadoTurno, string> = {
   confirmado: COLOR_CONFIRMADO,
   pendiente: COLOR_PENDIENTE,
   cancelado: COLOR_CANCELADO,
+  atendido: COLOR_ATENDIDO,
 };
 
 export const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   confirmado: 'Confirmado',
   pendiente: 'Pendiente',
   cancelado: 'Cancelado',
+  atendido: 'Atendido',
 };
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -40,4 +45,25 @@ export function detalleFecha(fecha: string) {
 export function formatearFecha(fecha: string) {
   const [anio, mes, dia] = fecha.split('-');
   return `${dia}/${mes}/${anio}`;
+}
+
+// Pasa una fecha (Date) a texto 'AAAA-MM-DD', el formato que usan los turnos.
+export function fechaComoTexto(fecha: Date) {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+}
+
+// El próximo turno: el más cercano que no está cancelado ni atendido y todavía no pasó.
+// Si no hay ninguno, devuelve undefined.
+export function buscarProximoTurno(turnos: Turno[]) {
+  const ahora = new Date();
+  return [...turnos]
+    .filter(
+      (turno) =>
+        turno.estado !== 'cancelado' &&
+        turno.estado !== 'atendido' &&
+        fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
+    )
+    .sort(
+      (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
+    )[0];
 }

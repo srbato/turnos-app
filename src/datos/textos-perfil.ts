@@ -28,6 +28,8 @@ type TextosPerfil = {
     turnos: string;
     medicamentos: string;
     agenda: string;
+    pacientes: string;
+    recetas: string;
     perfil: string;
   };
   roles: Record<Rol, string>;
@@ -57,7 +59,7 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     cambiarPerfil: 'Cambiar de perfil',
     cerrarSesion: 'Cerrar sesión',
     version: 'versión 2.4.1 · Consultorios Rivadavia',
-    tabs: { inicio: 'Inicio', turnos: 'Turnos', medicamentos: 'Medicamentos', agenda: 'Agenda', perfil: 'Perfil' },
+    tabs: { inicio: 'Inicio', turnos: 'Turnos', medicamentos: 'Medicamentos', agenda: 'Agenda', pacientes: 'Pacientes', recetas: 'Recetas', perfil: 'Perfil' },
     roles: {
       paciente: 'Paciente',
       medico: 'Médico',
@@ -103,7 +105,7 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     cambiarPerfil: 'Switch profile',
     cerrarSesion: 'Log out',
     version: 'version 2.4.1 · Consultorios Rivadavia',
-    tabs: { inicio: 'Home', turnos: 'Appointments', medicamentos: 'Medications', agenda: 'Schedule', perfil: 'Profile' },
+    tabs: { inicio: 'Home', turnos: 'Appointments', medicamentos: 'Medications', agenda: 'Schedule', pacientes: 'Patients', recetas: 'Prescriptions', perfil: 'Profile' },
     roles: {
       paciente: 'Patient',
       medico: 'Doctor',
