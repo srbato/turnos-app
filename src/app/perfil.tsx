@@ -79,6 +79,13 @@ export default function Perfil() {
 
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
+  // Al cerrar sesión se vacía la pila de pantallas y se vuelve al inicio: así deslizar hacia atrás
+  // no devuelve a una pantalla de la sesión que ya se cerró.
+  function cerrarSesion() {
+    router.dismissAll();
+    router.replace('/');
+  }
+
   // Solo el paciente tiene editor de perfil por ahora; para los demás roles estas filas no hacen nada.
   const irAlEditor =
     rol === 'paciente' ? () => router.push('/paciente/editar-perfil' as Href) : undefined;
@@ -224,7 +231,7 @@ export default function Perfil() {
           </Pressable>
         )}
 
-        <Pressable style={styles.botonCerrarSesion} onPress={() => router.push('/')}>
+        <Pressable style={styles.botonCerrarSesion} onPress={cerrarSesion}>
           <Text style={styles.botonCerrarSesionTexto}>{textos.cerrarSesion}</Text>
         </Pressable>
 
