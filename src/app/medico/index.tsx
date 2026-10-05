@@ -1,5 +1,11 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { DetallePreconsultaModal } from '@/components/detalle-preconsulta';
+import { usePreconsultas } from '@/contextos/PreconsultasContext';
+import type { Preconsulta } from '@/datos/preconsulta';
+import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 type EstadoTurno = 'confirmado' | 'pendiente' | 'en_espera' | 'bloqueado';
@@ -109,6 +115,12 @@ function fechaDeHoy() {
 }
 
 export default function AgendaMedico() {
+  const { preconsultas } = usePreconsultas();
+  const [preconsultaAbierta, setPreconsultaAbierta] = useState<Preconsulta | null>(null);
+
+  // Preconsultas que los pacientes le enviaron a este médico.
+  const preconsultasRecibidas = preconsultas.filter((preconsulta) => preconsulta.medico === NOMBRE_MEDICO);
+
   // Se calcula en cada render: no hace falta useEffect para esto.
   const turnosDelDia = TURNOS_HOY.filter((turno) => turno.estado !== 'bloqueado');
   const confirmados = turnosDelDia.filter((turno) => turno.estado === 'confirmado').length;
@@ -149,6 +161,29 @@ export default function AgendaMedico() {
       </View>
 
       <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
+        {preconsultasRecibidas.length > 0 && (
+          <View style={styles.preconsultasBloque}>
+            <Text style={styles.preconsultasTitulo}>Preconsultas recibidas</Text>
+            {preconsultasRecibidas.map((preconsulta) => (
+              <Pressable
+                key={preconsulta.turnoId}
+                style={styles.preconsultaTarjeta}
+                onPress={() => setPreconsultaAbierta(preconsulta)}>
+                <View style={styles.tarjetaDatos}>
+                  <Text style={styles.pacienteTexto}>{preconsulta.paciente}</Text>
+                  <Text style={styles.subtituloTexto}>
+                    {detalleFecha(preconsulta.fecha).diaSemana} {formatearFecha(preconsulta.fecha)} ·{' '}
+                    {preconsulta.hora} h · {preconsulta.respuestas.motivo || 'Sin motivo'}
+                  </Text>
+                </View>
+                <View style={styles.preconsultaChip}>
+                  <Text style={styles.preconsultaChipTexto}>Ver</Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         <View style={styles.listaEncabezado}>
           <Text style={styles.listaTitulo}>Mañana · 08:00 a 13:00</Text>
           <Text style={styles.filtrar}>Filtrar</Text>
@@ -198,6 +233,11 @@ export default function AgendaMedico() {
           ))
         )}
       </ScrollView>
+
+      <DetallePreconsultaModal
+        preconsulta={preconsultaAbierta}
+        onCerrar={() => setPreconsultaAbierta(null)}
+      />
 
       <View style={styles.tabBar}>
         <View style={styles.tabItem}>
@@ -371,6 +411,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5A5A5A',
     textAlign: 'center',
+  },
+  preconsultasBloque: {
+    marginBottom: 20,
+  },
+  preconsultasTitulo: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 10,
+  },
+  preconsultaTarjeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: COLOR_MEDICO,
+    padding: 14,
+    marginBottom: 10,
+  },
+  preconsultaChip: {
+    backgroundColor: COLOR_MEDICO,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+  },
+  preconsultaChipTexto: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   tabBar: {
     flexDirection: 'row',

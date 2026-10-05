@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 
 import { MedicamentosProvider } from '@/contextos/MedicamentosContext';
 import { PerfilPacienteProvider } from '@/contextos/PerfilPacienteContext';
+import { PreconsultasProvider } from '@/contextos/PreconsultasContext';
 import { PreferenciasProvider } from '@/contextos/PreferenciasContext';
 import { TurnosProvider } from '@/contextos/TurnosContext';
 
@@ -14,13 +15,15 @@ export default function RootLayout() {
       <PerfilPacienteProvider>
         <TurnosProvider>
           <MedicamentosProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
-              <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
-              <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
-              <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
-              <Stack.Screen name="perfil" options={OPCIONES_MENU} />
-            </Stack>
+            <PreconsultasProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
+                <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
+                <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
+                <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
+                <Stack.Screen name="perfil" options={OPCIONES_MENU} />
+              </Stack>
+            </PreconsultasProvider>
           </MedicamentosProvider>
         </TurnosProvider>
       </PerfilPacienteProvider>

@@ -13,6 +13,7 @@ import {
   FONDO_PACIENTE,
 } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { ESTUDIOS, type Estudio } from '@/datos/estudios';
 import { useTurnos, type Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
@@ -39,6 +40,7 @@ function saludoSegunHora() {
 export default function HubPaciente() {
   const { turnos } = useTurnos();
   const { nombre } = usePerfilPaciente();
+  const { buscarPorTurno } = usePreconsultas();
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
   // Turno pendiente de confirmar su cancelación; lo comparten el botón del home y el del detalle.
   const [turnoACancelar, setTurnoACancelar] = useState<Turno | null>(null);
@@ -183,10 +185,20 @@ export default function HubPaciente() {
 
         <View style={styles.accesos}>
           <Pressable
-            style={styles.accesoPreconsulta}
-            onPress={() => router.push('/paciente/preconsulta')}>
+            style={[styles.accesoPreconsulta, !proximoTurno && styles.accesoDeshabilitado]}
+            disabled={!proximoTurno}
+            onPress={() =>
+              proximoTurno &&
+              router.push({ pathname: '/paciente/preconsulta', params: { turnoId: proximoTurno.id } })
+            }>
             <Text style={styles.accesoPreconsultaTitulo}>Preconsulta</Text>
-            <Text style={styles.accesoPreconsultaSubtitulo}>5 min antes del turno</Text>
+            <Text style={styles.accesoPreconsultaSubtitulo}>
+              {!proximoTurno
+                ? 'Necesitás un turno próximo'
+                : buscarPorTurno(proximoTurno.id)
+                  ? 'Enviada al médico ✓'
+                  : 'Opcional · contale a tu médico'}
+            </Text>
           </Pressable>
           <Pressable
             style={styles.accesoMedicacion}
@@ -457,6 +469,9 @@ const styles = StyleSheet.create({
   accesos: {
     flexDirection: 'row',
     gap: 12,
+  },
+  accesoDeshabilitado: {
+    opacity: 0.55,
   },
   accesoPreconsulta: {
     flex: 1,

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useTurnos, type Turno } from '@/contextos/TurnosContext';
 import { DIRECCION_SEDE, MEDICOS } from '@/datos/catalogo';
 import {
@@ -22,6 +23,8 @@ type PropsDetalle = {
 
 // Modal de "Ver detalle". Lo usan el home y Mis turnos.
 export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle) {
+  const { buscarPorTurno } = usePreconsultas();
+
   return (
     <Modal visible={turno !== null} animationType="fade" transparent onRequestClose={onCerrar}>
       <View style={styles.fondoModal}>
@@ -84,9 +87,11 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                       style={styles.botonPrimario}
                       onPress={() => {
                         onCerrar();
-                        router.push('/paciente/preconsulta');
+                        router.push({ pathname: '/paciente/preconsulta', params: { turnoId: turno.id } });
                       }}>
-                      <Text style={styles.botonPrimarioTexto}>Ir a Preconsulta</Text>
+                      <Text style={styles.botonPrimarioTexto}>
+                        {buscarPorTurno(turno.id) ? 'Ver preconsulta' : 'Preconsulta'}
+                      </Text>
                     </Pressable>
                     <Pressable
                       style={styles.botonSecundario}
