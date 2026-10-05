@@ -28,7 +28,9 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Elegí una foto de tu galería para usarla como foto de perfil."
+          "photosPermission": "Elegí una foto de tu galería para usarla como foto de perfil.",
+          "cameraPermission": "Usamos la cámara para que te saques una foto de perfil.",
+          "microphonePermission": false
         }
       ],
       [

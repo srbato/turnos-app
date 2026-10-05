@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { MenuPaciente } from '@/components/menu-paciente';
+import { DetalleEstudioModal } from '@/components/modal-estudio';
 import { CancelarTurnoModal, DetalleTurnoModal } from '@/components/modales-turno';
 import {
   COLOR_CANCELADO,
@@ -12,7 +13,7 @@ import {
   FONDO_PACIENTE,
 } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { ESTUDIOS } from '@/datos/estudios';
+import { ESTUDIOS, type Estudio } from '@/datos/estudios';
 import { useTurnos, type Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
@@ -41,6 +42,7 @@ export default function HubPaciente() {
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
   // Turno pendiente de confirmar su cancelación; lo comparten el botón del home y el del detalle.
   const [turnoACancelar, setTurnoACancelar] = useState<Turno | null>(null);
+  const [estudioSeleccionado, setEstudioSeleccionado] = useState<Estudio | null>(null);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
@@ -58,7 +60,9 @@ export default function HubPaciente() {
             <Text style={styles.saludo}>{saludoSegunHora()},</Text>
             <Text style={styles.nombre}>{nombre.split(' ')[0]}</Text>
           </View>
-          <AvatarPaciente tamano={48} colorFondo={COLOR_PACIENTE} colorTexto="#FFFFFF" />
+          <Pressable onPress={() => router.navigate('/perfil?rol=paciente')}>
+            <AvatarPaciente tamano={48} colorFondo={COLOR_PACIENTE} colorTexto="#FFFFFF" />
+          </Pressable>
         </View>
 
         {!proximoTurno ? (
@@ -139,8 +143,9 @@ export default function HubPaciente() {
               </Pressable>
             </View>
             {ESTUDIOS_PENDIENTES.map((estudio, indice) => (
-              <View
+              <Pressable
                 key={estudio.id}
+                onPress={() => setEstudioSeleccionado(estudio)}
                 style={[
                   styles.filaEstudio,
                   indice < ESTUDIOS_PENDIENTES.length - 1 && styles.filaEstudioConBorde,
@@ -155,7 +160,7 @@ export default function HubPaciente() {
                 <View style={styles.chipPendiente}>
                   <Text style={styles.chipPendienteTexto}>Pendiente</Text>
                 </View>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
@@ -197,6 +202,10 @@ export default function HubPaciente() {
         onCancelar={setTurnoACancelar}
       />
       <CancelarTurnoModal turno={turnoACancelar} onCerrar={() => setTurnoACancelar(null)} />
+      <DetalleEstudioModal
+        estudio={estudioSeleccionado}
+        onCerrar={() => setEstudioSeleccionado(null)}
+      />
 
       <MenuPaciente activa="inicio" />
     </View>

@@ -5,6 +5,10 @@ type TextosEditar = {
   titulo: string;
   foto: string;
   cambiarFoto: string;
+  tomarFoto: string;
+  elegirDeGaleria: string;
+  errorCamara: string;
+  errorGaleria: string;
   quitarFoto: string;
   datos: string;
   nombre: string;
@@ -37,7 +41,11 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
   es: {
     titulo: 'Editar perfil',
     foto: 'Foto de perfil',
-    cambiarFoto: 'Elegir de la galería',
+    cambiarFoto: 'Cambiar foto',
+    tomarFoto: 'Tomar una foto',
+    elegirDeGaleria: 'Elegir de la galería',
+    errorCamara: 'Necesitamos permiso para usar la cámara. Podés activarlo en los ajustes del teléfono.',
+    errorGaleria: 'Necesitamos permiso para acceder a tus fotos. Podés activarlo en los ajustes del teléfono.',
     quitarFoto: 'Quitar foto',
     datos: 'Datos personales',
     nombre: 'Nombre y apellido',
@@ -68,7 +76,11 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
   en: {
     titulo: 'Edit profile',
     foto: 'Profile picture',
-    cambiarFoto: 'Choose from gallery',
+    cambiarFoto: 'Change photo',
+    tomarFoto: 'Take a photo',
+    elegirDeGaleria: 'Choose from gallery',
+    errorCamara: 'We need permission to use the camera. You can turn it on in your phone settings.',
+    errorGaleria: 'We need permission to access your photos. You can turn it on in your phone settings.',
     quitarFoto: 'Remove photo',
     datos: 'Personal details',
     nombre: 'Full name',

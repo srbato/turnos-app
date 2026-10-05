@@ -31,6 +31,8 @@ export default function EditarPerfil() {
   const [domicilio, setDomicilio] = useState(perfil.domicilio);
   const [fotoUri, setFotoUri] = useState<string | null>(perfil.fotoUri);
   const [coberturaIds, setCoberturaIds] = useState<string[]>(perfil.coberturaIds);
+  const [opcionesFotoAbiertas, setOpcionesFotoAbiertas] = useState(false);
+  const [errorFoto, setErrorFoto] = useState('');
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
 
   // Cambio de contraseña
@@ -40,20 +42,46 @@ export default function EditarPerfil() {
   const [repetida, setRepetida] = useState('');
   const [errorContrasena, setErrorContrasena] = useState('');
 
-  async function elegirFoto() {
-    const resultado = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.4,
-      base64: true, // se guarda la imagen en sí, no una ruta temporal que después deja de existir
-    });
+  // La imagen se guarda en sí (base64), no una ruta temporal que después deja de existir.
+  const opcionesFoto = {
+    allowsEditing: true,
+    aspect: [1, 1] as [number, number],
+    quality: 0.4,
+    base64: true,
+  };
+
+  function usarResultado(resultado: ImagePicker.ImagePickerResult) {
     if (!resultado.canceled) {
       const imagen = resultado.assets[0];
       setFotoUri(
         imagen.base64 ? `data:${imagen.mimeType ?? 'image/jpeg'};base64,${imagen.base64}` : imagen.uri
       );
     }
+  }
+
+  // Cada opción pide primero el permiso; si no lo dan, se explica cómo activarlo.
+  async function tomarFoto() {
+    setOpcionesFotoAbiertas(false);
+    setErrorFoto('');
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) {
+      setErrorFoto(textos.errorCamara);
+      return;
+    }
+    usarResultado(await ImagePicker.launchCameraAsync(opcionesFoto));
+  }
+
+  async function elegirDeGaleria() {
+    setOpcionesFotoAbiertas(false);
+    setErrorFoto('');
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      setErrorFoto(textos.errorGaleria);
+      return;
+    }
+    usarResultado(
+      await ImagePicker.launchImageLibraryAsync({ ...opcionesFoto, mediaTypes: ['images'] })
+    );
   }
 
   function alternarCobertura(id: string) {
@@ -131,9 +159,10 @@ export default function EditarPerfil() {
           <View style={styles.avatarFoto}>
             <AvatarPaciente tamano={88} colorTexto={COLOR_PERFIL} colorBorde={COLOR_PERFIL} />
           </View>
-          <Pressable style={styles.botonFoto} onPress={elegirFoto}>
+          <Pressable style={styles.botonFoto} onPress={() => setOpcionesFotoAbiertas(true)}>
             <Text style={styles.botonFotoTexto}>{textos.cambiarFoto}</Text>
           </Pressable>
+          {errorFoto !== '' && <Text style={[styles.mensajeError, styles.errorFoto]}>{errorFoto}</Text>}
           {fotoUri !== null && (
             <Pressable onPress={() => setFotoUri(null)}>
               <Text style={[styles.quitarFoto, { color: tema.textoSecundario }]}>{textos.quitarFoto}</Text>
@@ -220,6 +249,29 @@ export default function EditarPerfil() {
 
       <BarraPerfil rol="paciente" pantalla="editar" tema={tema} />
 
+      <Modal
+        visible={opcionesFotoAbiertas}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setOpcionesFotoAbiertas(false)}>
+        <View style={styles.fondoModal}>
+          <View style={[styles.tarjetaModal, { backgroundColor: tema.tarjeta }]}>
+            <Text style={[styles.modalTitulo, { color: tema.texto }]}>{textos.foto}</Text>
+            <Pressable style={styles.opcionPrimaria} onPress={tomarFoto}>
+              <Text style={styles.botonPrimarioTexto}>{textos.tomarFoto}</Text>
+            </Pressable>
+            <Pressable style={styles.opcionSecundaria} onPress={elegirDeGaleria}>
+              <Text style={styles.botonSecundarioTexto}>{textos.elegirDeGaleria}</Text>
+            </Pressable>
+            <Pressable style={styles.cancelarOpciones} onPress={() => setOpcionesFotoAbiertas(false)}>
+              <Text style={[styles.cancelarOpcionesTexto, { color: tema.textoSecundario }]}>
+                {textos.cancelar}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={contrasenaAbierta} animationType="fade" transparent onRequestClose={cerrarContrasena}>
         <View style={styles.fondoModal}>
           <View style={[styles.tarjetaModal, { backgroundColor: tema.tarjeta }]}>
@@ -286,6 +338,34 @@ const styles = StyleSheet.create({
     color: COLOR_PERFIL,
     fontSize: 13,
     fontWeight: '700',
+  },
+  errorFoto: {
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 0,
+  },
+  // Botones del menú de foto: van en columna, así que no usan flex como los de las filas.
+  opcionPrimaria: {
+    backgroundColor: COLOR_PERFIL,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  opcionSecundaria: {
+    borderWidth: 1,
+    borderColor: COLOR_PERFIL,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  cancelarOpciones: {
+    alignItems: 'center',
+    paddingTop: 14,
+  },
+  cancelarOpcionesTexto: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   quitarFoto: {
     fontSize: 12,
