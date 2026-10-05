@@ -5,6 +5,9 @@ import { PerfilPacienteProvider } from '@/contextos/PerfilPacienteContext';
 import { PreferenciasProvider } from '@/contextos/PreferenciasContext';
 import { TurnosProvider } from '@/contextos/TurnosContext';
 
+// Cambio de sección del menú: un fundido corto (ms), para que no se sienta lento.
+const OPCIONES_MENU = { animation: 'fade', animationDuration: 120 } as const;
+
 export default function RootLayout() {
   return (
     <PreferenciasProvider>
@@ -13,10 +16,10 @@ export default function RootLayout() {
           <MedicamentosProvider>
             <Stack screenOptions={{ headerShown: false }}>
               {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
-              <Stack.Screen name="paciente/index" options={{ animation: 'fade' }} />
-              <Stack.Screen name="paciente/mis-turnos" options={{ animation: 'fade' }} />
-              <Stack.Screen name="paciente/medicamentos" options={{ animation: 'fade' }} />
-              <Stack.Screen name="perfil" options={{ animation: 'fade' }} />
+              <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
+              <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
+              <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
+              <Stack.Screen name="perfil" options={OPCIONES_MENU} />
             </Stack>
           </MedicamentosProvider>
         </TurnosProvider>
