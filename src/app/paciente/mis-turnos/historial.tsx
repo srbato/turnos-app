@@ -8,7 +8,7 @@ export default function TurnosHistorial() {
   const ahora = new Date();
 
   const historial = misTurnos
-    .filter((turno) => turno.estado === 'cancelado' || turno.estado === 'atendido' || fechaHoraComoDate(turno.fecha, turno.hora) < ahora)
+    .filter((turno) => turno.estado === 'cancelado' || turno.estado === 'atendido' || turno.estado === 'ausente' || fechaHoraComoDate(turno.fecha, turno.hora) < ahora)
     .sort(
       (a, b) => fechaHoraComoDate(b.fecha, b.hora).getTime() - fechaHoraComoDate(a.fecha, a.hora).getTime()
     );

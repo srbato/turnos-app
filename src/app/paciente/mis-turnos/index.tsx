@@ -8,7 +8,7 @@ export default function TurnosProximos() {
   const ahora = new Date();
 
   const proximos = misTurnos
-    .filter((turno) => turno.estado !== 'cancelado' && turno.estado !== 'atendido' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
+    .filter((turno) => turno.estado !== 'cancelado' && turno.estado !== 'atendido' && turno.estado !== 'ausente' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
     );

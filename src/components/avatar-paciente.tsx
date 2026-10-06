@@ -7,6 +7,8 @@ type Props = {
   colorFondo?: string;
   colorTexto: string;
   colorBorde?: string;
+  // Si se pasan, se muestran estos datos en lugar de los del paciente (por ejemplo, los de Secretaría).
+  datos?: { nombre: string; fotoUri: string | null };
 };
 
 // Iniciales del nombre: las de las dos primeras palabras, o la primera letra si es una sola.
@@ -18,9 +20,10 @@ function iniciales(nombre: string) {
     .join('');
 }
 
-// Foto de perfil del paciente en círculo; si no eligió una, muestra sus iniciales.
-export function AvatarPaciente({ tamano, colorFondo, colorTexto, colorBorde }: Props) {
-  const { nombre, fotoUri } = usePerfilPaciente();
+// Foto de perfil en círculo (del paciente, o de quien se pase en datos); si no eligió una, muestra sus iniciales.
+export function AvatarPaciente({ tamano, colorFondo, colorTexto, colorBorde, datos }: Props) {
+  const paciente = usePerfilPaciente();
+  const { nombre, fotoUri } = datos ?? paciente;
 
   const caja = {
     width: tamano,

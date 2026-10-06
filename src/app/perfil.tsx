@@ -7,6 +7,7 @@ import { BarraPerfil } from '@/components/barra-perfil';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO, type Tema } from '@/constantes/tema';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { useSesion } from '@/contextos/SesionContext';
 import { usePreferencias, type Idioma } from '@/contextos/PreferenciasContext';
 import { nombreCobertura } from '@/datos/catalogo';
@@ -60,12 +61,15 @@ export default function Perfil() {
   const { rol: rolParam } = useLocalSearchParams();
   const rol = normalizarRol(rolParam);
   const perfilPaciente = usePerfilPaciente();
+  const perfilSecretaria = usePerfilSecretaria();
   const { medicoLogueado } = useSesion();
   // El paciente edita su perfil: sus datos vienen del contexto. Los demás roles usan datos fijos.
   // El médico muestra los datos del médico que inició sesión.
   let info: InfoPerfil = PERFILES[rol];
   if (rol === 'paciente') {
     info = { ...PERFILES.paciente, ...perfilPaciente };
+  } else if (rol === 'secretaria') {
+    info = { ...PERFILES.secretaria, ...perfilSecretaria };
   } else if (rol === 'medico') {
     info = {
       nombre: medicoLogueado.nombre,
@@ -97,7 +101,9 @@ export default function Perfil() {
       ? obrasSociales.join('\n') || '—'
       : rol === 'medico'
         ? medicoLogueado.matricula
-        : textos.filaSubtitulos[rol];
+        : rol === 'secretaria'
+          ? perfilSecretaria.turnoTrabajo || '—'
+          : textos.filaSubtitulos[rol];
 
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
@@ -108,21 +114,37 @@ export default function Perfil() {
     router.replace('/');
   }
 
-  // Solo el paciente tiene editor de perfil por ahora; para los demás roles estas filas no hacen nada.
+  // El paciente y Secretaría tienen editor de perfil; para los demás roles estas filas no hacen nada.
   const irAlEditor =
-    rol === 'paciente' ? () => router.push('/paciente/editar-perfil' as Href) : undefined;
+    rol === 'paciente'
+      ? () => router.push('/paciente/editar-perfil' as Href)
+      : rol === 'secretaria'
+        ? () => router.push('/secretaria/editar-perfil' as Href)
+        : undefined;
 
   return (
     <View style={[styles.pantalla, { backgroundColor: tema.fondo }]}>
       <ScrollView style={styles.contenido} contentContainerStyle={styles.contenidoInterno}>
         <View style={styles.encabezado}>
-          <Text style={[styles.tituloPantalla, { color: tema.texto }]}>{textos.tituloPantalla}</Text>
+          {/* Secretaría llega desde Ajustes: la flecha de arriba a la izquierda vuelve ahí. */}
+          {rol === 'secretaria' ? (
+            <Pressable onPress={() => router.replace('/secretaria/ajustes')} hitSlop={10}>
+              <Text style={[styles.tituloPantalla, { color: tema.texto }]}>‹ {textos.tituloPantalla}</Text>
+            </Pressable>
+          ) : (
+            <Text style={[styles.tituloPantalla, { color: tema.texto }]}>{textos.tituloPantalla}</Text>
+          )}
         </View>
 
         <View style={styles.filaPerfil}>
-          {rol === 'paciente' ? (
+          {rol === 'paciente' || rol === 'secretaria' ? (
             <View style={styles.avatarPaciente}>
-              <AvatarPaciente tamano={64} colorTexto={COLOR_PERFIL} colorBorde={COLOR_PERFIL} />
+              <AvatarPaciente
+                tamano={64}
+                colorTexto={COLOR_PERFIL}
+                colorBorde={COLOR_PERFIL}
+                datos={rol === 'secretaria' ? perfilSecretaria : undefined}
+              />
             </View>
           ) : (
             <View style={styles.avatar}>
@@ -139,13 +161,13 @@ export default function Perfil() {
         </View>
 
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
-          {/* El editor es solo del paciente por ahora. */}
-          {rol === 'paciente' && (
+          {/* El editor es del paciente y de Secretaría. */}
+          {(rol === 'paciente' || rol === 'secretaria') && (
             <>
               <Fila
                 tema={tema}
                 titulo={textos.editarPerfil}
-                subtitulo={textos.editarPerfilDetalle}
+                subtitulo={rol === 'paciente' ? textos.editarPerfilDetalle : textos.editarPerfilDetalleStaff}
                 conFlecha
                 onPress={irAlEditor}
               />
@@ -155,7 +177,7 @@ export default function Perfil() {
           <Fila
             tema={tema}
             titulo={textos.datosPersonales}
-            subtitulo={textos.datosPersonalesDetalle}
+            subtitulo={rol === 'paciente' ? textos.datosPersonalesDetalle : textos.datosPersonalesDetalleStaff}
             conFlecha
             onPress={irAlEditor}
           />
@@ -228,8 +250,8 @@ export default function Perfil() {
             activo={recordatorios}
             onCambiar={alternarRecordatorios}
           />
-          {/* Las alertas de medicación (interacciones) son para el médico: el paciente no las ve. */}
-          {rol !== 'paciente' && (
+          {/* Las alertas de medicación (interacciones) son solo para el médico. */}
+          {rol === 'medico' && (
             <>
               <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
               <FilaToggle
@@ -243,16 +265,7 @@ export default function Perfil() {
           )}
         </View>
 
-        {/* El rol se lee de la cuenta: el paciente no elige ni cambia de perfil. */}
-        {rol !== 'paciente' && (
-          <Pressable
-            style={[styles.filaCambiarPerfil, { backgroundColor: tema.tarjeta }]}
-            onPress={() => router.push('/')}>
-            <Text style={[styles.filaTitulo, { color: tema.texto }]}>{textos.cambiarPerfil}</Text>
-            <Text style={styles.cambiarPerfilValor}>{textos.roles[rol]} ▾</Text>
-          </Pressable>
-        )}
-
+        {/* El rol se lee de la cuenta: nadie elige ni cambia de perfil desde acá. */}
         <Pressable style={styles.botonCerrarSesion} onPress={cerrarSesion}>
           <Text style={styles.botonCerrarSesionTexto}>{textos.cerrarSesion}</Text>
         </Pressable>
@@ -472,20 +485,6 @@ const styles = StyleSheet.create({
   },
   toggleThumbActivo: {
     backgroundColor: '#1A1815',
-  },
-  filaCambiarPerfil: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 16,
-  },
-  cambiarPerfilValor: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLOR_PERFIL,
   },
   botonCerrarSesion: {
     borderWidth: 1,

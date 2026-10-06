@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconoAnimado } from '@/components/icono-animado';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
+import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import type { Tema } from '@/constantes/tema';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
@@ -10,7 +11,18 @@ import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 const COLOR_PERFIL = '#C9A24C';
 
 type Rol = 'paciente' | 'medico' | 'secretaria' | 'administrador';
-type Clave = 'inicio' | 'turnos' | 'medicamentos' | 'agenda' | 'pacientes' | 'recetas' | 'perfil';
+type Clave =
+  | 'inicio'
+  | 'turnos'
+  | 'medicamentos'
+  | 'agenda'
+  | 'pacientes'
+  | 'recetas'
+  | 'perfil'
+  | 'espera'
+  | 'alertas'
+  | 'personal'
+  | 'ajustes';
 
 type Item = { icono: string; iconoActivo: string; clave: Clave; ruta: Href };
 
@@ -27,6 +39,13 @@ const ITEMS_POR_ROL: Partial<Record<Rol, Item[]>> = {
     { icono: '◍', iconoActivo: '◍', clave: 'pacientes', ruta: '/medico/pacientes' },
     { icono: '℞', iconoActivo: '℞', clave: 'recetas', ruta: '/medico/recetas' },
     { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=medico' },
+  ],
+  secretaria: [
+    { icono: '▤', iconoActivo: '▥', clave: 'agenda', ruta: RUTA_AGENDA_SECRETARIA },
+    { icono: '≡', iconoActivo: '☰', clave: 'espera', ruta: '/secretaria/espera' },
+    { icono: '△', iconoActivo: '▲', clave: 'alertas', ruta: '/secretaria/alertas' },
+    { icono: '☺', iconoActivo: '☻', clave: 'personal', ruta: '/secretaria/personal' },
+    { icono: '◌', iconoActivo: '⚙', clave: 'ajustes', ruta: '/secretaria/ajustes' },
   ],
 };
 
@@ -50,12 +69,12 @@ export function BarraPerfil({ rol, pantalla, tema }: Props) {
   return (
     <View style={[styles.tabBar, { backgroundColor: tema.fondo, borderTopColor: tema.borde }]}>
       {items.map((item) => {
-        const esActiva = item.clave === 'perfil';
+        const esActiva = item.clave === (rol === 'secretaria' ? 'ajustes' : 'perfil');
         return (
           <Pressable
             key={item.clave}
             style={styles.tabItem}
-            disabled={esActiva && pantalla === 'perfil'}
+            disabled={esActiva && pantalla === 'perfil' && rol !== 'secretaria'}
             onPress={() => router.replace(item.ruta)}>
             <IconoAnimado
               icono={item.icono}

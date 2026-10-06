@@ -2,6 +2,7 @@ import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes
 import type { Turno } from '@/contextos/TurnosContext';
 
 const COLOR_ATENDIDO = '#5A6B7D'; // gris azulado: el turno ya se realizó
+const COLOR_AUSENTE = '#B03A3A'; // rojo oscuro: el paciente no se presentó
 import type { EstadoTurno } from '@/contextos/TurnosContext';
 
 export const COLORES_ESTADO: Record<EstadoTurno, string> = {
@@ -9,6 +10,7 @@ export const COLORES_ESTADO: Record<EstadoTurno, string> = {
   pendiente: COLOR_PENDIENTE,
   cancelado: COLOR_CANCELADO,
   atendido: COLOR_ATENDIDO,
+  ausente: COLOR_AUSENTE,
 };
 
 export const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
@@ -16,6 +18,7 @@ export const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   pendiente: 'Pendiente',
   cancelado: 'Cancelado',
   atendido: 'Atendido',
+  ausente: 'No asistió',
 };
 
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -61,6 +64,7 @@ export function buscarProximoTurno(turnos: Turno[]) {
       (turno) =>
         turno.estado !== 'cancelado' &&
         turno.estado !== 'atendido' &&
+        turno.estado !== 'ausente' &&
         fechaHoraComoDate(turno.fecha, turno.hora) >= ahora
     )
     .sort(

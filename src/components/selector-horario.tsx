@@ -68,10 +68,18 @@ type Props = {
   ocupadas: string[]; // horas ya tomadas por otros turnos del médico ese día
   onElegirFecha: (fecha: string) => void;
   onElegirHora: (hora: string) => void;
+  color?: string; // color del rol para lo seleccionado (por defecto, el del paciente)
 };
 
 // Selector de días + grilla de horarios mañana/tarde. Lo usan Sacar turno (paso 3) y Reprogramar.
-export function SelectorHorario({ fecha, hora, ocupadas, onElegirFecha, onElegirHora }: Props) {
+export function SelectorHorario({
+  fecha,
+  hora,
+  ocupadas,
+  onElegirFecha,
+  onElegirHora,
+  color = COLOR_PACIENTE,
+}: Props) {
   function renderGrilla(turno: Horario['turno']) {
     return (
       <View style={styles.grillaHorarios}>
@@ -85,6 +93,7 @@ export function SelectorHorario({ fecha, hora, ocupadas, onElegirFecha, onElegir
               style={[
                 styles.horarioBoton,
                 seleccionado && styles.horarioBotonSeleccionado,
+                seleccionado && { backgroundColor: color, borderColor: color },
                 !disponible && styles.horarioBotonDeshabilitado,
               ]}
               onPress={() => onElegirHora(horario.hora)}>
@@ -115,6 +124,7 @@ export function SelectorHorario({ fecha, hora, ocupadas, onElegirFecha, onElegir
               style={[
                 styles.diaCaja,
                 seleccionado && styles.diaCajaSeleccionada,
+                seleccionado && { backgroundColor: color },
                 !dia.disponible && styles.diaCajaDeshabilitada,
               ]}
               onPress={() => onElegirFecha(dia.fecha)}>

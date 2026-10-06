@@ -26,6 +26,7 @@ const COLORES_ESTADO: Record<EstadoTurno, string> = {
   pendiente: COLOR_PENDIENTE,
   cancelado: COLOR_GRIS,
   atendido: COLOR_GRIS,
+  ausente: COLOR_RIESGO_ALTO,
 };
 
 const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
@@ -33,6 +34,7 @@ const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   pendiente: 'Pendiente',
   cancelado: 'Cancelado',
   atendido: 'Atendido',
+  ausente: 'No asistió',
 };
 
 // Ficha de un paciente, vista por el médico. El id del paciente llega por la URL.

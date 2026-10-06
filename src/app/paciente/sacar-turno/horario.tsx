@@ -2,6 +2,7 @@ import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { OpcionAdelanto } from '@/components/opcion-adelanto';
 import { ResumenEspecialidad, ResumenMedico } from '@/components/resumen-turno';
 import {
   DIAS,
@@ -12,16 +13,21 @@ import {
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
+import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { coberturaQueAtiende, SEDE } from '@/datos/catalogo';
-import { ID_PACIENTE_APP } from '@/datos/consultorio';
+import { horasReservadas } from '@/datos/adelantos';
+import { HOY, ID_PACIENTE_APP } from '@/datos/consultorio';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
 
 export default function ElegirHorario() {
   const { especialidad, medico, fecha, hora, elegirFecha, elegirHora } = useSacarTurno();
   const { turnos, agregarTurno } = useTurnos();
+  const { ofertas } = useAdelantos();
   const { coberturaIds } = usePerfilPaciente();
   const [confirmado, setConfirmado] = useState(false);
+  // Si quiere que le ofrezcan adelantar el turno cuando se libere un horario (lista de espera).
+  const [quiereAdelanto, setQuiereAdelanto] = useState(false);
 
   // Si se entra a esta URL directo, se vuelve al primer paso que falte.
   if (!especialidad) {
@@ -48,6 +54,7 @@ export default function ElegirHorario() {
       cobertura: coberturaQueAtiende(medico, coberturaIds),
       estado: 'pendiente',
       instrucciones: [],
+      adelantoDesde: quiereAdelanto ? HOY : undefined,
     });
     setConfirmado(true);
   }
@@ -72,10 +79,16 @@ export default function ElegirHorario() {
         <SelectorHorario
           fecha={fechaSeleccionada}
           hora={hora}
-          ocupadas={horasOcupadas(turnos, medico.nombre, fechaSeleccionada)}
+          ocupadas={[
+            ...horasOcupadas(turnos, medico.nombre, fechaSeleccionada),
+            // Un horario ofrecido a la lista de espera queda reservado hasta que el paciente responda.
+            ...horasReservadas(ofertas, turnos, medico.nombre, fechaSeleccionada),
+          ]}
           onElegirFecha={elegirFecha}
           onElegirHora={elegirHora}
         />
+
+        <OpcionAdelanto activo={quiereAdelanto} onCambiar={setQuiereAdelanto} />
       </ScrollView>
 
       <Pressable

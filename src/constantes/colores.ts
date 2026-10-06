@@ -4,6 +4,8 @@ export const COLOR_PACIENTE = '#2D6FE0';
 export const FONDO_PACIENTE = '#EAF2FE';
 
 export const COLOR_MEDICO = '#1B4B8F';
+export const COLOR_MEDICO_GRIS = '#1E2126'; // grafito: el gris del rol médico
+export const FONDO_MEDICO = '#F4F5F7';
 
 export const COLOR_SECRETARIA = '#147D77';
 export const FONDO_SECRETARIA = '#EAF6F4';

@@ -1,5 +1,13 @@
 import { router } from 'expo-router';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  COLOR_MEDICO_GRIS,
+  COLOR_PACIENTE,
+  COLOR_SECRETARIA,
+  FONDO_MEDICO,
+  FONDO_PACIENTE,
+  FONDO_SECRETARIA,
+} from '@/constantes/colores';
 
 type PropsOpcionRol = {
   letra: string;
@@ -49,8 +57,8 @@ export default function SeleccionRol (){
           letra="P"
           titulo="Paciente"
           subtitulo="Turnos, estudios y medicación"
-          colorFondo="#eff6ff"
-          colorCuadro="#2563eb"
+          colorFondo={FONDO_PACIENTE}
+          colorCuadro={COLOR_PACIENTE}
           onPress={() => router.push('/login?rol=paciente')}
         />
 
@@ -58,8 +66,8 @@ export default function SeleccionRol (){
           letra="M"
           titulo="Médico"
           subtitulo="Agenda, preconsultas y recetas"
-          colorFondo="#f1f5f9"
-          colorCuadro="#1e293b"
+          colorFondo={FONDO_MEDICO}
+          colorCuadro={COLOR_MEDICO_GRIS}
           onPress={() => router.push('/login?rol=medico')}
         />
 
@@ -67,8 +75,8 @@ export default function SeleccionRol (){
           letra="S"
           titulo="Secretaría"
           subtitulo="Agendas, lista de espera y avisos"
-          colorFondo="#ecfdf5"
-          colorCuadro="#0f766e"
+          colorFondo={FONDO_SECRETARIA}
+          colorCuadro={COLOR_SECRETARIA}
           onPress={() => router.push('/login?rol=secretaria')}
         />
 
@@ -177,7 +185,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   pieLink: {
-    color: '#2563eb',
+    color: COLOR_PACIENTE,
     fontSize: 14,
     fontWeight: 'bold',
   },

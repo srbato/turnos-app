@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { MenuPaciente } from '@/components/menu-paciente';
+import { OfertasAdelanto } from '@/components/ofertas-adelanto';
 import { DetalleEstudioModal } from '@/components/modal-estudio';
 import { CancelarTurnoModal, DetalleTurnoModal } from '@/components/modales-turno';
 import {
@@ -14,19 +15,13 @@ import {
 } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
+import { listaDeEspera, puestoEnLista } from '@/datos/adelantos';
 import { ESTUDIOS, type Estudio } from '@/datos/estudios';
 import { useTurnos, type Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
-type ListaEspera = {
-  posicion: number;
-  especialidad: string;
-};
-
 const ESTUDIOS_PENDIENTES = ESTUDIOS.filter((estudio) => estudio.estado === 'pendiente');
-
-const LISTA_ESPERA: ListaEspera | null = { posicion: 3, especialidad: 'Cardiología' };
 
 const FONDO_PENDIENTE = '#FCF1DC'; // tinte claro del ámbar, para chips y fondos suaves
 
@@ -38,8 +33,10 @@ function saludoSegunHora() {
 }
 
 export default function HubPaciente() {
-  const { misTurnos } = useTurnos();
+  const { turnos, misTurnos } = useTurnos();
   const { nombre } = usePerfilPaciente();
+  // Sus turnos anotados en la lista de espera para adelantarlos, con su puesto (1 = el que hace más tiempo espera).
+  const esperas = listaDeEspera(misTurnos).map((turno) => ({ turno, ...puestoEnLista(turno, turnos) }));
   const { buscarPorTurno } = usePreconsultas();
   const [turnoSeleccionado, setTurnoSeleccionado] = useState<Turno | null>(null);
   // Turno pendiente de confirmar su cancelación; lo comparten el botón del home y el del detalle.
@@ -49,7 +46,7 @@ export default function HubPaciente() {
   // Se calcula en cada render: no hace falta useEffect para esto.
   const ahora = new Date();
   const proximoTurno = [...misTurnos]
-    .filter((turno) => turno.estado !== 'cancelado' && turno.estado !== 'atendido' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
+    .filter((turno) => turno.estado !== 'cancelado' && turno.estado !== 'atendido' && turno.estado !== 'ausente' && fechaHoraComoDate(turno.fecha, turno.hora) >= ahora)
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
     )[0];
@@ -66,6 +63,9 @@ export default function HubPaciente() {
             <AvatarPaciente tamano={48} colorFondo={COLOR_PACIENTE} colorTexto="#FFFFFF" />
           </Pressable>
         </View>
+
+        {/* Propuestas de Secretaría para adelantar un turno (si hay alguna). */}
+        <OfertasAdelanto />
 
         {!proximoTurno ? (
           <View style={styles.estadoVacio}>
@@ -167,21 +167,21 @@ export default function HubPaciente() {
           </View>
         )}
 
-        {LISTA_ESPERA && (
-          <View style={styles.tarjetaEspera}>
+        {esperas.map(({ turno, posicion, total }) => (
+          <View key={turno.id} style={styles.tarjetaEspera}>
             <View style={styles.esperaNumero}>
-              <Text style={styles.esperaNumeroTexto}>{LISTA_ESPERA.posicion}°</Text>
+              <Text style={styles.esperaNumeroTexto}>{posicion}°</Text>
             </View>
             <View style={styles.esperaDatos}>
               <Text style={styles.esperaTitulo}>
-                Estás {LISTA_ESPERA.posicion}° en la lista de espera
+                Lista de espera: {posicion}° de {total}
               </Text>
               <Text style={styles.esperaSubtitulo}>
-                {LISTA_ESPERA.especialidad} · te avisamos si se libera un turno
+                {turno.medico} · te ofrecemos un horario antes si se libera
               </Text>
             </View>
           </View>
-        )}
+        ))}
 
         <View style={styles.accesos}>
           <Pressable

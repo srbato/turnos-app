@@ -1,28 +1,37 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  COLOR_MEDICO_GRIS,
+  COLOR_PACIENTE,
+  COLOR_SECRETARIA,
+  FONDO_MEDICO,
+  FONDO_PACIENTE,
+  FONDO_SECRETARIA,
+} from '@/constantes/colores';
+import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useSesion } from '@/contextos/SesionContext';
 import { MEDICOS } from '@/datos/consultorio';
 
 
 const TEMAS = {
   paciente: {
-    color: '#2563eb',
-    fondo: '#eff6ff',
+    color: COLOR_PACIENTE,
+    fondo: FONDO_PACIENTE,
     colorCard: '#ffffff',
     etiqueta: 'Ingreso paciente',
     alternativo: 'Ingresar con DNI y N° de afiliado',
   },
   medico: {
-    color: '#1e293b',
-    fondo: '#f1f5f9',
+    color: COLOR_MEDICO_GRIS,
+    fondo: FONDO_MEDICO,
     colorCard: '#ffffff',
     etiqueta: 'Ingreso médico',
     alternativo: 'Ingresar con matrícula',
   },
   secretaria: {
-    color: '#0f766e',
-    fondo: '#ecfdf5',
+    color: COLOR_SECRETARIA,
+    fondo: FONDO_SECRETARIA,
     colorCard: '#ffffff',
     etiqueta: 'Ingreso secretaría',
     alternativo: '',
@@ -82,6 +91,10 @@ export default function Login() {
         }
         if (rol === 'medico') {
             router.replace('/medico');
+            return;
+        }
+        if (rol === 'secretaria') {
+            router.replace(RUTA_AGENDA_SECRETARIA);
             return;
         }
         setMensajeExito('Ingreso correcto. Esta pantalla todavía no está armada.');
@@ -330,7 +343,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   link: {
-    color: '#2563eb',
+    color: COLOR_PACIENTE,
     fontSize: 13,
     fontWeight: 'bold',
   },

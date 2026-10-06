@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { OpcionAdelanto } from '@/components/opcion-adelanto';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useTurnos, type Turno } from '@/contextos/TurnosContext';
@@ -24,6 +25,9 @@ type PropsDetalle = {
 // Modal de "Ver detalle". Lo usan el home y Mis turnos.
 export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle) {
   const { buscarPorTurno } = usePreconsultas();
+  const { turnos, activarAdelanto } = useTurnos();
+  // El turno recibido es una foto de cuando se abrió el modal: el estado actual se busca en el contexto.
+  const turnoActual = turno ? turnos.find((t) => t.id === turno.id) : undefined;
 
   return (
     <Modal visible={turno !== null} animationType="fade" transparent onRequestClose={onCerrar}>
@@ -82,6 +86,10 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
 
               {puedeModificarse(turno) ? (
                 <>
+                  <OpcionAdelanto
+                    activo={turnoActual?.adelantoDesde !== undefined}
+                    onCambiar={(activo) => activarAdelanto(turno.id, activo)}
+                  />
                   <View style={styles.botones}>
                     <Pressable
                       style={styles.botonPrimario}
@@ -145,7 +153,7 @@ function volverAPedirTurno(turno: Turno) {
 
 // Solo se reprograma o cancela un turno que no está cancelado y todavía no pasó.
 function puedeModificarse(turno: Turno) {
-  return turno.estado !== 'cancelado' && turno.estado !== 'atendido' && fechaHoraComoDate(turno.fecha, turno.hora) >= new Date();
+  return turno.estado !== 'cancelado' && turno.estado !== 'atendido' && turno.estado !== 'ausente' && fechaHoraComoDate(turno.fecha, turno.hora) >= new Date();
 }
 
 type PropsCancelar = {

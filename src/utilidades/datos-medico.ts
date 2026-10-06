@@ -17,12 +17,9 @@ export type MedicamentoParaMedico = {
 // Arma los datos del paciente que usa la app para las pantallas del médico: su perfil actualizado,
 // sus medicamentos (recetados y propios) y las interacciones que se detectan entre ellos.
 // Es una función común: cada pantalla le pasa lo que ya leyó de los contextos.
-export function datosParaMedico(
-  perfil: PerfilPaciente,
-  medicamentosPropios: MedicamentoPropio[],
-  recetas: Receta[]
-) {
-  // Lista de pacientes: el que usa la app muestra los datos que editó en su perfil.
+// Lista de pacientes: el que usa la app muestra los datos que editó en su perfil.
+// No incluye nada clínico del paciente de la app (medicación, recetas, interacciones): eso es solo para el médico.
+export function pacientesConPerfil(perfil: PerfilPaciente) {
   const [primerNombre, ...resto] = perfil.nombre.trim().split(/\s+/);
   const pacientes: Paciente[] = PACIENTES.map((paciente) => {
     if (paciente.id !== ID_PACIENTE_APP) return paciente;
@@ -47,6 +44,15 @@ export function datosParaMedico(
       alergias: perfil.alergias.trim() || 'No informó',
     };
   });
+  return pacientes;
+}
+
+export function datosParaMedico(
+  perfil: PerfilPaciente,
+  medicamentosPropios: MedicamentoPropio[],
+  recetas: Receta[]
+) {
+  const pacientes = pacientesConPerfil(perfil);
   const paciente = pacientes.find((p) => p.id === ID_PACIENTE_APP) as Paciente;
 
   const recetasDelPaciente = recetas.filter((receta) => receta.idPaciente === ID_PACIENTE_APP);

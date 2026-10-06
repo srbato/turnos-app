@@ -26,6 +26,7 @@ const COLORES_ESTADO: Record<EstadoTurno, string> = {
   pendiente: COLOR_PENDIENTE,
   cancelado: COLOR_GRIS,
   atendido: COLOR_GRIS,
+  ausente: COLOR_RIESGO_ALTO,
 };
 
 const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
@@ -33,6 +34,7 @@ const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
   pendiente: 'Pendiente',
   cancelado: 'Cancelado',
   atendido: 'Atendido',
+  ausente: 'No asistió',
 };
 
 // Filtros de la lista: '' muestra todos.
@@ -383,6 +385,12 @@ export default function AgendaMedico() {
                         <Text style={styles.botonCerrarTexto}>Marcar como atendido</Text>
                       </Pressable>
                     )}
+
+                    <Pressable
+                      style={styles.botonAtendidoSecundario}
+                      onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'ausente')}>
+                      <Text style={styles.botonAtendidoSecundarioTexto}>El paciente no asistió</Text>
+                    </Pressable>
 
                     <Pressable
                       style={styles.linkCancelar}

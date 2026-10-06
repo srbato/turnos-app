@@ -7,8 +7,10 @@ type TextosPerfil = {
   tituloPantalla: string;
   editarPerfil: string;
   editarPerfilDetalle: string;
+  editarPerfilDetalleStaff: string;
   datosPersonales: string;
-  datosPersonalesDetalle: string;
+  datosPersonalesDetalle: string; // del paciente (incluye alergias)
+  datosPersonalesDetalleStaff: string; // del personal del consultorio
   seguridad: string;
   seguridadDetalle: string;
   preferencias: string;
@@ -20,7 +22,6 @@ type TextosPerfil = {
   recordatoriosDetalle: string;
   alertas: string;
   alertasDetalle: string;
-  cambiarPerfil: string;
   cerrarSesion: string;
   version: string;
   tabs: {
@@ -31,6 +32,10 @@ type TextosPerfil = {
     pacientes: string;
     recetas: string;
     perfil: string;
+    espera: string;
+    alertas: string;
+    personal: string;
+    ajustes: string;
   };
   roles: Record<Rol, string>;
   chips: Record<Rol, string>;
@@ -43,8 +48,10 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     tituloPantalla: 'Mi perfil',
     editarPerfil: 'Editar perfil',
     editarPerfilDetalle: 'Foto, datos, obras sociales y seguridad',
+    editarPerfilDetalleStaff: 'Foto, datos y seguridad',
     datosPersonales: 'Datos personales',
     datosPersonalesDetalle: 'DNI, contacto, domicilio y alergias',
+    datosPersonalesDetalleStaff: 'DNI, contacto y domicilio',
     seguridad: 'Seguridad',
     seguridadDetalle: 'Contraseña y huella',
     preferencias: 'Preferencias',
@@ -56,10 +63,9 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     recordatoriosDetalle: 'WhatsApp y notificaciones',
     alertas: 'Alertas de medicación',
     alertasDetalle: 'Avisos de interacciones',
-    cambiarPerfil: 'Cambiar de perfil',
     cerrarSesion: 'Cerrar sesión',
     version: 'versión 2.4.1 · Consultorios Rivadavia',
-    tabs: { inicio: 'Inicio', turnos: 'Turnos', medicamentos: 'Medicamentos', agenda: 'Agenda', pacientes: 'Pacientes', recetas: 'Recetas', perfil: 'Perfil' },
+    tabs: { inicio: 'Inicio', turnos: 'Turnos', medicamentos: 'Medicamentos', agenda: 'Agendas', pacientes: 'Pacientes', recetas: 'Recetas', perfil: 'Perfil', espera: 'Espera', alertas: 'Alertas', personal: 'Personal', ajustes: 'Ajustes' },
     roles: {
       paciente: 'Paciente',
       medico: 'Médico',
@@ -89,8 +95,10 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     tituloPantalla: 'My profile',
     editarPerfil: 'Edit profile',
     editarPerfilDetalle: 'Photo, details, health insurance and security',
+    editarPerfilDetalleStaff: 'Photo, details and security',
     datosPersonales: 'Personal details',
     datosPersonalesDetalle: 'ID, contact, address and allergies',
+    datosPersonalesDetalleStaff: 'ID, contact and address',
     seguridad: 'Security',
     seguridadDetalle: 'Password and fingerprint',
     preferencias: 'Preferences',
@@ -102,10 +110,9 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     recordatoriosDetalle: 'WhatsApp and notifications',
     alertas: 'Medication alerts',
     alertasDetalle: 'Interaction warnings',
-    cambiarPerfil: 'Switch profile',
     cerrarSesion: 'Log out',
     version: 'version 2.4.1 · Consultorios Rivadavia',
-    tabs: { inicio: 'Home', turnos: 'Appointments', medicamentos: 'Medications', agenda: 'Schedule', pacientes: 'Patients', recetas: 'Prescriptions', perfil: 'Profile' },
+    tabs: { inicio: 'Home', turnos: 'Appointments', medicamentos: 'Medications', agenda: 'Schedules', pacientes: 'Patients', recetas: 'Prescriptions', perfil: 'Profile', espera: 'Waitlist', alertas: 'Alerts', personal: 'Staff', ajustes: 'Settings' },
     roles: {
       paciente: 'Patient',
       medico: 'Doctor',

@@ -15,6 +15,8 @@ type TextosEditar = {
   email: string;
   telefono: string;
   domicilio: string;
+  turnoTrabajo: string;
+  turnoTrabajoEjemplo: string;
   alergias: string;
   alergiasEjemplo: string;
   numeroAfiliado: string;
@@ -56,6 +58,8 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     email: 'Email',
     telefono: 'Teléfono',
     domicilio: 'Domicilio',
+    turnoTrabajo: 'Turno de trabajo',
+    turnoTrabajoEjemplo: 'Ej: Lunes a viernes · 8:00 a 16:00',
     alergias: 'Alergias',
     alergiasEjemplo: 'Ej: penicilina (escribí "ninguna" si no tenés)',
     numeroAfiliado: 'N° de afiliado',
@@ -95,6 +99,8 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     email: 'Email',
     telefono: 'Phone',
     domicilio: 'Address',
+    turnoTrabajo: 'Work shift',
+    turnoTrabajoEjemplo: 'E.g. Monday to Friday · 8:00 to 16:00',
     alergias: 'Allergies',
     alergiasEjemplo: 'E.g. penicillin (write "none" if you have none)',
     numeroAfiliado: 'Member number',

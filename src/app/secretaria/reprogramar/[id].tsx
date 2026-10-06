@@ -2,36 +2,46 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ResumenEspecialidad, ResumenMedico } from '@/components/resumen-turno';
 import {
   DIAS,
   formatearFechaCorta,
   formatearFechaLarga,
   SelectorHorario,
 } from '@/components/selector-horario';
-import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
-import { useAdelantos } from '@/contextos/AdelantosContext';
-import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
-import { horasReservadas } from '@/datos/adelantos';
-import { ESPECIALIDADES, MEDICOS } from '@/datos/catalogo';
+import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { useAdelantos } from '@/contextos/AdelantosContext';
+import { horasReservadas } from '@/datos/adelantos';
+import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
+import { pacientesConPerfil } from '@/utilidades/datos-medico';
+import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
-export default function Reprogramar() {
+function volver() {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace(RUTA_AGENDA_SECRETARIA);
+  }
+}
+
+// Reprogramar un turno de cualquier paciente. El médico y el paciente no cambian: solo la fecha y la hora.
+export default function ReprogramarSecretaria() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { turnos, reprogramarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
+  const perfilPaciente = usePerfilPaciente();
   const [fecha, setFecha] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState(false);
 
-  // La especialidad y el médico no se eligen: vienen del turno que se reprograma.
   const turno = turnos.find((t) => t.id === id);
-  const especialidad = ESPECIALIDADES.find((e) => e.nombre === turno?.especialidad);
-  const medico = MEDICOS.find((m) => m.nombre === turno?.medico);
+  const paciente = turno ? pacientesConPerfil(perfilPaciente).find((p) => p.id === turno.idPaciente) : undefined;
 
-  // Si el id no existe (por ejemplo, URL escrita a mano), se vuelve al home.
-  if (!turno || !especialidad || !medico) {
-    return <Redirect href="/paciente" />;
+  // Si el id no existe (por ejemplo, URL escrita a mano), se vuelve a la agenda.
+  if (!turno || !paciente) {
+    return <Redirect href={RUTA_AGENDA_SECRETARIA} />;
   }
 
   // Mientras no elija otro día, se muestra el primero.
@@ -42,50 +52,45 @@ export default function Reprogramar() {
     setHora(null);
   }
 
-  function volver() {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/paciente');
-    }
-  }
-
   function confirmar() {
     if (!turno || !hora) return;
-    reprogramarTurno(turno.id, fechaSeleccionada, hora);
+    // La secretaría confirma el turno al reprogramarlo.
+    reprogramarTurno(turno.id, fechaSeleccionada, hora, 'confirmado');
     setConfirmado(true);
-  }
-
-  function volverAlInicio() {
-    router.dismissTo('/paciente');
   }
 
   return (
     <View style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <Pressable onPress={volver}>
-          <Text style={styles.volverTexto}>‹ Reprogramar turno</Text>
+          <Text style={styles.volver}>‹ Reprogramar turno</Text>
         </Pressable>
 
-        <View style={styles.turnoActual}>
-          <Text style={styles.turnoActualEtiqueta}>Turno actual</Text>
-          <Text style={styles.turnoActualValor}>
-            {formatearFechaLarga(turno.fecha)} · {turno.hora} h
+        <View style={styles.tarjeta}>
+          <Text style={styles.etiqueta}>Paciente</Text>
+          <Text style={styles.valor}>
+            {paciente.nombre} {paciente.apellido}
+          </Text>
+          <Text style={styles.etiqueta}>Profesional</Text>
+          <Text style={styles.valor}>
+            {turno.medico} · {turno.especialidad}
+          </Text>
+          <Text style={styles.etiqueta}>Turno actual</Text>
+          <Text style={styles.valor}>
+            {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h
           </Text>
         </View>
-
-        <ResumenEspecialidad especialidad={especialidad} />
-        <ResumenMedico medico={medico} />
 
         <SelectorHorario
           fecha={fechaSeleccionada}
           hora={hora}
           ocupadas={[
-            ...horasOcupadas(turnos, medico.nombre, fechaSeleccionada, turno.id),
-            ...horasReservadas(ofertas, turnos, medico.nombre, fechaSeleccionada, turno.id),
+            ...horasOcupadas(turnos, turno.medico, fechaSeleccionada, turno.id),
+            ...horasReservadas(ofertas, turnos, turno.medico, fechaSeleccionada, turno.id),
           ]}
           onElegirFecha={elegirFecha}
           onElegirHora={setHora}
+          color={COLOR_SECRETARIA}
         />
       </ScrollView>
 
@@ -100,20 +105,20 @@ export default function Reprogramar() {
         </Text>
       </Pressable>
 
-      <Modal visible={confirmado} animationType="slide" transparent onRequestClose={volverAlInicio}>
+      <Modal visible={confirmado} animationType="fade" transparent onRequestClose={() => router.replace(RUTA_AGENDA_SECRETARIA)}>
         <View style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
-            <Text style={styles.modalTitulo}>¡Turno reprogramado!</Text>
-            <Text style={styles.modalMedico}>{medico.nombre}</Text>
-            <Text style={styles.modalDato}>
-              {especialidad.nombre} · {medico.consultorio}
+            <Text style={styles.modalTitulo}>Turno reprogramado</Text>
+            <Text style={styles.modalPaciente}>
+              {paciente.nombre} {paciente.apellido}
             </Text>
+            <Text style={styles.modalDato}>{turno.medico}</Text>
             <Text style={styles.modalDato}>
               {formatearFechaLarga(fechaSeleccionada)} · {hora} h
             </Text>
-            <Text style={styles.modalDato}>Queda pendiente de confirmación.</Text>
-            <Pressable style={styles.botonModal} onPress={volverAlInicio}>
-              <Text style={styles.botonConfirmarTexto}>Volver al inicio</Text>
+            <Text style={styles.modalDato}>Queda confirmado.</Text>
+            <Pressable style={styles.botonModal} onPress={() => router.replace(RUTA_AGENDA_SECRETARIA)}>
+              <Text style={styles.botonConfirmarTexto}>Volver a la agenda</Text>
             </Pressable>
           </View>
         </View>
@@ -126,44 +131,43 @@ const styles = StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: FONDO_SECRETARIA,
   },
   contenido: {
     padding: 20,
     paddingBottom: 24,
   },
-  volverTexto: {
+  volver: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 16,
   },
-  turnoActual: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  tarjeta: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    padding: 16,
+    marginBottom: 16,
   },
-  turnoActualEtiqueta: {
+  etiqueta: {
     fontSize: 11,
     color: '#8A8A8A',
+    marginTop: 8,
   },
-  turnoActualValor: {
+  valor: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1A1A1A',
+    marginTop: 2,
   },
   botonConfirmar: {
-    backgroundColor: COLOR_PACIENTE,
+    backgroundColor: COLOR_SECRETARIA,
     paddingVertical: 16,
     paddingBottom: 16 + MARGEN_INFERIOR,
     alignItems: 'center',
   },
   botonConfirmarDeshabilitado: {
-    backgroundColor: '#A9BEE8',
+    backgroundColor: '#8FC4BF',
   },
   botonConfirmarTexto: {
     color: '#FFFFFF',
@@ -173,23 +177,23 @@ const styles = StyleSheet.create({
   fondoModal: {
     flex: 1,
     backgroundColor: 'rgba(26, 24, 21, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    padding: 20,
   },
   tarjetaModal: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     padding: 24,
   },
   modalTitulo: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: COLOR_SECRETARIA,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
   },
-  modalMedico: {
+  modalPaciente: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1A1A1A',
@@ -201,7 +205,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   botonModal: {
-    backgroundColor: COLOR_PACIENTE,
+    backgroundColor: COLOR_SECRETARIA,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',

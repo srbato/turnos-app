@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
 
 import {
+  HOY,
   ID_PACIENTE_APP,
   PACIENTES,
   TURNOS_DE_EJEMPLO,
@@ -19,9 +20,10 @@ type TurnosContextType = {
   turnos: Turno[]; // los turnos de todos los pacientes
   misTurnos: Turno[]; // solo los del paciente que usa la app
   agregarTurno: (turno: Turno) => void;
-  reprogramarTurno: (id: string, fecha: string, hora: string) => void;
+  reprogramarTurno: (id: string, fecha: string, hora: string, estado?: EstadoTurno) => void;
   cancelarTurno: (id: string) => void;
   cambiarEstadoTurno: (id: string, estado: EstadoTurno) => void; // lo usa el médico (confirmar, atender)
+  activarAdelanto: (id: string, activo: boolean) => void; // anota o saca el turno de la lista de espera para adelantarlo
 };
 
 // Cobertura del paciente de un turno de ejemplo, como texto ("Swiss Medical SMG20").
@@ -45,11 +47,19 @@ export function TurnosProvider({ children }: { children: ReactNode }) {
     function agregarTurno(turno: Turno) {
       setTurnos((anteriores) => [...anteriores, turno]);
     }
-    // Cambia fecha y hora del mismo turno (mismo id). Queda pendiente hasta que se reconfirme.
-    function reprogramarTurno(id: string, fecha: string, hora: string) {
+    // Cambia fecha y hora del mismo turno (mismo id). Por defecto queda pendiente hasta que se reconfirme;
+    // la secretaría lo puede dejar confirmado.
+    function reprogramarTurno(id: string, fecha: string, hora: string, estado: EstadoTurno = 'pendiente') {
       setTurnos((anteriores) =>
         anteriores.map((turno) =>
-          turno.id === id ? { ...turno, fecha, hora, estado: 'pendiente' } : turno
+          turno.id === id ? { ...turno, fecha, hora, estado } : turno
+        )
+      );
+    }
+    function activarAdelanto(id: string, activo: boolean) {
+      setTurnos((anteriores) =>
+        anteriores.map((turno) =>
+          turno.id === id ? { ...turno, adelantoDesde: activo ? HOY : undefined } : turno
         )
       );
     }
@@ -62,7 +72,7 @@ export function TurnosProvider({ children }: { children: ReactNode }) {
       );
     }
     const misTurnos = turnos.filter((turno) => turno.idPaciente === ID_PACIENTE_APP);
-    return { turnos, misTurnos, agregarTurno, reprogramarTurno, cancelarTurno, cambiarEstadoTurno };
+    return { turnos, misTurnos, agregarTurno, reprogramarTurno, cancelarTurno, cambiarEstadoTurno, activarAdelanto };
   }, [turnos]);
 
   return <TurnosContext.Provider value={value}>{children}</TurnosContext.Provider>;

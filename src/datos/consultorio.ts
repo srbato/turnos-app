@@ -16,6 +16,7 @@ export type Paciente = {
   numeroAfiliado: string;
   alergias: string;
   alerta: string; // aviso importante para el médico ('' si no hay ninguno)
+  faltas: number; // turnos anteriores a los que no se presentó (lo usa el puntaje de ausentismo)
 };
 
 // El primero de la lista (Valentín) es el paciente que usa la app.
@@ -32,6 +33,7 @@ export const PACIENTES: Paciente[] = [
     numeroAfiliado: '62-4418902/01',
     alergias: 'penicilina',
     alerta: '',
+    faltas: 0,
   },
   {
     id: 'p2',
@@ -44,6 +46,7 @@ export const PACIENTES: Paciente[] = [
     numeroAfiliado: '31-5566778/02',
     alergias: 'ninguna',
     alerta: '',
+    faltas: 0,
   },
   {
     id: 'p3',
@@ -56,6 +59,7 @@ export const PACIENTES: Paciente[] = [
     numeroAfiliado: '44-1122334/01',
     alergias: 'aspirina',
     alerta: 'Interacción medicamentosa detectada',
+    faltas: 2,
   },
   {
     id: 'p4',
@@ -68,6 +72,7 @@ export const PACIENTES: Paciente[] = [
     numeroAfiliado: '15-9988776/00',
     alergias: 'ninguna',
     alerta: '',
+    faltas: 0,
   },
   {
     id: 'p5',
@@ -80,6 +85,7 @@ export const PACIENTES: Paciente[] = [
     numeroAfiliado: '27-3344556/01',
     alergias: 'látex',
     alerta: '',
+    faltas: 2,
   },
   {
     id: 'p6',
@@ -92,6 +98,7 @@ export const PACIENTES: Paciente[] = [
     numeroAfiliado: '15-1234567/00',
     alergias: 'ninguna',
     alerta: '',
+    faltas: 0,
   },
 ];
 
@@ -192,7 +199,13 @@ export const ESPECIALIDADES = ['Cardiología', 'Clínica médica', 'Pediatría',
 const fechaHoy = new Date();
 export const HOY = `${fechaHoy.getFullYear()}-${String(fechaHoy.getMonth() + 1).padStart(2, '0')}-${String(fechaHoy.getDate()).padStart(2, '0')}`;
 
-export type EstadoTurno = 'confirmado' | 'pendiente' | 'cancelado' | 'atendido';
+// Fecha dentro de N días como texto 'AAAA-MM-DD' (para los turnos de ejemplo que dependen de hoy).
+export function fechaDentroDe(dias: number) {
+  const f = new Date(fechaHoy.getFullYear(), fechaHoy.getMonth(), fechaHoy.getDate() + dias);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+}
+
+export type EstadoTurno = 'confirmado' | 'pendiente' | 'cancelado' | 'atendido' | 'ausente';
 
 // Turno de ejemplo (sin cobertura): TurnosContext lo completa y lo usa como dato inicial.
 export type TurnoDeEjemplo = {
@@ -206,6 +219,8 @@ export type TurnoDeEjemplo = {
   sede: string;
   estado: EstadoTurno;
   instrucciones: string[];
+  adelantoDesde?: string; // AAAA-MM-DD desde que está en lista de espera para adelantar este turno (si falta, no está)
+  reservadoEl?: string; // AAAA-MM-DD en que se reservó (si falta, se asume que se reservó hoy)
 };
 
 export const TURNOS_DE_EJEMPLO: TurnoDeEjemplo[] = [
@@ -281,7 +296,7 @@ export const TURNOS_DE_EJEMPLO: TurnoDeEjemplo[] = [
     fecha: HOY,
     hora: '09:20',
     sede: NOMBRE_CONSULTORIO,
-    estado: 'confirmado',
+    estado: 'ausente',
     instrucciones: [],
   },
   {
@@ -293,7 +308,7 @@ export const TURNOS_DE_EJEMPLO: TurnoDeEjemplo[] = [
     fecha: HOY,
     hora: '09:40',
     sede: NOMBRE_CONSULTORIO,
-    estado: 'pendiente',
+    estado: 'ausente',
     instrucciones: [],
   },
   {
@@ -318,6 +333,7 @@ export const TURNOS_DE_EJEMPLO: TurnoDeEjemplo[] = [
     hora: '11:00',
     sede: NOMBRE_CONSULTORIO,
     estado: 'confirmado',
+    reservadoEl: '2026-06-20',
     instrucciones: [],
   },
 
@@ -345,6 +361,59 @@ export const TURNOS_DE_EJEMPLO: TurnoDeEjemplo[] = [
     sede: NOMBRE_CONSULTORIO,
     estado: 'confirmado',
     instrucciones: [],
+  },
+  // Turno cancelado hoy: queda liberado para ofrecérselo a la lista de espera de Cardiología.
+  {
+    id: '12',
+    idPaciente: 'p3',
+    medico: 'Dr. Ricardo Paz',
+    especialidad: 'Cardiología',
+    consultorio: 'Consultorio 5',
+    fecha: HOY,
+    hora: '16:20',
+    sede: NOMBRE_CONSULTORIO,
+    estado: 'cancelado',
+    instrucciones: [],
+  },
+  // Adelantos: un turno liberado dentro de 4 días con Paz, y dos pacientes con turno más tarde que están en la
+  // lista de espera para adelantarlo (Valentín espera hace más tiempo, así que es el primero).
+  {
+    id: '13',
+    idPaciente: 'p6',
+    medico: 'Dr. Ricardo Paz',
+    especialidad: 'Cardiología',
+    consultorio: 'Consultorio 5',
+    fecha: fechaDentroDe(4),
+    hora: '09:20',
+    sede: NOMBRE_CONSULTORIO,
+    estado: 'cancelado',
+    instrucciones: [],
+  },
+  {
+    id: '14',
+    idPaciente: 'p1',
+    medico: 'Dr. Ricardo Paz',
+    especialidad: 'Cardiología',
+    consultorio: 'Consultorio 5',
+    fecha: fechaDentroDe(12),
+    hora: '10:00',
+    sede: NOMBRE_CONSULTORIO,
+    estado: 'confirmado',
+    instrucciones: [],
+    adelantoDesde: '2026-09-20',
+  },
+  {
+    id: '15',
+    idPaciente: 'p4',
+    medico: 'Dr. Ricardo Paz',
+    especialidad: 'Cardiología',
+    consultorio: 'Consultorio 5',
+    fecha: fechaDentroDe(9),
+    hora: '15:00',
+    sede: NOMBRE_CONSULTORIO,
+    estado: 'pendiente',
+    instrucciones: [],
+    adelantoDesde: '2026-09-28',
   },
 ];
 
