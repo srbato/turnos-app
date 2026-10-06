@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AvatarPaciente } from '@/components/avatar-paciente';
 import { DetalleOfertaSecretaria } from '@/components/detalle-oferta-secretaria';
 import { DetalleTurnoSecretaria } from '@/components/detalle-turno-secretaria';
 import { MenuSecretaria } from '@/components/menu-secretaria';
@@ -12,6 +13,7 @@ import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
@@ -38,6 +40,7 @@ export default function TurnosDelDia() {
   const { ofertas } = useAdelantos();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo } = useConfiguracion();
+  const perfilSecretaria = usePerfilSecretaria();
   const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
 
   const [diaElegido, setDiaElegido] = useState(HOY);
@@ -79,9 +82,20 @@ export default function TurnosDelDia() {
             </Text>
             <Text style={styles.titulo}>{diaElegido === HOY ? 'Turnos de hoy' : 'Turnos del día'}</Text>
           </View>
-          <Pressable style={styles.botonMas} onPress={() => setNuevoAbierto(true)}>
-            <Text style={styles.botonMasTexto}>+</Text>
-          </Pressable>
+          <View style={styles.encabezadoAcciones}>
+            <Pressable style={styles.botonMas} onPress={() => setNuevoAbierto(true)}>
+              <Text style={styles.botonMasTexto}>+</Text>
+            </Pressable>
+            {/* Tocar la foto lleva a Mi perfil, igual que en el inicio del paciente. */}
+            <Pressable onPress={() => router.navigate('/perfil?rol=secretaria')} hitSlop={8}>
+              <AvatarPaciente
+                tamano={44}
+                colorFondo={COLOR_SECRETARIA}
+                colorTexto="#FFFFFF"
+                datos={{ nombre: perfilSecretaria.nombre, fotoUri: perfilSecretaria.fotoUri }}
+              />
+            </Pressable>
+          </View>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.semanaFila}>
@@ -251,6 +265,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLOR_SECRETARIA,
     marginTop: 2,
+  },
+  encabezadoAcciones: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   botonMas: {
     width: 44,
