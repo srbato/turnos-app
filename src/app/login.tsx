@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
@@ -10,6 +10,7 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useSesion } from '@/contextos/SesionContext';
 import { MEDICOS } from '@/datos/consultorio';
 
@@ -46,7 +47,8 @@ const CREDENCIALES = {
 };
 
 export default function Login() {
-    const { rol } = useLocalSearchParams();
+    const { rol, registrado } = useLocalSearchParams();
+    const perfilPaciente = usePerfilPaciente();
 
     let tema = TEMAS.paciente;
     let credenciales = CREDENCIALES.paciente;
@@ -65,7 +67,10 @@ export default function Login() {
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [mensajeError, setMensajeError] = useState('');
-    const [mensajeExito, setMensajeExito] = useState('');
+    // Al venir de Registro se avisa que la cuenta ya está creada.
+    const [mensajeExito, setMensajeExito] = useState(
+      registrado === '1' ? 'Cuenta creada. Ingresá con tu email y contraseña.' : ''
+    );
     const { setMedicoLogueado } = useSesion();
 
     // Opciones que todavía no funcionan (necesitan backend).
@@ -127,7 +132,13 @@ export default function Login() {
           return;
         }
 
-        if (email.trim() !== credenciales.email || password !== credenciales.password) {
+        // Paciente: sirve la cuenta de prueba o la que se creó en Registro.
+        const esCuentaRegistrada =
+          rol === 'paciente' &&
+          email.trim().toLowerCase() === perfilPaciente.email.toLowerCase() &&
+          password === perfilPaciente.contrasena;
+
+        if (!esCuentaRegistrada && (email.trim() !== credenciales.email || password !== credenciales.password)) {
           setMensajeError('Email o contraseña incorrectos.');
           return;
         }
@@ -243,12 +254,15 @@ export default function Login() {
                 </>
               )}
 
-              <View style={styles.pie}>
-                <Text style={styles.pieTexto}>¿No tenés cuenta?</Text>
-                <Pressable onPress={proximamente}>
-                  <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
-                </Pressable>
-              </View>
+              {/* Solo los pacientes se registran solos: el personal lo da de alta el consultorio. */}
+              {rol === 'paciente' && (
+                <View style={styles.pie}>
+                  <Text style={styles.pieTexto}>¿No tenés cuenta?</Text>
+                  <Pressable onPress={() => router.push('/registro' as Href)}>
+                    <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
+                  </Pressable>
+                </View>
+              )}
 
         </ScrollView>
         </KeyboardAvoidingView>

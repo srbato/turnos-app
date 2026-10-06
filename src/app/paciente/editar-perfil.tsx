@@ -8,7 +8,7 @@ import { BarraPerfil } from '@/components/barra-perfil';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
-import { DNI_PACIENTE, usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { COBERTURAS } from '@/datos/catalogo';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
@@ -23,9 +23,6 @@ const ESPERA_CIERRE_MODAL_MS = 600;
 function esperar(milisegundos: number) {
   return new Promise((resolver) => setTimeout(resolver, milisegundos));
 }
-
-// Contraseña de prueba del paciente (la misma del login). Con backend se verificaría en el servidor.
-const CONTRASENA_ACTUAL_MOCK = 'p';
 
 export default function EditarPerfil() {
   const perfil = usePerfilPaciente();
@@ -145,7 +142,8 @@ export default function EditarPerfil() {
   }
 
   async function confirmarContrasena() {
-    if (actual !== CONTRASENA_ACTUAL_MOCK) {
+    // Contraseña de prueba guardada en el perfil. Con backend se verificaría en el servidor.
+    if (actual !== perfil.contrasena) {
       setErrorContrasena(textos.errorActual);
       return;
     }
@@ -163,6 +161,7 @@ export default function EditarPerfil() {
       setErrorContrasena(textos.errorBiometria);
       return;
     }
+    perfil.actualizarPerfil({ contrasena: nueva });
     cerrarContrasena();
     setMensaje({ texto: textos.contrasenaCambiada, esError: false });
   }
@@ -232,7 +231,7 @@ export default function EditarPerfil() {
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.dni}</Text>
           <View style={[styles.campo, styles.campoBloqueado, { borderColor: tema.borde }]}>
-            <Text style={[styles.dniValor, { color: tema.textoSecundario }]}>{DNI_PACIENTE}</Text>
+            <Text style={[styles.dniValor, { color: tema.textoSecundario }]}>{perfil.dni}</Text>
           </View>
           <Text style={[styles.nota, { color: tema.textoTenue }]}>{textos.dniNota}</Text>
         </View>

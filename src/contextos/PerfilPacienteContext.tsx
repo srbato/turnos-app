@@ -1,11 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-// El DNI no se guarda ni se edita: es único y, con backend, se validaría contra el RENAPER.
-export const DNI_PACIENTE = '40.123.456';
-
 export type PerfilPaciente = {
   nombre: string;
+  dni: string; // se carga al registrarse y después no se edita: con backend se validaría contra el RENAPER
+  contrasena: string; // de prueba: todavía no hay backend que la guarde de forma segura
   email: string;
   telefono: string;
   domicilio: string;
@@ -23,6 +22,8 @@ const CLAVE_STORAGE = 'perfil-paciente';
 
 const PERFIL_INICIAL: PerfilPaciente = {
   nombre: 'Valentín Michelic',
+  dni: '40.123.456',
+  contrasena: 'p',
   email: 'valentin@test.com',
   telefono: '',
   domicilio: '',
