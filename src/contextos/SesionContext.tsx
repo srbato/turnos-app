@@ -1,9 +1,10 @@
 import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
 
-import { MEDICOS, type Medico } from '@/datos/consultorio';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { type Medico } from '@/datos/consultorio';
 
 // Guarda qué médico inició sesión, para que la agenda y el perfil muestren sus datos.
-// Todavía no hay backend: el login compara usuario y contraseña de prueba (ver MEDICOS en datos/consultorio).
+// Todavía no hay backend: el login compara usuario y contraseña de prueba (ver los médicos de cada consultorio en datos/consultorio).
 
 type SesionContextType = {
   medicoLogueado: Medico;
@@ -13,8 +14,9 @@ type SesionContextType = {
 const SesionContext = createContext<SesionContextType | undefined>(undefined);
 
 export function SesionProvider({ children }: { children: ReactNode }) {
-  // Por defecto, el primer médico de la lista (para entrar directo a /medico sin pasar por el login).
-  const [medicoLogueado, setMedicoLogueado] = useState<Medico>(MEDICOS[0]);
+  const { consultorio } = useConsultorio();
+  // Por defecto, el primer médico del consultorio (para entrar directo a /medico sin pasar por el login).
+  const [medicoLogueado, setMedicoLogueado] = useState<Medico>(consultorio.medicos[0]);
 
   // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
   const value = useMemo(() => ({ medicoLogueado, setMedicoLogueado }), [medicoLogueado]);

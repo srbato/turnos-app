@@ -1,10 +1,36 @@
 // Horarios de atención de los médicos.
 
-// Horarios que se ofrecen siempre (turnos de 20 minutos): mañana y tarde.
-export const HORAS_BASE = [
-  '09:00', '09:20', '09:40', '10:00', '10:20', '10:40', '11:00', '11:20', '11:40',
-  '15:00', '15:20', '15:40', '16:00', '16:20', '16:40', '17:00',
+// Duraciones de turno que puede elegir Secretaría en Ajustes (minutos).
+export const DURACIONES_DE_TURNO = [15, 20, 30, 45] as const;
+export type DuracionDeTurno = (typeof DURACIONES_DE_TURNO)[number];
+
+// Los dos bloques en que se atiende cada día: un turno entra solo si termina antes de que cierre el bloque.
+const BLOQUES = [
+  { desde: '09:00', hasta: '12:00' }, // mañana
+  { desde: '15:00', hasta: '17:20' }, // tarde
 ];
+
+function aMinutos(hora: string) {
+  const [horas, minutos] = hora.split(':').map(Number);
+  return horas * 60 + minutos;
+}
+
+function aHora(minutos: number) {
+  return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
+}
+
+// Horarios de turno de un día, según la duración que configuró Secretaría. Es la única grilla de la app: la usan el
+// paciente al sacar turno, Secretaría en sus agendas y los médicos. Con 20 minutos son 09:00, 09:20 … 11:40 y
+// 15:00 … 17:00.
+export function horasDeAtencion(duracionMinutos: number) {
+  const horas: string[] = [];
+  BLOQUES.forEach((bloque) => {
+    for (let inicio = aMinutos(bloque.desde); inicio + duracionMinutos <= aMinutos(bloque.hasta); inicio += duracionMinutos) {
+      horas.push(aHora(inicio));
+    }
+  });
+  return horas;
+}
 
 const NOMBRES_DIAS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
 

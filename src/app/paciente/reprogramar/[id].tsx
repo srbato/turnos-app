@@ -12,10 +12,10 @@ import {
 } from '@/components/selector-horario';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useAdelantos } from '@/contextos/AdelantosContext';
-import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
+import { aceptaTurnos, atiendeEn, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
-import { ESPECIALIDADES, MEDICOS } from '@/datos/catalogo';
+import { especialidadesDe, medicosDelCatalogo } from '@/datos/catalogo';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 export default function Reprogramar() {
@@ -29,8 +29,8 @@ export default function Reprogramar() {
 
   // La especialidad y el médico no se eligen: vienen del turno que se reprograma.
   const turno = turnos.find((t) => t.id === id);
-  const especialidad = ESPECIALIDADES.find((e) => e.nombre === turno?.especialidad);
-  const medico = MEDICOS.find((m) => m.nombre === turno?.medico);
+  const especialidad = especialidadesDe(personal).find((e) => e.nombre === turno?.especialidad);
+  const medico = medicosDelCatalogo(personal).find((m) => m.nombre === turno?.medico);
 
   // Si el id no existe (por ejemplo, URL escrita a mano), se vuelve al home.
   if (!turno || !especialidad || !medico) {
@@ -58,7 +58,11 @@ export default function Reprogramar() {
   // Si el médico está de licencia, los días disponibles arrancan cuando vuelve.
   const vuelta = fechaDeVuelta(personal, medico.nombre);
   const dias = diasDesde(vuelta, DIAS_OFRECIDOS);
-  const fechaSeleccionada = fecha && dias.some((dia) => dia.fecha === fecha) ? fecha : dias[0].fecha;
+  // Solo se ofrecen los días en que el médico atiende.
+  const atiende = (dia: string) => atiendeEn(personal, medico.nombre, dia);
+  const diasConAtencion = dias.filter((dia) => dia.disponible && atiende(dia.fecha));
+  const fechaSeleccionada =
+    fecha && diasConAtencion.some((dia) => dia.fecha === fecha) ? fecha : (diasConAtencion[0] ?? dias[0]).fecha;
 
   function elegirFecha(nueva: string) {
     setFecha(nueva);
@@ -111,6 +115,7 @@ export default function Reprogramar() {
         <SelectorHorario
           primerDia={vuelta}
           cantidadDias={DIAS_OFRECIDOS}
+          atiende={atiende}
           fecha={fechaSeleccionada}
           hora={hora}
           ocupadas={[
@@ -139,7 +144,7 @@ export default function Reprogramar() {
             <Text style={styles.modalTitulo}>¡Turno reprogramado!</Text>
             <Text style={styles.modalMedico}>{medico.nombre}</Text>
             <Text style={styles.modalDato}>
-              {especialidad.nombre} · {medico.consultorio}
+              {especialidad.nombre} · {medico.sala}
             </Text>
             <Text style={styles.modalDato}>
               {formatearFechaLarga(fechaSeleccionada)} · {hora} h

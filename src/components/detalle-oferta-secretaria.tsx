@@ -9,6 +9,7 @@ import {
   COLOR_SECRETARIA,
 } from "@/constantes/colores";
 import { useAdelantos } from "@/contextos/AdelantosContext";
+import { useConsultorio } from "@/contextos/ConsultorioContext";
 import { usePerfilPaciente } from "@/contextos/PerfilPacienteContext";
 import { useTurnos } from "@/contextos/TurnosContext";
 import { ofertasVigentes } from "@/datos/adelantos";
@@ -29,7 +30,8 @@ function textoFecha(fecha: string, hora: string) {
 export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
   const { turnos } = useTurnos();
   const { ofertas, retirarOferta } = useAdelantos();
-  const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { consultorio } = useConsultorio();
+  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
   const [confirmando, setConfirmando] = useState(false);
   // Eligiendo otro horario para esta misma oferta.
   const [reprogramando, setReprogramando] = useState(false);

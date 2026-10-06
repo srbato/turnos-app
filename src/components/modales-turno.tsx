@@ -3,9 +3,10 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { OpcionAdelanto } from '@/components/opcion-adelanto';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { usePersonal, type MiembroMedico } from '@/contextos/PersonalContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useTurnos, type Turno } from '@/contextos/TurnosContext';
-import { DIRECCION_SEDE, MEDICOS } from '@/datos/catalogo';
 import {
   COLORES_ESTADO,
   detalleFecha,
@@ -26,6 +27,8 @@ type PropsDetalle = {
 export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle) {
   const { buscarPorTurno } = usePreconsultas();
   const { turnos, activarAdelanto } = useTurnos();
+  const { direccion } = useConfiguracion();
+  const { medicos } = usePersonal();
   // El turno recibido es una foto de cuando se abrió el modal: el estado actual se busca en el contexto.
   const turnoActual = turno ? turnos.find((t) => t.id === turno.id) : undefined;
 
@@ -59,13 +62,13 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
               <View style={styles.filas}>
                 <View style={styles.fila}>
                   <Text style={styles.etiqueta}>Consultorio</Text>
-                  <Text style={styles.valor}>{turno.consultorio}</Text>
+                  <Text style={styles.valor}>{turno.sala}</Text>
                 </View>
                 <View style={styles.fila}>
                   <Text style={styles.etiqueta}>Sede</Text>
                   <View style={styles.valorCaja}>
                     <Text style={styles.valor}>{turno.sede}</Text>
-                    <Text style={styles.subvalor}>{DIRECCION_SEDE}</Text>
+                    <Text style={styles.subvalor}>{direccion}</Text>
                   </View>
                 </View>
                 <View style={[styles.fila, styles.filaUltima]}>
@@ -125,7 +128,7 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                   style={styles.botonPrimarioAncho}
                   onPress={() => {
                     onCerrar();
-                    volverAPedirTurno(turno);
+                    volverAPedirTurno(turno, medicos);
                   }}>
                   <Text style={styles.botonPrimarioTexto}>Volver a pedir turno con este profesional</Text>
                 </Pressable>
@@ -142,13 +145,13 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
 }
 
 // Abre Sacar turno directo en el paso del horario, con la especialidad y el médico del turno ya elegidos.
-function volverAPedirTurno(turno: Turno) {
-  const medico = MEDICOS.find((m) => m.nombre === turno.medico);
+function volverAPedirTurno(turno: Turno, medicos: MiembroMedico[]) {
+  const medico = medicos.find((m) => m.nombre === turno.medico);
   if (!medico) {
     router.push('/paciente/sacar-turno');
     return;
   }
-  router.push({ pathname: '/paciente/sacar-turno/horario', params: { medicoId: medico.id } });
+  router.push({ pathname: '/paciente/sacar-turno/horario', params: { medicoId: medico.matricula } });
 }
 
 // Solo se reprograma o cancela un turno que no está cancelado y todavía no pasó.

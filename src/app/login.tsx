@@ -10,9 +10,9 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useSesion } from '@/contextos/SesionContext';
-import { MEDICOS } from '@/datos/consultorio';
 
 
 const TEMAS = {
@@ -40,7 +40,7 @@ const TEMAS = {
 };
 
 // Credenciales de prueba: todavía no hay backend, se validan a mano.
-// Los médicos tienen un usuario cada uno, en la lista MEDICOS de datos/consultorio.ts.
+// Los médicos tienen un usuario cada uno, en los médicos de cada consultorio (datos/consultorio.ts).
 const CREDENCIALES = {
   paciente: { email: 'p@t.com', password: 'p' },
   secretaria: { email: 's@t.com', password: 's' },
@@ -72,6 +72,7 @@ export default function Login() {
       registrado === '1' ? 'Cuenta creada. Ingresá con tu email y contraseña.' : ''
     );
     const { setMedicoLogueado } = useSesion();
+    const { consultorio } = useConsultorio();
 
     // Opciones que todavía no funcionan (necesitan backend).
     const proximamente = () => {
@@ -122,7 +123,7 @@ export default function Login() {
 
         // Médicos: se busca en la lista cuál médico es, y se guarda en la sesión.
         if (rol === 'medico') {
-          const medico = MEDICOS.find((m) => m.email === email.trim() && m.password === password);
+          const medico = consultorio.medicos.find((m) => m.email === email.trim() && m.password === password);
           if (!medico) {
             setMensajeError('Email o contraseña incorrectos.');
             return;
@@ -443,4 +444,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-});
+});

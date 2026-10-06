@@ -1,6 +1,6 @@
 import type { Oferta } from '@/contextos/AdelantosContext';
 import type { Turno } from '@/contextos/TurnosContext';
-import { HOY, NOMBRE_CONSULTORIO } from '@/datos/consultorio';
+import { HOY } from '@/datos/consultorio';
 
 // Lista de espera = adelantos. Todos los pacientes sacan un turno; al sacarlo pueden pedir que se les ofrezca un
 // horario antes si se libera uno (el turno queda con "adelantoDesde"). Reglas:
@@ -35,29 +35,37 @@ function horarioOcupado(horario: Turno, turnos: Turno[]) {
   );
 }
 
-// Turnos cancelados de hoy en adelante cuyo horario nadie volvió a ocupar.
+// Turnos cancelados de hoy en adelante cuyo horario nadie volvió a ocupar. Los que el sistema canceló porque el médico
+// no atendía ese día no cuentan: ese horario no existe, así que no se le ofrece a nadie.
 export function turnosLiberados(turnos: Turno[]) {
   return turnos
-    .filter((turno) => turno.estado === 'cancelado' && turno.fecha >= HOY && !horarioOcupado(turno, turnos))
+    .filter(
+      (turno) =>
+        turno.estado === 'cancelado' &&
+        turno.motivoCancelacion === undefined &&
+        turno.fecha >= HOY &&
+        !horarioOcupado(turno, turnos)
+    )
     .sort((a, b) => (momento(a) < momento(b) ? -1 : 1));
 }
 
 // Un horario libre de la agenda de un médico, con forma de turno cancelado (así toda la lógica de ofertas lo trata igual
 // que un turno liberado). No tiene paciente.
 export function crearHorarioLibre(
-  medico: { nombre: string; especialidad: string; consultorio: string },
+  medico: { nombre: string; especialidad: string; sala: string },
   fecha: string,
-  hora: string
+  hora: string,
+  sede: string // nombre del consultorio al que pertenece el horario
 ): Turno {
   return {
     id: `horario-${medico.nombre}-${fecha}-${hora}`,
     idPaciente: '',
     medico: medico.nombre,
     especialidad: medico.especialidad,
-    consultorio: medico.consultorio,
+    sala: medico.sala,
     fecha,
     hora,
-    sede: NOMBRE_CONSULTORIO,
+    sede,
     estado: 'cancelado',
     instrucciones: [],
     cobertura: '',

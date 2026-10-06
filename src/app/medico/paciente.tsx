@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
@@ -46,8 +47,10 @@ export default function FichaPaciente() {
   const perfilPaciente = usePerfilPaciente();
   const { medicamentos: medicamentosPropios } = useMedicamentos();
   const { recetas } = useRecetas();
+  const { consultorio } = useConsultorio();
   const { pacientes, paciente, medicamentos, interacciones } = datosParaMedico(
     perfilPaciente,
+    consultorio.pacientes,
     medicamentosPropios,
     recetas
   );

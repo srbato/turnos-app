@@ -12,12 +12,13 @@ import {
   SelectorHorario,
 } from '@/components/selector-horario';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
+import { aceptaTurnos, atiendeEn, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
-import { coberturaQueAtiende, SEDE } from '@/datos/catalogo';
+import { coberturaQueAtiende } from '@/datos/catalogo';
 import { horasReservadas } from '@/datos/adelantos';
 import { HOY, ID_PACIENTE_APP } from '@/datos/consultorio';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
@@ -27,6 +28,7 @@ export default function ElegirHorario() {
   const { turnos, agregarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
   const { medicos: personal } = usePersonal();
+  const { nombre: nombreConsultorio } = useConfiguracion();
   const { coberturaIds } = usePerfilPaciente();
   const [confirmado, setConfirmado] = useState(false);
   // Si quiere que le ofrezcan adelantar el turno cuando se libere un horario (lista de espera).
@@ -43,8 +45,12 @@ export default function ElegirHorario() {
   // Si el médico está de licencia, los días disponibles arrancan cuando vuelve.
   const vuelta = fechaDeVuelta(personal, medico.nombre);
   const dias = diasDesde(vuelta, DIAS_OFRECIDOS);
-  // Mientras no elija otro día (o si el que había elegido ya no se ofrece), se muestra el primero.
-  const fechaSeleccionada = fecha && dias.some((dia) => dia.fecha === fecha) ? fecha : dias[0].fecha;
+  // Solo se ofrecen los días en que el médico atiende (sus días de atención y sin licencia).
+  const atiende = (dia: string) => atiendeEn(personal, medico.nombre, dia);
+  const diasConAtencion = dias.filter((dia) => dia.disponible && atiende(dia.fecha));
+  // Mientras no elija otro día (o si el que había elegido ya no se ofrece), se muestra el primero con atención.
+  const fechaSeleccionada =
+    fecha && diasConAtencion.some((dia) => dia.fecha === fecha) ? fecha : (diasConAtencion[0] ?? dias[0]).fecha;
 
   function confirmar() {
     if (!especialidad || !medico || !hora) return;
@@ -53,10 +59,10 @@ export default function ElegirHorario() {
       idPaciente: ID_PACIENTE_APP,
       medico: medico.nombre,
       especialidad: especialidad.nombre,
-      consultorio: medico.consultorio,
+      sala: medico.sala,
       fecha: fechaSeleccionada,
       hora,
-      sede: SEDE,
+      sede: nombreConsultorio,
       cobertura: coberturaQueAtiende(medico, coberturaIds),
       estado: 'pendiente',
       instrucciones: [],
@@ -93,6 +99,7 @@ export default function ElegirHorario() {
         <SelectorHorario
           primerDia={vuelta}
           cantidadDias={DIAS_OFRECIDOS}
+          atiende={atiende}
           fecha={fechaSeleccionada}
           hora={hora}
           ocupadas={[
@@ -124,12 +131,12 @@ export default function ElegirHorario() {
             <Text style={styles.modalTitulo}>¡Turno solicitado!</Text>
             <Text style={styles.modalMedico}>{medico.nombre}</Text>
             <Text style={styles.modalDato}>
-              {especialidad.nombre} · {medico.consultorio}
+              {especialidad.nombre} · {medico.sala}
             </Text>
             <Text style={styles.modalDato}>
               {formatearFechaLarga(fechaSeleccionada)} · {hora} h
             </Text>
-            <Text style={styles.modalDato}>{SEDE}</Text>
+            <Text style={styles.modalDato}>{nombreConsultorio}</Text>
             <Pressable style={styles.botonModal} onPress={volverAlInicio}>
               <Text style={styles.botonConfirmarTexto}>Volver al inicio</Text>
             </Pressable>

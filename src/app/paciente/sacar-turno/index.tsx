@@ -2,11 +2,15 @@ import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { aceptaTurnos, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
-import { ESPECIALIDADES, type Especialidad } from '@/datos/catalogo';
+import { especialidadesDe, type Especialidad } from '@/datos/catalogo';
 
 export default function ElegirEspecialidad() {
   const { elegirEspecialidad } = useSacarTurno();
+  const { medicos: personal } = usePersonal();
+  // Solo las especialidades que tienen algún médico que atiende (no de baja ni de licencia sin fecha).
+  const especialidades = especialidadesDe(personal.filter((medico) => aceptaTurnos(personal, medico.nombre)));
 
   function elegir(especialidad: Especialidad) {
     elegirEspecialidad(especialidad);
@@ -17,7 +21,7 @@ export default function ElegirEspecialidad() {
     <FlatList
       style={styles.pantalla}
       contentContainerStyle={styles.contenido}
-      data={ESPECIALIDADES}
+      data={especialidades}
       keyExtractor={(especialidad) => especialidad.id}
       ListHeaderComponent={<Text style={styles.titulo}>¿Qué especialidad necesitás?</Text>}
       renderItem={({ item }) => (

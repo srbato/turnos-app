@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_SECRETARIA } from '@/constantes/colores';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
@@ -17,7 +18,8 @@ type Props = {
 // Se guarda el id (y no el turno) para que el Modal muestre siempre el estado actualizado.
 export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
   const { turnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
-  const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { consultorio } = useConsultorio();
+  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
   const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
 
   const turno = turnos.find((t) => t.id === idTurno);
@@ -57,7 +59,7 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                 <View style={styles.fila}>
                   <Text style={styles.etiqueta}>Especialidad</Text>
                   <Text style={styles.valor}>
-                    {turno.especialidad} · {turno.consultorio}
+                    {turno.especialidad} · {turno.sala}
                   </Text>
                 </View>
                 <View style={[styles.fila, styles.filaUltima]}>

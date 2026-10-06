@@ -16,7 +16,12 @@ type RecetasContextType = {
   recetas: Receta[]; // las recetas de todos los pacientes
   misRecetas: Receta[]; // solo las del paciente que usa la app
   emitirReceta: (receta: RecetaNueva) => void;
+  editarReceta: (id: string, cambios: CambiosReceta) => void; // el médico corrige una receta vigente
+  eliminarReceta: (id: string) => void; // el médico la elimina si no correspondía
 };
+
+// Lo que el médico puede corregir de una receta ya emitida: el paciente, la fecha y el código no cambian.
+export type CambiosReceta = Pick<RecetaNueva, 'medicamento' | 'indicacion' | 'riesgo'>;
 
 const VIGENCIA_POR_DEFECTO_DIAS = 30;
 
@@ -40,8 +45,20 @@ export function RecetasProvider({ children }: { children: ReactNode }) {
       };
       setRecetas((anteriores) => [...anteriores, receta]);
     }
+    function editarReceta(id: string, cambios: CambiosReceta) {
+      setRecetas((anteriores) =>
+        anteriores.map((receta) =>
+          receta.id === id
+            ? { ...receta, ...cambios, abreviatura: cambios.medicamento.slice(0, 3).toUpperCase() }
+            : receta
+        )
+      );
+    }
+    function eliminarReceta(id: string) {
+      setRecetas((anteriores) => anteriores.filter((receta) => receta.id !== id));
+    }
     const misRecetas = recetas.filter((receta) => receta.idPaciente === ID_PACIENTE_APP);
-    return { recetas, misRecetas, emitirReceta };
+    return { recetas, misRecetas, emitirReceta, editarReceta, eliminarReceta };
   }, [recetas]);
 
   return <RecetasContext.Provider value={value}>{children}</RecetasContext.Provider>;

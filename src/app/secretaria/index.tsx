@@ -9,6 +9,8 @@ import { apellidoDelMedico, NuevoTurnoSecretaria } from '@/components/nuevo-turn
 import { COLOR_CANCELADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
@@ -34,7 +36,9 @@ export default function TurnosDelDia() {
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
   const { ofertas } = useAdelantos();
-  const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { consultorio } = useConsultorio();
+  const { reglasRiesgo } = useConfiguracion();
+  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
 
   const [diaElegido, setDiaElegido] = useState(HOY);
   const [medicoFiltro, setMedicoFiltro] = useState(''); // '' = todos
@@ -115,9 +119,14 @@ export default function TurnosDelDia() {
           </View>
         </View>
 
-        <Pressable style={styles.botonComparar} onPress={() => router.push('/secretaria/comparar')}>
-          <Text style={styles.botonCompararTexto}>▦  Comparar horarios de los médicos</Text>
-        </Pressable>
+        <View style={styles.botonesFila}>
+          <Pressable style={styles.botonComparar} onPress={() => router.push('/secretaria/comparar')}>
+            <Text style={styles.botonCompararTexto}>▦  Comparar horarios</Text>
+          </Pressable>
+          <Pressable style={styles.botonComparar} onPress={() => router.push('/secretaria/pacientes')}>
+            <Text style={styles.botonCompararTexto}>◍  Pacientes</Text>
+          </Pressable>
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
           <Pressable style={[styles.chip, medicoFiltro === '' && styles.chipActivo]} onPress={() => setMedicoFiltro('')}>
@@ -161,7 +170,7 @@ export default function TurnosDelDia() {
                     Horario ofrecido · {oferta.horario.medico}
                   </Text>
                   <Text style={styles.detalle} numberOfLines={1}>
-                    {oferta.horario.especialidad} · {oferta.horario.consultorio}
+                    {oferta.horario.especialidad} · {oferta.horario.sala}
                   </Text>
                 </View>
                 <View style={styles.tarjetaEstado}>
@@ -173,7 +182,7 @@ export default function TurnosDelDia() {
           }
           const { turno } = item;
           const paciente = pacientes.find((p) => p.id === turno.idPaciente);
-          const riesgo = paciente ? evaluarRiesgo(paciente, turnos) : undefined;
+          const riesgo = paciente ? evaluarRiesgo(paciente, turnos, reglasRiesgo) : undefined;
           const riesgoAlto = riesgo?.nivel === 'alto' && (turno.estado === 'pendiente' || turno.estado === 'confirmado');
           const color = turno.estado === 'ausente' ? COLOR_AUSENTE : COLORES_ESTADO[turno.estado];
           return (
@@ -188,7 +197,7 @@ export default function TurnosDelDia() {
                   {turno.medico}
                 </Text>
                 <Text style={styles.detalle} numberOfLines={1}>
-                  {turno.especialidad} · {turno.consultorio}
+                  {turno.especialidad} · {turno.sala}
                 </Text>
               </View>
               <View style={styles.tarjetaEstado}>
@@ -314,14 +323,19 @@ const styles = StyleSheet.create({
     color: '#5A5A5A',
     marginTop: 1,
   },
+  botonesFila: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 12,
+  },
   botonComparar: {
+    flex: 1,
     borderWidth: 1,
     borderColor: COLOR_SECRETARIA,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 12,
   },
   botonCompararTexto: {
     fontSize: 14,

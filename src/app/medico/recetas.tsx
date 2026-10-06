@@ -13,11 +13,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MenuMedico } from '@/components/menu-medico';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
+import { recetaVigente, vencimientoReceta, type Receta } from '@/datos/recetas';
 import { datosParaMedico } from '@/utilidades/datos-medico';
 import { formatearFecha } from '@/utilidades/turnos';
 
@@ -30,8 +33,9 @@ export default function RecetasDelMedico() {
   const { medicoLogueado } = useSesion();
   const perfilPaciente = usePerfilPaciente();
   const { medicamentos: medicamentosPropios } = useMedicamentos();
-  const { recetas, emitirReceta } = useRecetas();
-  const { pacientes } = datosParaMedico(perfilPaciente, medicamentosPropios, recetas);
+  const { recetas, emitirReceta, editarReceta, eliminarReceta } = useRecetas();
+  const { consultorio } = useConsultorio();
+  const { pacientes } = datosParaMedico(perfilPaciente, consultorio.pacientes, medicamentosPropios, recetas);
 
   // Formulario de nueva receta (se muestra en un Modal).
   const [formularioVisible, setFormularioVisible] = useState(false);
@@ -42,6 +46,10 @@ export default function RecetasDelMedico() {
   const [errorPaciente, setErrorPaciente] = useState('');
   const [errorMedicamento, setErrorMedicamento] = useState('');
   const [errorIndicacion, setErrorIndicacion] = useState('');
+  // Si se está corrigiendo una receta ya emitida, su id ('' = receta nueva).
+  const [idEditando, setIdEditando] = useState('');
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
+  const [vista, setVista] = useState<'vigentes' | 'historial'>('vigentes');
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   // Se le pueden hacer recetas a los pacientes que tienen turnos con este médico.
@@ -50,10 +58,22 @@ export default function RecetasDelMedico() {
     turnosDelMedico.some((turno) => turno.idPaciente === paciente.id)
   );
 
-  // Recetas de este médico, de la más nueva a la más vieja.
+  // Recetas de este médico, de la más nueva a la más vieja. Las vencidas pasan al historial y ya no se editan.
   const recetasDelMedico = recetas
     .filter((receta) => receta.medico === medicoLogueado.nombre)
     .sort((a, b) => (a.fechaEmision < b.fechaEmision ? 1 : -1));
+  const recetasVigentes = recetasDelMedico.filter((receta) => recetaVigente(receta));
+  const recetasPasadas = recetasDelMedico.filter((receta) => !recetaVigente(receta));
+  const recetasMostradas = vista === 'vigentes' ? recetasVigentes : recetasPasadas;
+
+  function abrirEdicion(receta: Receta) {
+    setIdEditando(receta.id);
+    setIdPaciente(receta.idPaciente);
+    setMedicamento(receta.medicamento);
+    setIndicacion(receta.indicacion);
+    setEsRiesgoso(receta.riesgo);
+    setFormularioVisible(true);
+  }
 
   function nombreDelPaciente(id: string) {
     const paciente = pacientes.find((pacienteDeLaLista) => pacienteDeLaLista.id === id);
@@ -69,6 +89,8 @@ export default function RecetasDelMedico() {
     setErrorPaciente('');
     setErrorMedicamento('');
     setErrorIndicacion('');
+    setIdEditando('');
+    setConfirmandoEliminar(false);
   }
 
   function guardarReceta() {
@@ -99,13 +121,26 @@ export default function RecetasDelMedico() {
       return;
     }
 
-    emitirReceta({
-      idPaciente: idPaciente,
-      medico: medicoLogueado.nombre,
-      medicamento: medicamento.trim(),
-      indicacion: indicacion.trim(),
-      riesgo: esRiesgoso,
-    });
+    if (idEditando !== '') {
+      editarReceta(idEditando, {
+        medicamento: medicamento.trim(),
+        indicacion: indicacion.trim(),
+        riesgo: esRiesgoso,
+      });
+    } else {
+      emitirReceta({
+        idPaciente: idPaciente,
+        medico: medicoLogueado.nombre,
+        medicamento: medicamento.trim(),
+        indicacion: indicacion.trim(),
+        riesgo: esRiesgoso,
+      });
+    }
+    cerrarFormulario();
+  }
+
+  function eliminar() {
+    eliminarReceta(idEditando);
     cerrarFormulario();
   }
 
@@ -119,18 +154,40 @@ export default function RecetasDelMedico() {
             <Text style={styles.botonNuevaTexto}>+ Nueva receta</Text>
           </Pressable>
         </View>
+        <View style={styles.vistaFila}>
+          <Pressable
+            style={[styles.vistaChip, vista === 'vigentes' && styles.vistaChipActivo]}
+            onPress={() => setVista('vigentes')}>
+            <Text style={[styles.vistaTexto, vista === 'vigentes' && styles.vistaTextoActivo]}>
+              Vigentes ({recetasVigentes.length})
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.vistaChip, vista === 'historial' && styles.vistaChipActivo]}
+            onPress={() => setVista('historial')}>
+            <Text style={[styles.vistaTexto, vista === 'historial' && styles.vistaTextoActivo]}>
+              Historial ({recetasPasadas.length})
+            </Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
 
       <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
-        {recetasDelMedico.length === 0 && (
+        {recetasMostradas.length === 0 && (
           <View style={styles.estadoVacio}>
-            <Text style={styles.estadoVacioTexto}>Todavía no emitiste recetas.</Text>
+            <Text style={styles.estadoVacioTexto}>
+              {vista === 'vigentes' ? 'No tenés recetas vigentes.' : 'Todavía no tenés recetas vencidas.'}
+            </Text>
           </View>
         )}
 
-        {recetasDelMedico.map((receta) => (
-          <View key={receta.id} style={styles.tarjeta}>
-            <View style={styles.icono}>
+        {recetasMostradas.map((receta) => (
+          <Pressable
+            key={receta.id}
+            style={styles.tarjeta}
+            disabled={vista === 'historial'}
+            onPress={() => abrirEdicion(receta)}>
+            <View style={[styles.icono, vista === 'historial' && styles.iconoVencida]}>
               <Text style={styles.iconoTexto}>℞</Text>
             </View>
             <View style={styles.datos}>
@@ -142,29 +199,18 @@ export default function RecetasDelMedico() {
               <Text style={styles.detalle}>
                 {nombreDelPaciente(receta.idPaciente)} · {formatearFecha(receta.fechaEmision)}
               </Text>
+              <Text style={styles.detalleVigencia}>
+                {vista === 'historial'
+                  ? `Venció el ${formatearFecha(vencimientoReceta(receta))}`
+                  : `Vigente hasta el ${formatearFecha(vencimientoReceta(receta))}`}
+              </Text>
             </View>
-          </View>
+            {vista === 'vigentes' && <Text style={styles.editar}>Editar ›</Text>}
+          </Pressable>
         ))}
       </ScrollView>
 
-      <SafeAreaView style={styles.tabBar} edges={['bottom']}>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/medico')}>
-          <Text style={styles.tabIcono}>▤</Text>
-          <Text style={styles.tabTexto}>Agenda</Text>
-        </Pressable>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/medico/pacientes')}>
-          <Text style={styles.tabIcono}>◍</Text>
-          <Text style={styles.tabTexto}>Pacientes</Text>
-        </Pressable>
-        <View style={styles.tabItem}>
-          <Text style={[styles.tabIcono, styles.tabIconoActivo]}>℞</Text>
-          <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Recetas</Text>
-        </View>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/perfil?rol=medico')}>
-          <Text style={styles.tabIcono}>⚙</Text>
-          <Text style={styles.tabTexto}>Perfil</Text>
-        </Pressable>
-      </SafeAreaView>
+      <MenuMedico activa="recetas" />
 
       {/* Formulario de nueva receta */}
       <Modal
@@ -177,24 +223,28 @@ export default function RecetasDelMedico() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
             <ScrollView keyboardShouldPersistTaps="handled">
-              <Text style={styles.modalTitulo}>Nueva receta</Text>
+              <Text style={styles.modalTitulo}>{idEditando !== '' ? 'Editar receta' : 'Nueva receta'}</Text>
 
               <Text style={styles.label}>Paciente</Text>
-              <View style={styles.filaPacientes}>
-                {pacientesDelMedico.map((paciente) => {
-                  const elegido = paciente.id === idPaciente;
-                  return (
-                    <Pressable
-                      key={paciente.id}
-                      style={[styles.chipPaciente, elegido && styles.chipPacienteElegido]}
-                      onPress={() => setIdPaciente(paciente.id)}>
-                      <Text style={[styles.chipPacienteTexto, elegido && styles.chipPacienteTextoElegido]}>
-                        {paciente.nombre} {paciente.apellido}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {idEditando !== '' ? (
+                <Text style={styles.pacienteFijo}>{nombreDelPaciente(idPaciente)}</Text>
+              ) : (
+                <View style={styles.filaPacientes}>
+                  {pacientesDelMedico.map((paciente) => {
+                    const elegido = paciente.id === idPaciente;
+                    return (
+                      <Pressable
+                        key={paciente.id}
+                        style={[styles.chipPaciente, elegido && styles.chipPacienteElegido]}
+                        onPress={() => setIdPaciente(paciente.id)}>
+                        <Text style={[styles.chipPacienteTexto, elegido && styles.chipPacienteTextoElegido]}>
+                          {paciente.nombre} {paciente.apellido}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
               {errorPaciente !== '' && <Text style={styles.errorTexto}>{errorPaciente}</Text>}
 
               <Text style={styles.label}>Medicamento</Text>
@@ -233,9 +283,30 @@ export default function RecetasDelMedico() {
                   <Text style={styles.botonCancelarTexto}>Cancelar</Text>
                 </Pressable>
                 <Pressable style={styles.botonGuardar} onPress={guardarReceta}>
-                  <Text style={styles.botonGuardarTexto}>Emitir receta</Text>
+                  <Text style={styles.botonGuardarTexto}>{idEditando !== '' ? 'Guardar cambios' : 'Emitir receta'}</Text>
                 </Pressable>
               </View>
+
+              {idEditando !== '' && !confirmandoEliminar && (
+                <Pressable style={styles.botonEliminar} onPress={() => setConfirmandoEliminar(true)}>
+                  <Text style={styles.botonEliminarTexto}>Eliminar receta</Text>
+                </Pressable>
+              )}
+              {idEditando !== '' && confirmandoEliminar && (
+                <View style={styles.confirmacion}>
+                  <Text style={styles.confirmacionTexto}>
+                    ¿Eliminar esta receta? El paciente deja de verla y no se puede deshacer.
+                  </Text>
+                  <View style={styles.filaBotones}>
+                    <Pressable style={styles.botonCancelar} onPress={() => setConfirmandoEliminar(false)}>
+                      <Text style={styles.botonCancelarTexto}>No, volver</Text>
+                    </Pressable>
+                    <Pressable style={styles.botonConfirmarEliminar} onPress={eliminar}>
+                      <Text style={styles.botonGuardarTexto}>Sí, eliminar</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </ScrollView>
           </SafeAreaView>
         </KeyboardAvoidingView>
@@ -280,6 +351,81 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  vistaFila: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+  },
+  vistaChip: {
+    borderWidth: 1,
+    borderColor: '#4A4F58',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  vistaChipActivo: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  vistaTexto: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#A9ADB4',
+  },
+  vistaTextoActivo: {
+    color: '#1E2126',
+  },
+  detalleVigencia: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLOR_MEDICO,
+    marginTop: 3,
+  },
+  editar: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLOR_MEDICO,
+  },
+  iconoVencida: {
+    backgroundColor: '#ECECEC',
+  },
+  pacienteFijo: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    backgroundColor: '#F4F5F7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  botonEliminar: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginTop: 4,
+  },
+  botonEliminarTexto: {
+    color: COLOR_ERROR,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  confirmacion: {
+    backgroundColor: '#FBDCDC',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 12,
+  },
+  confirmacionTexto: {
+    fontSize: 13,
+    color: '#1A1A1A',
+  },
+  botonConfirmarEliminar: {
+    flex: 1,
+    backgroundColor: COLOR_ERROR,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   lista: {
     flex: 1,
@@ -445,33 +591,6 @@ const styles = StyleSheet.create({
   botonGuardarTexto: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
-    paddingVertical: 10,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  tabIcono: {
-    fontSize: 20,
-    color: '#9A9A9A',
-  },
-  tabIconoActivo: {
-    color: COLOR_MEDICO,
-  },
-  tabTexto: {
-    fontSize: 11,
-    color: '#9A9A9A',
-    marginTop: 2,
-  },
-  tabTextoActivo: {
-    color: COLOR_MEDICO,
     fontWeight: '700',
   },
 });

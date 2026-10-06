@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarPaciente } from '@/components/avatar-paciente';
+import { AvisoConfirmar } from '@/components/aviso-confirmar';
 import { MenuPaciente } from '@/components/menu-paciente';
 import { OfertasAdelanto } from '@/components/ofertas-adelanto';
 import { DetalleEstudioModal } from '@/components/modal-estudio';
@@ -65,6 +66,7 @@ export default function HubPaciente() {
         </View>
 
         {/* Propuestas de Secretaría para adelantar un turno (si hay alguna). */}
+        <AvisoConfirmar />
         <OfertasAdelanto />
 
         {!proximoTurno ? (
@@ -96,7 +98,7 @@ export default function HubPaciente() {
               <View style={styles.proximoDatos}>
                 <Text style={styles.proximoMedico}>{proximoTurno.medico}</Text>
                 <Text style={styles.proximoEspecialidad}>
-                  {proximoTurno.especialidad} · {proximoTurno.consultorio}
+                  {proximoTurno.especialidad} · {proximoTurno.sala}
                 </Text>
                 <Text style={styles.proximoHora}>
                   {detalleFecha(proximoTurno.fecha).diaSemana} {proximoTurno.hora} h

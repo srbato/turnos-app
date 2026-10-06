@@ -1,8 +1,12 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AvatarPaciente } from '@/components/avatar-paciente';
+import { MenuMedico } from '@/components/menu-medico';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
@@ -129,13 +133,16 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
 
 export default function AgendaMedico() {
   const { turnos, cancelarTurno, cambiarEstadoTurno } = useTurnos();
+  const perfilMedico = usePerfilMedico();
   const { medicoLogueado } = useSesion();
   const { buscarPorTurno } = usePreconsultas();
   const perfilPaciente = usePerfilPaciente();
   const { medicamentos: medicamentosPropios } = useMedicamentos();
   const { recetas } = useRecetas();
+  const { consultorio } = useConsultorio();
   const { pacientes, paciente, medicamentos, interacciones } = datosParaMedico(
     perfilPaciente,
+    consultorio.pacientes,
     medicamentosPropios,
     recetas
   );
@@ -204,9 +211,19 @@ export default function AgendaMedico() {
               {diaElegido === HOY ? 'Tu agenda de hoy' : 'Tu agenda'}
             </Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarTexto}>{medicoLogueado.iniciales}</Text>
-          </View>
+          {/* Tocar la foto lleva a Editar perfil, donde el médico puede cambiarla. */}
+          <Pressable onPress={() => router.push('/medico/editar-perfil' as Href)} hitSlop={8}>
+            <AvatarPaciente
+              tamano={44}
+              colorFondo={COLOR_MEDICO}
+              colorTexto="#FFFFFF"
+              datos={{
+                nombre: medicoLogueado.nombre,
+                fotoUri: perfilMedico.fotoUri,
+                iniciales: medicoLogueado.iniciales,
+              }}
+            />
+          </Pressable>
         </View>
 
         <View style={styles.resumen}>
@@ -400,6 +417,19 @@ export default function AgendaMedico() {
                   </View>
                 )}
 
+                {turnoSeleccionado.estado === 'ausente' && (
+                  <View style={styles.acciones}>
+                    <Text style={styles.avisoCorreccion}>
+                      Si lo marcaste por error, corregilo: la falta deja de sumar puntos de riesgo al paciente.
+                    </Text>
+                    <Pressable
+                      style={styles.botonAtendido}
+                      onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'atendido')}>
+                      <Text style={styles.botonCerrarTexto}>El paciente sí asistió</Text>
+                    </Pressable>
+                  </View>
+                )}
+
                 {confirmandoCancelacion && (
                   <View style={styles.cajaConfirmacion}>
                     <Text style={styles.textoConfirmacion}>¿Seguro que querés cancelar este turno?</Text>
@@ -423,24 +453,7 @@ export default function AgendaMedico() {
         </View>
       </Modal>
 
-      <SafeAreaView style={styles.tabBar} edges={['bottom']}>
-        <View style={styles.tabItem}>
-          <Text style={[styles.tabIcono, styles.tabIconoActivo]}>▤</Text>
-          <Text style={[styles.tabTexto, styles.tabTextoActivo]}>Agenda</Text>
-        </View>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/medico/pacientes')}>
-          <Text style={styles.tabIcono}>◍</Text>
-          <Text style={styles.tabTexto}>Pacientes</Text>
-        </Pressable>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/medico/recetas')}>
-          <Text style={styles.tabIcono}>℞</Text>
-          <Text style={styles.tabTexto}>Recetas</Text>
-        </Pressable>
-        <Pressable style={styles.tabItem} onPress={() => router.push('/perfil?rol=medico')}>
-          <Text style={styles.tabIcono}>⚙</Text>
-          <Text style={styles.tabTexto}>Perfil</Text>
-        </Pressable>
-      </SafeAreaView>
+      <MenuMedico activa="agenda" />
     </View>
   );
 }
@@ -717,6 +730,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#5A5A5A',
   },
+  avisoCorreccion: {
+    fontSize: 13,
+    color: '#5A5A5A',
+    marginBottom: 10,
+  },
   acciones: {
     marginTop: 24,
   },
@@ -797,33 +815,6 @@ const styles = StyleSheet.create({
   botonCerrarTexto: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
-    paddingVertical: 10,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  tabIcono: {
-    fontSize: 20,
-    color: '#9A9A9A',
-  },
-  tabIconoActivo: {
-    color: COLOR_MEDICO,
-  },
-  tabTexto: {
-    fontSize: 11,
-    color: '#9A9A9A',
-    marginTop: 2,
-  },
-  tabTextoActivo: {
-    color: COLOR_MEDICO,
     fontWeight: '700',
   },
 });

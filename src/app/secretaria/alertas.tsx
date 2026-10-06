@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MenuSecretaria } from '@/components/menu-secretaria';
@@ -11,16 +11,28 @@ import {
 } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
-import { evaluarRiesgo } from '@/datos/ausentismo';
+import {
+  evaluarRiesgo,
+  PUNTOS_POR_ASISTENCIA,
+  PUNTOS_POR_CONFIRMACION,
+  PUNTOS_POR_FALTA,
+  textoPuntaje,
+} from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
-// Lo único que suma puntos de riesgo (ver datos/ausentismo.ts).
-const REGLAS = [{ puntos: '+1', texto: 'Cada falta (no asistió)' }];
+// Cómo suman y restan los puntos de riesgo (ver datos/ausentismo.ts).
+const REGLAS = [
+  { puntos: `+${textoPuntaje(PUNTOS_POR_FALTA)}`, texto: 'Cada falta (no asistió)' },
+  { puntos: `−${textoPuntaje(PUNTOS_POR_ASISTENCIA)}`, texto: 'Cada vez que asistió' },
+  { puntos: `−${textoPuntaje(PUNTOS_POR_CONFIRMACION)}`, texto: 'Cada turno que confirmó' },
+];
 
 // "Dra. Lucía Fernández" -> "Dra. Fernández"
 function medicoCorto(nombre: string) {
@@ -31,8 +43,10 @@ function medicoCorto(nombre: string) {
 // Alertas: todos los turnos que todavía no confirmó el paciente. Un turno nuevo nace "pendiente", así que acá
 // están todos hasta que se confirmen. La idea: avisarles para que confirmen y, si no responden, liberar el horario.
 export default function AlertasSecretaria() {
-  const { turnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
-  const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { turnos, cambiarEstadoTurno, cancelarConMotivo, enviarAviso } = useTurnos();
+  const { consultorio } = useConsultorio();
+  const { reglasRiesgo, avisosAntesDeActuar } = useConfiguracion();
+  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
   const { ofertas } = useAdelantos();
 
   const hoy = new Date();
@@ -43,14 +57,30 @@ export default function AlertasSecretaria() {
     .sort((a, b) => (`${a.fecha} ${a.hora}` < `${b.fecha} ${b.hora}` ? -1 : 1))
     .map((turno) => {
       const paciente = pacientes.find((p) => p.id === turno.idPaciente);
-      return { turno, paciente, riesgo: paciente ? evaluarRiesgo(paciente, turnos) : undefined };
+      return { turno, paciente, riesgo: paciente ? evaluarRiesgo(paciente, turnos, reglasRiesgo) : undefined };
     });
+
+  // Cancelación por riesgo: queda con motivo, así el horario no se ofrece solo y Secretaría elige a quién dárselo.
+  function cancelarPorRiesgo(id: string) {
+    cancelarConMotivo([
+      {
+        id,
+        motivo: `Cancelado por riesgo de inasistencia: no confirmó tras ${avisosAntesDeActuar} avisos. El horario quedó libre para la lista de espera.`,
+      },
+    ]);
+  }
 
   function cuando(fecha: string, hora: string) {
     if (fecha === HOY) return `Hoy ${hora} h`;
     if (fecha === manana) return `Mañana ${hora} h`;
     return `${detalleFecha(fecha).diaSemana.slice(0, 3)} ${formatearFecha(fecha).slice(0, 5)} · ${hora} h`;
   }
+
+  // Turnos que el sistema canceló solo porque el médico no atiende ese día (cambió sus días, licencia, baja o error de
+  // carga). Quedan acá hasta que pasa la fecha, para avisar al paciente y darle otro turno.
+  const canceladosPorSistema = turnos
+    .filter((turno) => turno.estado === 'cancelado' && turno.motivoCancelacion !== undefined && turno.fecha >= HOY)
+    .sort((a, b) => (`${a.fecha} ${a.hora}` < `${b.fecha} ${b.hora}` ? -1 : 1));
 
   // Ofertas de adelanto esperando respuesta: son las que se ven en la pantalla Espera.
   const ofertasEnCurso = ofertasVigentes(ofertas, turnos).length;
@@ -86,31 +116,72 @@ export default function AlertasSecretaria() {
         )}
 
         {sinConfirmar.map(({ turno, paciente, riesgo }) => {
-          const faltas = riesgo?.puntaje ?? 0;
           const alto = riesgo?.nivel === 'alto';
-          const color = alto ? COLOR_CANCELADO : COLOR_PENDIENTE;
+          const color = alto ? COLOR_CANCELADO : riesgo?.nivel === 'en-riesgo' ? COLOR_PENDIENTE : COLOR_CONFIRMADO;
+          const avisos = turno.avisos?.length ?? 0;
+          // Solo a un paciente de riesgo alto que ya recibió los avisos se le puede reprogramar o cancelar el turno.
+          const puedeActuar = alto && avisos >= avisosAntesDeActuar;
           return (
             <View key={turno.id} style={[styles.tarjeta, { borderLeftColor: color }]}>
               <View style={styles.filaEncabezado}>
                 <Text style={styles.nombre}>{paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'}</Text>
-                {faltas > 0 && (
+                {riesgo && riesgo.faltas > 0 && (
                   <Text style={[styles.nivel, { color }]}>
-                    {faltas} {faltas === 1 ? 'falta' : 'faltas'} · riesgo {alto ? 'alto' : 'medio'}
+                    {textoPuntaje(riesgo.puntaje)} pts · riesgo {alto ? 'alto' : riesgo.nivel === 'en-riesgo' ? 'medio' : 'bajo'}
                   </Text>
                 )}
               </View>
               <Text style={styles.detalle}>
                 {cuando(turno.fecha, turno.hora)} · {medicoCorto(turno.medico)}
               </Text>
+              {avisos > 0 && (
+                <Text style={styles.detalle}>
+                  Avisos enviados: {avisos} · último el {formatearFecha(turno.avisos![avisos - 1]).slice(0, 5)}
+                </Text>
+              )}
 
               <View style={styles.filaBotones}>
                 <Pressable style={styles.botonPrimario} onPress={() => cambiarEstadoTurno(turno.id, 'confirmado')}>
                   <Text style={styles.botonPrimarioTexto}>Ya confirmó</Text>
                 </Pressable>
-                <Pressable style={styles.botonSecundario} onPress={() => cancelarTurno(turno.id)}>
-                  <Text style={styles.botonSecundarioTexto}>Liberar turno</Text>
-                </Pressable>
+                {avisos < avisosAntesDeActuar ? (
+                  <Pressable style={styles.botonSuave} onPress={() => enviarAviso(turno.id, avisosAntesDeActuar)}>
+                    <Text style={styles.botonSuaveTexto}>
+                      Enviar aviso ({avisos}/{avisosAntesDeActuar})
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <View style={styles.avisosCompletos}>
+                    <Text style={styles.avisosCompletosTexto}>
+                      {avisosAntesDeActuar}/{avisosAntesDeActuar} avisos enviados
+                    </Text>
+                  </View>
+                )}
               </View>
+
+              {alto && !puedeActuar && (
+                <Text style={styles.ayudaRiesgo}>
+                  Riesgo alto: después de {avisosAntesDeActuar} avisos podés reprogramar o cancelar este turno para darle el
+                  horario a alguien de la lista de espera con mejor historial.
+                </Text>
+              )}
+              {puedeActuar && (
+                <>
+                  <Text style={styles.ayudaRiesgo}>
+                    Ya recibió {avisosAntesDeActuar} avisos y tiene riesgo alto: podés reprogramar o cancelar su turno.
+                  </Text>
+                  <View style={styles.filaBotones}>
+                    <Pressable
+                      style={styles.botonSuave}
+                      onPress={() => router.push({ pathname: '/secretaria/reprogramar/[id]', params: { id: turno.id } })}>
+                      <Text style={styles.botonSuaveTexto}>Reprogramar</Text>
+                    </Pressable>
+                    <Pressable style={styles.botonCancelarRiesgo} onPress={() => cancelarPorRiesgo(turno.id)}>
+                      <Text style={styles.botonPrimarioTexto}>Cancelar turno</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
             </View>
           );
         })}
@@ -134,10 +205,25 @@ export default function AlertasSecretaria() {
         )}
 
         <View style={styles.panel}>
+          <Text style={styles.panelTitulo}>Historial de turnos</Text>
+          <Text style={styles.panelAyuda}>
+            Los turnos que ya pasaron y los cancelados, con el motivo.
+            {canceladosPorSistema.length > 0
+              ? ` Hay ${canceladosPorSistema.length} turno${canceladosPorSistema.length === 1 ? '' : 's'} próximo${canceladosPorSistema.length === 1 ? '' : 's'} cancelado${canceladosPorSistema.length === 1 ? '' : 's'} por el sistema o por riesgo: avisales a los pacientes.`
+              : ''}
+          </Text>
+          <Pressable style={styles.botonHistorial} onPress={() => router.push('/secretaria/historial' as Href)}>
+            <Text style={styles.botonHistorialTexto}>Ver historial de turnos</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.panel}>
           <Text style={styles.panelTitulo}>Cómo se calcula el riesgo</Text>
           <Text style={styles.panelAyuda}>
-            Solo suman puntos las faltas. 1 punto es riesgo medio y 2 o más, riesgo alto. No confirmar un turno no suma
-            puntos. Los puntos de cada paciente están en su ficha.
+            Las faltas suman y asistir o confirmar resta; el puntaje no baja de 0. Desde {textoPuntaje(reglasRiesgo.medio)} {reglasRiesgo.medio === 1 ? 'punto' : 'puntos'} el riesgo es medio y desde{' '}
+            {textoPuntaje(reglasRiesgo.alto)}, alto. No confirmar no suma nada. A un paciente de riesgo alto que no confirma, después de {avisosAntesDeActuar}{' '}
+            avisos tuyos podés reprogramarle o cancelarle el turno y darle el horario a alguien de la lista de espera con
+            mejor historial. Los puntos de cada paciente están en su ficha.
           </Text>
           <View style={styles.fichas}>
             {REGLAS.map((regla) => (
@@ -238,6 +324,62 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#5A5A5A',
     marginTop: 2,
+  },
+  avisosCompletos: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    backgroundColor: '#E3E6E8',
+  },
+  avisosCompletosTexto: {
+    color: '#5A5A5A',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  botonSuave: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLOR_SECRETARIA,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  botonSuaveTexto: {
+    color: COLOR_SECRETARIA,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  botonHistorial: {
+    borderWidth: 1,
+    borderColor: COLOR_SECRETARIA,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  botonHistorialTexto: {
+    color: COLOR_SECRETARIA,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  ayudaRiesgo: {
+    fontSize: 12,
+    color: '#5A5A5A',
+    marginTop: 10,
+  },
+  botonCancelarRiesgo: {
+    flex: 1,
+    backgroundColor: COLOR_CANCELADO,
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  motivo: {
+    fontSize: 12,
+    color: COLOR_CANCELADO,
+    fontWeight: '600',
+    marginTop: 6,
   },
   filaBotones: {
     flexDirection: 'row',

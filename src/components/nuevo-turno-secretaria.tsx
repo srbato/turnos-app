@@ -3,18 +3,16 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { atiendeEseDia } from '@/datos/atencion';
-import { HORAS_BASE } from '@/datos/atencion';
-import { HOY, NOMBRE_CONSULTORIO, PACIENTES } from '@/datos/consultorio';
+import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
-import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
-
-// Los horarios de la grilla viven en datos/atencion.ts; se re-exportan para quien ya los importaba de acá.
-export { HORAS_BASE };
+import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 // "Dra. Lucía Fernández" -> "Fernández"
 export function apellidoDelMedico(nombreCompleto: string) {
@@ -27,27 +25,63 @@ type Props = {
   medicoInicial: string;
   horaInicial: string;
   onCerrar: () => void;
+  // Si se llega desde la tabla de pacientes: el paciente ya está elegido y se elige el día (en la agenda el día ya viene dado).
+  idPacienteInicial?: string;
+  // Si lo usa un médico: solo puede darse turnos con él mismo.
+  medicoFijo?: string;
+  color?: string; // color del rol (por defecto, el de Secretaría)
 };
 
-// Alta de un turno por Secretaría. Se monta cuando hace falta (los valores iniciales se toman al montar).
-export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerrar }: Props) {
+const DIAS_ELEGIBLES = 28; // 4 semanas hacia adelante, igual que en el resto de la app
+
+// Alta de un turno por Secretaría o por un médico. Se monta cuando hace falta (los valores iniciales se toman al montar).
+export function NuevoTurnoSecretaria({
+  fecha: fechaInicial,
+  medicoInicial,
+  horaInicial,
+  onCerrar,
+  idPacienteInicial = '',
+  medicoFijo,
+  color = COLOR_SECRETARIA,
+}: Props) {
   const { turnos, agregarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
   const { medicos } = usePersonal();
-  const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { consultorio } = useConsultorio();
+  const { horarios, nombre: nombreConsultorio } = useConfiguracion();
+  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
 
-  const [medico, setMedico] = useState(medicoInicial);
+  const [fecha, setFecha] = useState(fechaInicial);
+  const [medico, setMedico] = useState(medicoFijo ?? medicoInicial);
   const [hora, setHora] = useState(horaInicial);
-  const [idPaciente, setIdPaciente] = useState('');
+  const [idPaciente, setIdPaciente] = useState(idPacienteInicial);
   const [busqueda, setBusqueda] = useState('');
+  const elegirDia = idPacienteInicial !== '';
+  const pacienteElegido = pacientes.find((p) => p.id === idPacienteInicial);
+  const dias = Array.from({ length: DIAS_ELEGIBLES }, (_, i) => {
+    const hoy = new Date();
+    return fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i));
+  });
 
   // Médicos que atienden ese día: no de baja, no de licencia en esa fecha y con ese día entre sus días de atención.
-  const medicosActivos = medicos.filter(
-    (m) => m.estado !== 'baja' && !enLicencia(m, fecha) && atiendeEseDia(m.dias, fecha)
-  );
+  function atiendeEn(m: (typeof medicos)[number], dia: string) {
+    return (
+      m.estado !== 'baja' &&
+      !enLicencia(m, dia) &&
+      atiendeEseDia(m.dias, dia) &&
+      (medicoFijo === undefined || m.nombre === medicoFijo)
+    );
+  }
+  const medicosActivos = medicos.filter((m) => atiendeEn(m, fecha));
+  // Al cambiar de día, si el médico elegido no atiende ese día se vuelve a elegir.
+  function elegirFecha(nueva: string) {
+    setFecha(nueva);
+    setHora('');
+    if (!medicos.some((m) => m.nombre === medico && atiendeEn(m, nueva))) setMedico('');
+  }
   // Un horario ofrecido a la lista de espera queda reservado hasta que el paciente responda.
   const reservadas = horasReservadas(ofertas, turnos, medico, fecha);
-  const horasLibres = HORAS_BASE.filter(
+  const horasLibres = horarios.filter(
     (h) => !reservadas.includes(h) && !turnos.some((t) => t.medico === medico && t.fecha === fecha && t.hora === h && t.estado !== 'cancelado')
   );
   // Si se llegó tocando un horario fuera de la grilla base, se agrega para poder elegirlo.
@@ -63,19 +97,19 @@ export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerr
   function guardar() {
     // Se busca en el personal (incluye a los médicos dados de alta desde la app), no en la lista fija de ejemplo.
     const datosMedico = medicos.find((m) => m.nombre === medico);
-    const datosPaciente = PACIENTES.find((p) => p.id === idPaciente);
+    const datosPaciente = pacientes.find((p) => p.id === idPaciente);
     if (!datosMedico || !datosPaciente || hora === '') return;
     agregarTurno({
       id: String(Date.now()),
       idPaciente: datosPaciente.id,
       medico: datosMedico.nombre,
       especialidad: datosMedico.especialidad,
-      consultorio: datosMedico.consultorio,
+      sala: datosMedico.sala,
       fecha,
       hora,
-      sede: NOMBRE_CONSULTORIO,
+      sede: nombreConsultorio,
       cobertura: `${datosPaciente.cobertura} ${datosPaciente.plan}`.trim(),
-      estado: 'pendiente', // lo carga Secretaría: queda pendiente hasta que el paciente confirme (ella le avisa unos días antes)
+      estado: 'pendiente', // lo carga Secretaría (o un médico): queda pendiente hasta que el paciente confirme (se le avisa unos días antes)
       instrucciones: [],
       reservadoEl: HOY,
     });
@@ -90,12 +124,42 @@ export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerr
             Nuevo turno · {detalleFecha(fecha).diaSemana} {formatearFecha(fecha).slice(0, 5)}
           </Text>
 
+          {pacienteElegido && (
+            <View style={styles.pacienteFijo}>
+              <Text style={styles.filaPacienteNombre}>
+                {pacienteElegido.nombre} {pacienteElegido.apellido}
+              </Text>
+              <Text style={styles.filaPacienteDetalle}>
+                DNI {pacienteElegido.dni} · {pacienteElegido.cobertura}
+              </Text>
+            </View>
+          )}
+
+          {elegirDia && (
+            <>
+              <Text style={styles.etiquetaCampo}>Día</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
+                {dias.map((dia) => (
+                  <Pressable
+                    key={dia}
+                    style={[styles.chip, dia === fecha && { backgroundColor: color, borderColor: color }]}
+                    onPress={() => elegirFecha(dia)}>
+                    <Text style={[styles.chipTexto, dia === fecha && styles.chipTextoActivo]}>
+                      {detalleFecha(dia).diaSemana.slice(0, 3)} {detalleFecha(dia).dia} {detalleFecha(dia).mes}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          )}
+
           <Text style={styles.etiquetaCampo}>Médico</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
+            {medicosActivos.length === 0 && <Text style={styles.sinOpciones}>Ningún médico atiende ese día.</Text>}
             {medicosActivos.map((m) => (
               <Pressable
                 key={m.nombre}
-                style={[styles.chip, medico === m.nombre && styles.chipActivo]}
+                style={[styles.chip, medico === m.nombre && { backgroundColor: color, borderColor: color }]}
                 onPress={() => {
                   setMedico(m.nombre);
                   setHora('');
@@ -111,41 +175,48 @@ export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerr
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
             {medico !== '' &&
               horasOfrecidas.map((h) => (
-                <Pressable key={h} style={[styles.chip, hora === h && styles.chipActivo]} onPress={() => setHora(h)}>
+                <Pressable
+                  key={h}
+                  style={[styles.chip, hora === h && { backgroundColor: color, borderColor: color }]}
+                  onPress={() => setHora(h)}>
                   <Text style={[styles.chipTexto, hora === h && styles.chipTextoActivo]}>{h}</Text>
                 </Pressable>
               ))}
           </ScrollView>
 
-          <Text style={styles.etiquetaCampo}>Paciente</Text>
-          <TextInput
-            style={styles.buscador}
-            value={busqueda}
-            onChangeText={setBusqueda}
-            placeholder="Buscar por nombre"
-            placeholderTextColor="#8FB9B5"
-          />
-          <ScrollView style={styles.listaPacientes}>
-            {pacientesFiltrados.map((p) => (
-              <Pressable
-                key={p.id}
-                style={[styles.filaPaciente, idPaciente === p.id && styles.filaPacienteActiva]}
-                onPress={() => setIdPaciente(p.id)}>
-                <Text style={styles.filaPacienteNombre}>
-                  {p.nombre} {p.apellido}
-                </Text>
-                <Text style={styles.filaPacienteDetalle}>{p.cobertura}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {!elegirDia && (
+            <>
+              <Text style={styles.etiquetaCampo}>Paciente</Text>
+              <TextInput
+                style={styles.buscador}
+                value={busqueda}
+                onChangeText={setBusqueda}
+                placeholder="Buscar por nombre"
+                placeholderTextColor="#8FB9B5"
+              />
+              <ScrollView style={styles.listaPacientes}>
+                {pacientesFiltrados.map((p) => (
+                  <Pressable
+                    key={p.id}
+                    style={[styles.filaPaciente, idPaciente === p.id && styles.filaPacienteActiva]}
+                    onPress={() => setIdPaciente(p.id)}>
+                    <Text style={styles.filaPacienteNombre}>
+                      {p.nombre} {p.apellido}
+                    </Text>
+                    <Text style={styles.filaPacienteDetalle}>{p.cobertura}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </>
+          )}
 
           <View style={styles.filaBotones}>
-            <Pressable style={styles.botonSecundario} onPress={onCerrar}>
-              <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
+            <Pressable style={[styles.botonSecundario, { borderColor: color }]} onPress={onCerrar}>
+              <Text style={[styles.botonSecundarioTexto, { color }]}>Cancelar</Text>
             </Pressable>
             <Pressable
               disabled={!puedeGuardar}
-              style={[styles.botonPrimario, !puedeGuardar && styles.botonDeshabilitado]}
+              style={[styles.botonPrimario, { backgroundColor: color }, !puedeGuardar && styles.botonDeshabilitado]}
               onPress={guardar}>
               <Text style={styles.botonPrimarioTexto}>Asignar turno</Text>
             </Pressable>
@@ -231,6 +302,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A1A1A',
   },
+  pacienteFijo: {
+    backgroundColor: '#F4F5F7',
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    marginTop: 10,
+  },
+  sinOpciones: {
+    fontSize: 12,
+    color: '#8A8A8A',
+    paddingVertical: 8,
+  },
   filaPacienteDetalle: {
     fontSize: 12,
     color: '#5A5A5A',
@@ -266,6 +349,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   botonDeshabilitado: {
-    backgroundColor: '#8FC4BF',
+    opacity: 0.45,
   },
 });

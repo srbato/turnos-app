@@ -5,11 +5,13 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { DetalleOfertaSecretaria } from '@/components/detalle-oferta-secretaria';
 import { DetalleTurnoSecretaria } from '@/components/detalle-turno-secretaria';
 import { MenuSecretaria } from '@/components/menu-secretaria';
-import { apellidoDelMedico, HORAS_BASE, NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
+import { apellidoDelMedico, NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { COLOR_CANCELADO, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
@@ -43,7 +45,9 @@ export default function CompararHorarios() {
   const { ofertas } = useAdelantos();
   // Los médicos dados de baja ya no tienen agenda.
   const medicos = usePersonal().medicos.filter((medico) => medico.estado !== 'baja');
-  const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { consultorio } = useConsultorio();
+  const { reglasRiesgo, horarios } = useConfiguracion();
+  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
 
   const [diaElegido, setDiaElegido] = useState(HOY);
   // Columnas: por defecto, los 3 médicos activos con más turnos hoy.
@@ -84,7 +88,7 @@ export default function CompararHorarios() {
   const horasConTurno = turnos
     .filter((t) => t.fecha === diaElegido && t.estado !== 'cancelado' && medicosElegidos.includes(t.medico))
     .map((t) => t.hora);
-  const filas = [...new Set([...HORAS_BASE, ...horasConTurno])].sort();
+  const filas = [...new Set([...horarios, ...horasConTurno])].sort();
 
   function nombreAbreviado(idPaciente: string) {
     const paciente = pacientes.find((p) => p.id === idPaciente);
@@ -189,7 +193,7 @@ export default function CompararHorarios() {
                 );
               }
               const paciente = pacientes.find((p) => p.id === turno.idPaciente);
-              const riesgo = paciente ? evaluarRiesgo(paciente, turnos) : undefined;
+              const riesgo = paciente ? evaluarRiesgo(paciente, turnos, reglasRiesgo) : undefined;
               const riesgoAlto = riesgo?.nivel === 'alto' && (turno.estado === 'pendiente' || turno.estado === 'confirmado');
               const color = riesgoAlto ? COLOR_CANCELADO : turno.estado === 'ausente' ? COLOR_AUSENTE : COLORES_ESTADO[turno.estado];
               return (

@@ -7,7 +7,7 @@ import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { formatearFecha } from '@/utilidades/turnos';
-import { coberturaQueAtiende, medicosParaPaciente, type Medico } from '@/datos/catalogo';
+import { coberturaQueAtiende, medicosDelCatalogo, medicosParaPaciente, type Medico } from '@/datos/catalogo';
 
 export default function ElegirMedico() {
   const { especialidad, elegirMedico } = useSacarTurno();
@@ -20,7 +20,7 @@ export default function ElegirMedico() {
   }
 
   // Solo los médicos que aceptan alguna cobertura del paciente y que atienden ahora (no de licencia ni de baja).
-  const medicos = medicosParaPaciente(especialidad.id, coberturaIds).filter((medico) =>
+  const medicos = medicosParaPaciente(medicosDelCatalogo(personal), especialidad.id, coberturaIds).filter((medico) =>
     aceptaTurnos(personal, medico.nombre)
   );
 

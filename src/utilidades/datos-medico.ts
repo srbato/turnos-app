@@ -1,7 +1,7 @@
 import type { MedicamentoPropio } from '@/contextos/MedicamentosContext';
 import type { PerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { nombreCobertura } from '@/datos/catalogo';
-import { ID_PACIENTE_APP, PACIENTES, type Paciente } from '@/datos/consultorio';
+import { ID_PACIENTE_APP, type Paciente } from '@/datos/consultorio';
 import { detectarInteracciones } from '@/datos/interacciones';
 import type { Receta } from '@/datos/recetas';
 
@@ -17,11 +17,12 @@ export type MedicamentoParaMedico = {
 // Arma los datos del paciente que usa la app para las pantallas del médico: su perfil actualizado,
 // sus medicamentos (recetados y propios) y las interacciones que se detectan entre ellos.
 // Es una función común: cada pantalla le pasa lo que ya leyó de los contextos.
-// Lista de pacientes: el que usa la app muestra los datos que editó en su perfil.
+// Lista de pacientes del consultorio activo (se la pasa cada pantalla, leída de useConsultorio): el que usa la app
+// muestra los datos que editó en su perfil.
 // No incluye nada clínico del paciente de la app (medicación, recetas, interacciones): eso es solo para el médico.
-export function pacientesConPerfil(perfil: PerfilPaciente) {
+export function pacientesConPerfil(perfil: PerfilPaciente, pacientesDelConsultorio: Paciente[]) {
   const [primerNombre, ...resto] = perfil.nombre.trim().split(/\s+/);
-  const pacientes: Paciente[] = PACIENTES.map((paciente) => {
+  const pacientes: Paciente[] = pacientesDelConsultorio.map((paciente) => {
     if (paciente.id !== ID_PACIENTE_APP) return paciente;
     const coberturas = perfil.coberturaIds.map(nombreCobertura);
     return {
@@ -49,10 +50,11 @@ export function pacientesConPerfil(perfil: PerfilPaciente) {
 
 export function datosParaMedico(
   perfil: PerfilPaciente,
+  pacientesDelConsultorio: Paciente[],
   medicamentosPropios: MedicamentoPropio[],
   recetas: Receta[]
 ) {
-  const pacientes = pacientesConPerfil(perfil);
+  const pacientes = pacientesConPerfil(perfil, pacientesDelConsultorio);
   const paciente = pacientes.find((p) => p.id === ID_PACIENTE_APP) as Paciente;
 
   const recetasDelPaciente = recetas.filter((receta) => receta.idPaciente === ID_PACIENTE_APP);

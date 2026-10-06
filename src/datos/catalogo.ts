@@ -1,4 +1,7 @@
-// Datos mock del catálogo. Cuando exista el backend (Express + Prisma) esto pasa a ser un fetch.
+// Catálogo que ve el paciente al sacar un turno. Las coberturas son las que existen en la app; las especialidades y los
+// médicos NO son una lista aparte: salen del personal del consultorio (altas, bajas y licencias incluidas), así lo que
+// ve el paciente coincide siempre con lo que ven Secretaría y los médicos.
+import type { MiembroMedico } from '@/contextos/PersonalContext';
 
 export type Cobertura = {
   id: string;
@@ -12,16 +15,13 @@ export type Especialidad = {
 };
 
 export type Medico = {
-  id: string;
+  id: string; // la matrícula
   nombre: string;
   iniciales: string;
   especialidadId: string;
-  consultorio: string;
-  coberturaIds: string[]; // coberturas que acepta (MEDICO_COBERTURA)
+  sala: string;
+  coberturaIds: string[]; // coberturas que acepta
 };
-
-export const SEDE = 'Consultorios Rivadavia';
-export const DIRECCION_SEDE = 'Av. Rivadavia 4820';
 
 export const COBERTURAS: Cobertura[] = [
   { id: 'swiss-smg20', nombre: 'Swiss Medical SMG20' },
@@ -29,71 +29,46 @@ export const COBERTURAS: Cobertura[] = [
   { id: 'galeno-220', nombre: 'Galeno 220' },
 ];
 
-export const ESPECIALIDADES: Especialidad[] = [
-  { id: 'cardiologia', nombre: 'Cardiología', codigo: 'CAR' },
-  { id: 'clinica', nombre: 'Clínica médica', codigo: 'CLI' },
-  { id: 'pediatria', nombre: 'Pediatría', codigo: 'PED' },
-  { id: 'traumatologia', nombre: 'Traumatología', codigo: 'TRA' },
-];
-
-export const MEDICOS: Medico[] = [
-  {
-    id: 'paz',
-    nombre: 'Dr. Ricardo Paz',
-    iniciales: 'RP',
-    especialidadId: 'cardiologia',
-    consultorio: 'Consultorio 5',
-    coberturaIds: ['swiss-smg20', 'galeno-220'],
-  },
-  {
-    id: 'torres',
-    nombre: 'Dra. Ana Torres',
-    iniciales: 'AT',
-    especialidadId: 'cardiologia',
-    consultorio: 'Consultorio 4',
-    coberturaIds: ['osde-210'],
-  },
-  {
-    id: 'duarte',
-    nombre: 'Dr. Héctor Duarte',
-    iniciales: 'HD',
-    especialidadId: 'cardiologia',
-    consultorio: 'Consultorio 6',
-    coberturaIds: ['galeno-220'], // no atiende ninguna cobertura del paciente: queda filtrado
-  },
-  {
-    id: 'fernandez',
-    nombre: 'Dra. Lucía Fernández',
-    iniciales: 'LF',
-    especialidadId: 'clinica',
-    consultorio: 'Consultorio 3',
-    coberturaIds: ['swiss-smg20', 'osde-210'],
-  },
-  {
-    id: 'sosa',
-    nombre: 'Dra. Mariela Sosa',
-    iniciales: 'MS',
-    especialidadId: 'pediatria',
-    consultorio: 'Consultorio 1',
-    coberturaIds: ['osde-210'],
-  },
-  {
-    id: 'ibanez',
-    nombre: 'Dr. Gustavo Ibáñez',
-    iniciales: 'GI',
-    especialidadId: 'traumatologia',
-    consultorio: 'Consultorio 2',
-    coberturaIds: ['swiss-smg20'],
-  },
-];
-
 export function nombreCobertura(id: string) {
   return COBERTURAS.find((cobertura) => cobertura.id === id)?.nombre ?? id;
 }
 
+function sinTildes(texto: string) {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// "Clínica médica" -> "clinica-medica"
+function idDeEspecialidad(nombre: string) {
+  return sinTildes(nombre).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+// Las especialidades que tiene el consultorio, en el orden en que aparecen sus médicos.
+export function especialidadesDe(medicos: MiembroMedico[]): Especialidad[] {
+  const especialidades: Especialidad[] = [];
+  medicos.forEach((medico) => {
+    const id = idDeEspecialidad(medico.especialidad);
+    if (!especialidades.some((especialidad) => especialidad.id === id)) {
+      especialidades.push({ id, nombre: medico.especialidad, codigo: sinTildes(medico.especialidad).slice(0, 3).toUpperCase() });
+    }
+  });
+  return especialidades;
+}
+
+// Los médicos del personal con la forma que usa el flujo de Sacar turno.
+export function medicosDelCatalogo(medicos: MiembroMedico[]): Medico[] {
+  return medicos.map((medico) => ({
+    id: medico.matricula,
+    nombre: medico.nombre,
+    iniciales: medico.iniciales,
+    especialidadId: idDeEspecialidad(medico.especialidad),
+    sala: medico.sala,
+    coberturaIds: medico.coberturaIds,
+  }));
+}
+
 // Médicos de una especialidad que aceptan al menos una de las coberturas del paciente.
-export function medicosParaPaciente(especialidadId: string, coberturasPaciente: string[]) {
-  return MEDICOS.filter(
+export function medicosParaPaciente(medicos: Medico[], especialidadId: string, coberturasPaciente: string[]) {
+  return medicos.filter(
     (medico) =>
       medico.especialidadId === especialidadId &&
       medico.coberturaIds.some((id) => coberturasPaciente.includes(id))

@@ -35,9 +35,9 @@ const ITEMS_POR_ROL: Partial<Record<Rol, Item[]>> = {
     { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=paciente' },
   ],
   medico: [
-    { icono: '▤', iconoActivo: '▤', clave: 'agenda', ruta: '/medico' },
-    { icono: '◍', iconoActivo: '◍', clave: 'pacientes', ruta: '/medico/pacientes' },
-    { icono: '℞', iconoActivo: '℞', clave: 'recetas', ruta: '/medico/recetas' },
+    { icono: '▤', iconoActivo: '▥', clave: 'agenda', ruta: '/medico' },
+    { icono: '◍', iconoActivo: '◉', clave: 'pacientes', ruta: '/medico/pacientes' },
+    { icono: '℞', iconoActivo: '⚕', clave: 'recetas', ruta: '/medico/recetas' },
     { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=medico' },
   ],
   secretaria: [

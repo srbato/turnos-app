@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -19,6 +19,12 @@ import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
 const COLOR_BAJA = '#8A8A8A';
 
+// "Dr. Ricardo Paz" -> "Dr. Paz"
+function medicoCorto(nombre: string) {
+  const palabras = nombre.split(' ');
+  return `${palabras[0]} ${palabras[palabras.length - 1]}`;
+}
+
 // Ficha de un médico para Secretaría: datos editables, estado (activo / licencia) y baja.
 export default function FichaMedico() {
   const { matricula: parametro } = useLocalSearchParams<{ matricula: string }>();
@@ -31,7 +37,7 @@ export default function FichaMedico() {
 
   const [especialidad, setEspecialidad] = useState(medico?.especialidad ?? '');
   const [matricula, setMatricula] = useState(medico?.matricula ?? '');
-  const [consultorio, setConsultorio] = useState(medico?.consultorio ?? '');
+  const [sala, setSala] = useState(medico?.sala ?? '');
   const [dias, setDias] = useState(medico?.dias ?? '');
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
@@ -74,7 +80,7 @@ export default function FichaMedico() {
   const diasParaVolver = Array.from({ length: 60 }, (_, i) => fechaDentroDe(i + 1));
 
   function guardar() {
-    if (especialidad.trim() === '' || matricula.trim() === '' || consultorio.trim() === '' || dias.trim() === '') {
+    if (especialidad.trim() === '' || matricula.trim() === '' || sala.trim() === '' || dias.trim() === '') {
       setMensaje({ texto: 'Completá todos los campos.', esError: true });
       return;
     }
@@ -85,7 +91,7 @@ export default function FichaMedico() {
     editarMedico(matriculaActual, {
       especialidad: especialidad.trim(),
       matricula: matricula.trim(),
-      consultorio: consultorio.trim(),
+      sala: sala.trim(),
       dias: dias.trim(),
     });
     setMatriculaActual(matricula.trim());
@@ -227,6 +233,15 @@ export default function FichaMedico() {
               <Text style={styles.ayuda}>{textoProximos}</Text>
             </>
           )}
+
+          {/* Calendario personal del médico: sus días de atención, licencias y turnos mes a mes. */}
+          <Pressable
+            style={styles.botonCalendario}
+            onPress={() =>
+              router.push(`/secretaria/calendario-medico?matricula=${encodeURIComponent(medico.matricula)}` as Href)
+            }>
+            <Text style={styles.botonSecundarioTexto}>▦  Ver todo el calendario de {medicoCorto(medico.nombre)}</Text>
+          </Pressable>
         </View>
 
         <Text style={styles.seccion}>DATOS DEL MÉDICO</Text>
@@ -243,8 +258,8 @@ export default function FichaMedico() {
           <Text style={styles.etiqueta}>Matrícula</Text>
           <TextInput style={styles.campo} value={matricula} onChangeText={setMatricula} maxLength={20} />
 
-          <Text style={styles.etiqueta}>Consultorio</Text>
-          <TextInput style={styles.campo} value={consultorio} onChangeText={setConsultorio} maxLength={30} />
+          <Text style={styles.etiqueta}>Sala</Text>
+          <TextInput style={styles.campo} value={sala} onChangeText={setSala} maxLength={30} />
 
           <Text style={styles.etiqueta}>Días y horarios</Text>
           <TextInput
@@ -285,7 +300,7 @@ export default function FichaMedico() {
             </Text>
             {proximos > 0 && (
               <Text style={[styles.detalleOscuro, styles.aviso]}>
-                {textoProximos} No se cancelan solos: reprogramalos o cancelalos desde la agenda.
+                {textoProximos} Se cancelan automáticamente y quedan en Alertas para que avises a los pacientes.
               </Text>
             )}
             <View style={styles.filaBotones}>
@@ -554,6 +569,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 12,
+  },
+  botonCalendario: {
+    borderWidth: 1,
+    borderColor: COLOR_SECRETARIA,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 14,
   },
   botonSecundarioMitad: {
     flex: 1,

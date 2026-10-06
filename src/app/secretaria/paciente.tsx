@@ -3,9 +3,17 @@ import { ScrollView, StyleSheet, Text, Pressable, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import { evaluarRiesgo } from '@/datos/ausentismo';
+import {
+  evaluarRiesgo,
+  PUNTOS_POR_ASISTENCIA,
+  PUNTOS_POR_CONFIRMACION,
+  PUNTOS_POR_FALTA,
+  textoPuntaje,
+} from '@/datos/ausentismo';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import {
   COLORES_ESTADO,
@@ -29,7 +37,9 @@ export default function FichaPacienteSecretaria() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { turnos } = useTurnos();
   const perfilPaciente = usePerfilPaciente();
-  const paciente = pacientesConPerfil(perfilPaciente).find((p) => p.id === id);
+  const { consultorio } = useConsultorio();
+  const { reglasRiesgo } = useConfiguracion();
+  const paciente = pacientesConPerfil(perfilPaciente, consultorio.pacientes).find((p) => p.id === id);
 
   if (!paciente) {
     return (
@@ -49,8 +59,8 @@ export default function FichaPacienteSecretaria() {
       (a, b) => fechaHoraComoDate(b.fecha, b.hora).getTime() - fechaHoraComoDate(a.fecha, a.hora).getTime()
     );
 
-  // Puntos de riesgo de ausencia: solo suman las faltas (turnos marcados "No asistió").
-  const riesgo = evaluarRiesgo(paciente, turnos);
+  // Puntos de riesgo de ausencia: las faltas suman; asistir y confirmar restan (ver datos/ausentismo.ts).
+  const riesgo = evaluarRiesgo(paciente, turnos, reglasRiesgo);
   const colorRiesgo =
     riesgo.nivel === 'alto' ? COLOR_CANCELADO : riesgo.nivel === 'en-riesgo' ? COLOR_PENDIENTE : COLOR_CONFIRMADO;
   const etiquetaRiesgo =
@@ -93,18 +103,21 @@ export default function FichaPacienteSecretaria() {
         <View style={styles.tarjeta}>
           <View style={styles.riesgoFila}>
             <View style={[styles.riesgoPuntos, { backgroundColor: colorRiesgo }]}>
-              <Text style={styles.riesgoPuntosNumero}>{riesgo.puntaje}</Text>
+              <Text style={styles.riesgoPuntosNumero}>{textoPuntaje(riesgo.puntaje)}</Text>
               <Text style={styles.riesgoPuntosTexto}>{riesgo.puntaje === 1 ? 'punto' : 'puntos'}</Text>
             </View>
             <View style={styles.riesgoTextos}>
               <Text style={[styles.riesgoNivel, { color: colorRiesgo }]}>{etiquetaRiesgo}</Text>
               <Text style={styles.riesgoDetalle}>
-                {riesgo.puntaje === 0
-                  ? 'Nunca faltó a un turno.'
-                  : `Faltó ${riesgo.puntaje} ${riesgo.puntaje === 1 ? 'vez' : 'veces'}. Cada falta suma 1 punto.`}
+                Faltó {riesgo.faltas} {riesgo.faltas === 1 ? 'vez' : 'veces'} · asistió {riesgo.asistencias} ·
+                confirmó {riesgo.confirmaciones}.
               </Text>
             </View>
           </View>
+          <Text style={styles.riesgoRegla}>
+            Cada falta suma {textoPuntaje(PUNTOS_POR_FALTA)} punto; cada asistencia resta {textoPuntaje(PUNTOS_POR_ASISTENCIA)} y
+            cada turno confirmado resta {textoPuntaje(PUNTOS_POR_CONFIRMACION)}. No baja de 0.
+          </Text>
           {ausenciasEnApp.length > 0 && (
             <>
               <Text style={styles.etiqueta}>Turnos a los que no asistió</Text>
@@ -253,6 +266,11 @@ const styles = StyleSheet.create({
   riesgoNivel: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  riesgoRegla: {
+    fontSize: 11,
+    color: '#8A8A8A',
+    marginTop: 10,
   },
   riesgoDetalle: {
     fontSize: 13,

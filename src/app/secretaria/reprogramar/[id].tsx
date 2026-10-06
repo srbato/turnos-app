@@ -3,8 +3,8 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
-  DIAS,
   DIAS_OFRECIDOS,
+  diasDesde,
   formatearFechaCorta,
   formatearFechaLarga,
   SelectorHorario,
@@ -12,7 +12,9 @@ import {
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { atiendeEn, usePersonal } from '@/contextos/PersonalContext';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
@@ -33,20 +35,26 @@ export default function ReprogramarSecretaria() {
   const { turnos, reprogramarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
   const perfilPaciente = usePerfilPaciente();
+  const { medicos: personal } = usePersonal();
   const [fecha, setFecha] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState(false);
 
   const turno = turnos.find((t) => t.id === id);
-  const paciente = turno ? pacientesConPerfil(perfilPaciente).find((p) => p.id === turno.idPaciente) : undefined;
+  const { consultorio } = useConsultorio();
+  const paciente = turno ? pacientesConPerfil(perfilPaciente, consultorio.pacientes).find((p) => p.id === turno.idPaciente) : undefined;
 
   // Si el id no existe (por ejemplo, URL escrita a mano), se vuelve a la agenda.
   if (!turno || !paciente) {
     return <Redirect href={RUTA_AGENDA_SECRETARIA} />;
   }
 
-  // Mientras no elija otro día, se muestra el primero.
-  const fechaSeleccionada = fecha ?? DIAS[0].fecha;
+  // Solo se ofrecen los días en que el médico atiende. Mientras no elija otro, se muestra el primero con atención.
+  const atiende = (dia: string) => atiendeEn(personal, turno.medico, dia);
+  const dias = diasDesde(undefined, DIAS_OFRECIDOS);
+  const diasConAtencion = dias.filter((dia) => atiende(dia.fecha));
+  const fechaSeleccionada =
+    fecha && diasConAtencion.some((dia) => dia.fecha === fecha) ? fecha : (diasConAtencion[0] ?? dias[0]).fecha;
 
   function elegirFecha(nueva: string) {
     setFecha(nueva);
@@ -93,6 +101,7 @@ export default function ReprogramarSecretaria() {
           onElegirHora={setHora}
           color={COLOR_SECRETARIA}
           cantidadDias={DIAS_OFRECIDOS}
+          atiende={atiende}
         />
       </ScrollView>
 

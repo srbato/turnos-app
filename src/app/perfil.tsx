@@ -6,6 +6,7 @@ import { AvatarPaciente } from '@/components/avatar-paciente';
 import { BarraPerfil } from '@/components/barra-perfil';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO, type Tema } from '@/constantes/tema';
+import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { useSesion } from '@/contextos/SesionContext';
@@ -57,6 +58,7 @@ export default function Perfil() {
   const rol = normalizarRol(rolParam);
   const perfilPaciente = usePerfilPaciente();
   const perfilSecretaria = usePerfilSecretaria();
+  const perfilMedico = usePerfilMedico();
   const { medicoLogueado } = useSesion();
   // El paciente edita su perfil: sus datos vienen del contexto. Los demás roles usan datos fijos.
   // El médico muestra los datos del médico que inició sesión.
@@ -109,13 +111,13 @@ export default function Perfil() {
     router.replace('/');
   }
 
-  // El paciente y Secretaría tienen editor de perfil; para los demás roles estas filas no hacen nada.
+  // Los tres roles tienen su editor de perfil.
   const irAlEditor =
     rol === 'paciente'
       ? () => router.push('/paciente/editar-perfil' as Href)
       : rol === 'secretaria'
         ? () => router.push('/secretaria/editar-perfil' as Href)
-        : undefined;
+        : () => router.push('/medico/editar-perfil' as Href);
 
   return (
     <View style={[styles.pantalla, { backgroundColor: tema.fondo }]}>
@@ -132,20 +134,20 @@ export default function Perfil() {
         </View>
 
         <View style={styles.filaPerfil}>
-          {rol === 'paciente' || rol === 'secretaria' ? (
-            <View style={styles.avatarPaciente}>
-              <AvatarPaciente
-                tamano={64}
-                colorTexto={COLOR_PERFIL}
-                colorBorde={COLOR_PERFIL}
-                datos={rol === 'secretaria' ? perfilSecretaria : undefined}
-              />
-            </View>
-          ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarTexto}>{info.iniciales}</Text>
-            </View>
-          )}
+          <View style={styles.avatarPaciente}>
+            <AvatarPaciente
+              tamano={64}
+              colorTexto={COLOR_PERFIL}
+              colorBorde={COLOR_PERFIL}
+              datos={
+                rol === 'secretaria'
+                  ? perfilSecretaria
+                  : rol === 'medico'
+                    ? { nombre: info.nombre, fotoUri: perfilMedico.fotoUri, iniciales: info.iniciales }
+                    : undefined
+              }
+            />
+          </View>
           <View style={styles.datosPerfil}>
             <Text style={[styles.nombre, { color: tema.texto }]}>{info.nombre}</Text>
             <Text style={[styles.email, { color: tema.textoSecundario }]}>{info.email}</Text>
@@ -156,19 +158,14 @@ export default function Perfil() {
         </View>
 
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
-          {/* El editor es del paciente y de Secretaría. */}
-          {(rol === 'paciente' || rol === 'secretaria') && (
-            <>
-              <Fila
-                tema={tema}
-                titulo={textos.editarPerfil}
-                subtitulo={rol === 'paciente' ? textos.editarPerfilDetalle : textos.editarPerfilDetalleStaff}
-                conFlecha
-                onPress={irAlEditor}
-              />
-              <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
-            </>
-          )}
+          <Fila
+            tema={tema}
+            titulo={textos.editarPerfil}
+            subtitulo={rol === 'paciente' ? textos.editarPerfilDetalle : textos.editarPerfilDetalleStaff}
+            conFlecha
+            onPress={irAlEditor}
+          />
+          <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
           <Fila
             tema={tema}
             titulo={textos.datosPersonales}

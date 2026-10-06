@@ -19,6 +19,7 @@ type AdelantosContextType = {
   retirados: string[]; // horarios que Secretaría sacó de la oferta (ver claveHorario)
   publicados: Turno[]; // horarios libres que Secretaría ofreció a la lista desde la agenda de un médico
   ofrecerHorario: (horario: Turno) => void;
+  ofrecerA: (horario: Turno, idTurno: string) => void; // Secretaría le propone ese horario a un paciente puntual de la lista
   aceptarOferta: (oferta: Oferta) => void; // el paciente acepta: su turno se mueve al horario ofrecido
   rechazarOferta: (oferta: Oferta) => void; // el paciente rechaza
   noContesta: (oferta: Oferta) => void; // Secretaría marca que no respondió: el horario pasa al siguiente
@@ -50,6 +51,16 @@ export function AdelantosProvider({ children }: { children: ReactNode }) {
       setPublicados((anteriores) =>
         anteriores.some((h) => h.id === horario.id) ? anteriores : [...anteriores, horario]
       );
+    }
+    // La oferta va directo al paciente elegido. El horario no se publica: si no acepta, queda libre y Secretaría
+    // decide a quién proponérselo después (no se ofrece solo al siguiente).
+    function ofrecerA(horario: Turno, idTurno: string) {
+      const clave = claveHorario(horario);
+      setRetirados((anteriores) => anteriores.filter((c) => c !== clave));
+      setOfertas((anteriores) => [
+        ...anteriores,
+        { id: `${idTurno}|${clave}`, idTurno, horario, estado: 'enviada' },
+      ]);
     }
     function responder(oferta: Oferta, estado: Oferta['estado']) {
       setOfertas((anteriores) => anteriores.map((o) => (o.id === oferta.id ? { ...o, estado } : o)));
@@ -99,6 +110,7 @@ export function AdelantosProvider({ children }: { children: ReactNode }) {
       publicados,
       retirados,
       ofrecerHorario,
+      ofrecerA,
       aceptarOferta,
       rechazarOferta,
       noContesta,

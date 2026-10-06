@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { SacarTurnoProvider } from '@/contextos/SacarTurnoContext';
 import { aceptaTurnos, usePersonal } from '@/contextos/PersonalContext';
-import { ESPECIALIDADES, MEDICOS } from '@/datos/catalogo';
+import { especialidadesDe, medicosDelCatalogo } from '@/datos/catalogo';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
 const PASOS = ['Especialidad', 'Médico', 'Horario'];
@@ -61,11 +61,11 @@ export default function SacarTurnoLayout() {
   // Si se entra con ?medicoId=..., el flujo arranca con ese médico y su especialidad ya elegidos.
   const { medicoId } = useGlobalSearchParams<{ medicoId?: string }>();
   const { medicos: personal } = usePersonal();
-  const medicoBuscado = MEDICOS.find((m) => m.id === medicoId);
+  const medicoBuscado = medicosDelCatalogo(personal).find((m) => m.id === medicoId);
   // Si el médico está de licencia o de baja, el flujo arranca de cero y no lo ofrece.
   const medicoInicial =
     medicoBuscado && aceptaTurnos(personal, medicoBuscado.nombre) ? medicoBuscado : undefined;
-  const especialidadInicial = ESPECIALIDADES.find((e) => e.id === medicoInicial?.especialidadId);
+  const especialidadInicial = especialidadesDe(personal).find((e) => e.id === medicoInicial?.especialidadId);
 
   // El Provider va acá y no en una pantalla: así no se desmonta al navegar entre pasos
   // y la selección se mantiene. Al salir del flujo el layout se desmonta y la selección se descarta.

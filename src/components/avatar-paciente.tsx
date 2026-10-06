@@ -8,7 +8,8 @@ type Props = {
   colorTexto: string;
   colorBorde?: string;
   // Si se pasan, se muestran estos datos en lugar de los del paciente (por ejemplo, los de Secretaría).
-  datos?: { nombre: string; fotoUri: string | null };
+  // Las iniciales son opcionales: un médico las trae armadas (RP), porque su nombre empieza con "Dr." o "Dra.".
+  datos?: { nombre: string; fotoUri: string | null; iniciales?: string };
 };
 
 // Iniciales del nombre: las de las dos primeras palabras, o la primera letra si es una sola.
@@ -24,6 +25,7 @@ function iniciales(nombre: string) {
 export function AvatarPaciente({ tamano, colorFondo, colorTexto, colorBorde, datos }: Props) {
   const paciente = usePerfilPaciente();
   const { nombre, fotoUri } = datos ?? paciente;
+  const letras = datos?.iniciales ?? iniciales(nombre);
 
   const caja = {
     width: tamano,
@@ -40,7 +42,7 @@ export function AvatarPaciente({ tamano, colorFondo, colorTexto, colorBorde, dat
         <Image source={{ uri: fotoUri }} style={styles.foto} resizeMode="cover" />
       ) : (
         <Text style={{ color: colorTexto, fontSize: tamano / 3, fontWeight: '700' }}>
-          {iniciales(nombre)}
+          {letras}
         </Text>
       )}
     </View>

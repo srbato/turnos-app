@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE } from '@/constantes/colores';
-import { DIRECCION_SEDE } from '@/datos/catalogo';
+import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 
 type DiaDisponible = {
   fecha: string; // AAAA-MM-DD
@@ -16,21 +16,6 @@ type Horario = {
   turno: 'Mañana' | 'Tarde';
   disponible: boolean;
 };
-
-const HORARIOS: Horario[] = [
-  { hora: '08:40', turno: 'Mañana', disponible: true },
-  { hora: '09:00', turno: 'Mañana', disponible: false },
-  { hora: '09:20', turno: 'Mañana', disponible: true },
-  { hora: '10:00', turno: 'Mañana', disponible: true },
-  { hora: '10:20', turno: 'Mañana', disponible: true },
-  { hora: '10:40', turno: 'Mañana', disponible: false },
-  { hora: '11:20', turno: 'Mañana', disponible: true },
-  { hora: '11:40', turno: 'Mañana', disponible: true },
-  { hora: '15:00', turno: 'Tarde', disponible: true },
-  { hora: '15:40', turno: 'Tarde', disponible: true },
-  { hora: '16:20', turno: 'Tarde', disponible: false },
-  { hora: '17:00', turno: 'Tarde', disponible: true },
-];
 
 const DIAS_SEMANA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
 const MESES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
@@ -92,6 +77,7 @@ type Props = {
   color?: string; // color del rol para lo seleccionado (por defecto, el del paciente)
   primerDia?: string; // primer día que se ofrece (por defecto, mañana)
   cantidadDias?: number; // cuántos días se ofrecen (por defecto 4; Sacar turno y Reprogramar usan 28)
+  atiende?: (fecha: string) => boolean; // si se pasa, los días en que el médico no atiende quedan deshabilitados
 };
 
 // Selector de días + grilla de horarios mañana/tarde. Lo usan Sacar turno (paso 3) y Reprogramar.
@@ -104,7 +90,16 @@ export function SelectorHorario({
   color = COLOR_PACIENTE,
   primerDia,
   cantidadDias = CANTIDAD_CORTA,
+  atiende,
 }: Props) {
+  const { horarios, duracionTurno, direccion } = useConfiguracion();
+  // Los mismos horarios que tienen las agendas de Secretaría y los médicos, según la duración que configuró Secretaría.
+  // Cuáles están libres depende de los turnos del médico ese día, no de una lista fija.
+  const HORARIOS: Horario[] = horarios.map((hora) => ({
+    hora,
+    turno: hora < '12:00' ? 'Mañana' : 'Tarde',
+    disponible: true,
+  }));
   const dias = diasDesde(primerDia, cantidadDias);
   // Con más de 4 días, la fila se desliza hacia el costado.
   const deslizable = dias.length > CANTIDAD_CORTA;
@@ -150,23 +145,24 @@ export function SelectorHorario({
         style={styles.contenedorDias}>
         {dias.map((dia) => {
           const seleccionado = dia.fecha === fecha;
+          const habilitado = dia.disponible && (atiende === undefined || atiende(dia.fecha));
           return (
             <Pressable
               key={dia.fecha}
-              disabled={!dia.disponible}
+              disabled={!habilitado}
               style={[
                 styles.diaCaja,
                 deslizable && styles.diaCajaFija,
                 seleccionado && styles.diaCajaSeleccionada,
                 seleccionado && { backgroundColor: color },
-                !dia.disponible && styles.diaCajaDeshabilitada,
+                !habilitado && styles.diaCajaDeshabilitada,
               ]}
               onPress={() => onElegirFecha(dia.fecha)}>
               <Text
                 style={[
                   styles.diaEtiqueta,
                   seleccionado && styles.diaTextoSeleccionado,
-                  !dia.disponible && styles.diaTextoDeshabilitado,
+                  !habilitado && styles.diaTextoDeshabilitado,
                 ]}>
                 {dia.etiquetaDia}
               </Text>
@@ -174,7 +170,7 @@ export function SelectorHorario({
                 style={[
                   styles.diaNumero,
                   seleccionado && styles.diaTextoSeleccionado,
-                  !dia.disponible && styles.diaTextoDeshabilitado,
+                  !habilitado && styles.diaTextoDeshabilitado,
                 ]}>
                 {dia.numero}
               </Text>
@@ -183,7 +179,7 @@ export function SelectorHorario({
                   style={[
                     styles.diaMes,
                     seleccionado && styles.diaTextoSeleccionado,
-                    !dia.disponible && styles.diaTextoDeshabilitado,
+                    !habilitado && styles.diaTextoDeshabilitado,
                   ]}>
                   {dia.mes}
                 </Text>
@@ -195,7 +191,7 @@ export function SelectorHorario({
 
       <View style={styles.tarjetaHorarios}>
         <Text style={styles.horariosTitulo}>Horarios del {formatearFechaLarga(fecha)}</Text>
-        <Text style={styles.horariosSubtitulo}>Turnos de 20 minutos · {DIRECCION_SEDE}</Text>
+        <Text style={styles.horariosSubtitulo}>Turnos de {duracionTurno} minutos · {direccion}</Text>
 
         <Text style={styles.turnoLabel}>MAÑANA</Text>
         {renderGrilla('Mañana')}

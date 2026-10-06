@@ -22,6 +22,9 @@ type TextosEditar = {
   numeroAfiliado: string;
   dni: string;
   dniNota: string;
+  matricula: string;
+  especialidad: string;
+  datosFijosNota: string;
   obrasSociales: string;
   obrasSocialesNota: string;
   guardar: string;
@@ -65,6 +68,9 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     numeroAfiliado: 'N° de afiliado',
     dni: 'DNI',
     dniNota: 'Verificado con RENAPER. No se puede modificar.',
+    matricula: 'Matrícula',
+    especialidad: 'Especialidad',
+    datosFijosNota: 'Estos datos los modifica Secretaría, porque figuran en los turnos y en tu ingreso.',
     obrasSociales: 'Obras sociales',
     obrasSocialesNota: 'Vamos a mostrarte solo los médicos que atienden las que marques.',
     guardar: 'Guardar cambios',
@@ -106,6 +112,9 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     numeroAfiliado: 'Member number',
     dni: 'ID number',
     dniNota: 'Verified with RENAPER. It cannot be changed.',
+    matricula: 'License number',
+    especialidad: 'Specialty',
+    datosFijosNota: 'The front desk changes these details, because they appear on appointments and in your sign-in.',
     obrasSociales: 'Health insurance',
     obrasSocialesNota: 'We will only show you doctors who accept the ones you select.',
     guardar: 'Save changes',

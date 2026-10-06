@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
-import { SECRETARIA } from '@/datos/consultorio';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 
 // El DNI no se guarda ni se edita: es único y, con backend, se validaría contra el RENAPER.
 export const DNI_SECRETARIA = '28.774.310';
@@ -21,27 +21,30 @@ type PerfilSecretariaContextType = PerfilSecretaria & {
 
 const CLAVE_STORAGE = 'perfil-secretaria';
 
-const PERFIL_INICIAL: PerfilSecretaria = {
-  nombre: SECRETARIA.nombre,
-  email: SECRETARIA.email,
-  telefono: '',
-  domicilio: '',
-  turnoTrabajo: SECRETARIA.horario,
-  fotoUri: null,
-};
-
 const PerfilSecretariaContext = createContext<PerfilSecretariaContextType | undefined>(undefined);
 
 export function PerfilSecretariaProvider({ children }: { children: ReactNode }) {
-  const [perfil, setPerfil] = useState<PerfilSecretaria>(PERFIL_INICIAL);
+  // La secretaria que usa la app es la primera de su consultorio.
+  const { consultorio } = useConsultorio();
+  const secretaria = consultorio.secretarias[0];
+  const perfilInicial: PerfilSecretaria = {
+    nombre: secretaria.nombre,
+    email: secretaria.email,
+    telefono: '',
+    domicilio: '',
+    turnoTrabajo: secretaria.horario,
+    fotoUri: null,
+  };
+  const claveStorage = `${CLAVE_STORAGE}-${consultorio.id}`;
+  const [perfil, setPerfil] = useState<PerfilSecretaria>(perfilInicial);
 
   // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
   useEffect(() => {
     async function cargarPerfil() {
       try {
-        const guardado = await AsyncStorage.getItem(CLAVE_STORAGE);
+        const guardado = await AsyncStorage.getItem(claveStorage);
         if (guardado !== null) {
-          setPerfil({ ...PERFIL_INICIAL, ...JSON.parse(guardado) });
+          setPerfil({ ...perfilInicial, ...JSON.parse(guardado) });
         }
       } catch {
         // Si falla la lectura, se queda con el perfil inicial.
@@ -56,7 +59,7 @@ export function PerfilSecretariaProvider({ children }: { children: ReactNode }) 
       const nuevo = { ...perfil, ...cambios };
       setPerfil(nuevo);
       try {
-        await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevo));
+        await AsyncStorage.setItem(claveStorage, JSON.stringify(nuevo));
       } catch {
         // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
       }

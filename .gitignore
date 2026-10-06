@@ -42,3 +42,6 @@ contexto/
 # generated native folders
 /ios
 /android
+
+# Instrucciones locales para Claude Code (no se suben al repo)
+CLAUDE.md
