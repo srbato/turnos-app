@@ -4,13 +4,15 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { ResumenEspecialidad, ResumenMedico } from '@/components/resumen-turno';
 import {
-  DIAS,
+  DIAS_OFRECIDOS,
+  diasDesde,
   formatearFechaCorta,
   formatearFechaLarga,
   SelectorHorario,
 } from '@/components/selector-horario';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { ESPECIALIDADES, MEDICOS } from '@/datos/catalogo';
@@ -20,6 +22,7 @@ export default function Reprogramar() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { turnos, reprogramarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
+  const { medicos: personal } = usePersonal();
   const [fecha, setFecha] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
   const [confirmado, setConfirmado] = useState(false);
@@ -34,8 +37,28 @@ export default function Reprogramar() {
     return <Redirect href="/paciente" />;
   }
 
+  // Si el médico está de baja, no se puede elegir un horario nuevo con él.
+  if (!aceptaTurnos(personal, medico.nombre)) {
+    return (
+      <View style={styles.pantalla}>
+        <ScrollView contentContainerStyle={styles.contenido}>
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/paciente'))}>
+            <Text style={styles.volverTexto}>‹ Reprogramar turno</Text>
+          </Pressable>
+          <Text style={styles.avisoMedico}>
+            {medico.nombre} ya no atiende, así que no se puede elegir un horario nuevo con él.
+            Comunicate con el consultorio para reprogramar tu turno.
+          </Text>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // Mientras no elija otro día, se muestra el primero.
-  const fechaSeleccionada = fecha ?? DIAS[0].fecha;
+  // Si el médico está de licencia, los días disponibles arrancan cuando vuelve.
+  const vuelta = fechaDeVuelta(personal, medico.nombre);
+  const dias = diasDesde(vuelta, DIAS_OFRECIDOS);
+  const fechaSeleccionada = fecha && dias.some((dia) => dia.fecha === fecha) ? fecha : dias[0].fecha;
 
   function elegirFecha(nueva: string) {
     setFecha(nueva);
@@ -77,7 +100,17 @@ export default function Reprogramar() {
         <ResumenEspecialidad especialidad={especialidad} />
         <ResumenMedico medico={medico} />
 
+        {vuelta && (
+          <View style={styles.avisoLicencia}>
+            <Text style={styles.avisoLicenciaTexto}>
+              {medico.nombre} está de licencia y vuelve el {formatearFechaCorta(vuelta)}. Podés elegir un horario desde ese día.
+            </Text>
+          </View>
+        )}
+
         <SelectorHorario
+          primerDia={vuelta}
+          cantidadDias={DIAS_OFRECIDOS}
           fecha={fechaSeleccionada}
           hora={hora}
           ocupadas={[
@@ -123,6 +156,25 @@ export default function Reprogramar() {
 }
 
 const styles = StyleSheet.create({
+  avisoLicencia: {
+    backgroundColor: '#FCF1DC',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  avisoLicenciaTexto: {
+    fontSize: 13,
+    color: '#7A5200',
+    fontWeight: '600',
+  },
+  avisoMedico: {
+    fontSize: 15,
+    color: '#3A3A3A',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 16,
+  },
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,

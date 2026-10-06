@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE } from '@/constantes/colores';
 import { DIRECCION_SEDE } from '@/datos/catalogo';
@@ -7,6 +7,7 @@ type DiaDisponible = {
   fecha: string; // AAAA-MM-DD
   etiquetaDia: string;
   numero: number;
+  mes: string; // abreviado (OCT)
   disponible: boolean;
 };
 
@@ -32,24 +33,44 @@ const HORARIOS: Horario[] = [
 ];
 
 const DIAS_SEMANA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+const MESES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
-function proximosDias(cantidad: number): DiaDisponible[] {
+// primerDia: si se pasa (por ejemplo, el día en que vuelve un médico de licencia) y es posterior a mañana, los días
+// arrancan ahí.
+// Cantidad de días de la tanda corta (la que usan los demás). Sacar turno y Reprogramar muestran 4 semanas.
+const CANTIDAD_CORTA = 4;
+export const DIAS_OFRECIDOS = 28;
+
+function proximosDias(cantidad: number, primerDia?: string): DiaDisponible[] {
   const dias: DiaDisponible[] = [];
   const hoy = new Date();
+  let desde = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+  if (primerDia) {
+    const [anio, mes, dia] = primerDia.split('-').map(Number);
+    const pedido = new Date(anio, mes - 1, dia);
+    if (pedido > desde) desde = pedido;
+  }
   for (let i = 1; i <= cantidad; i++) {
-    const fecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i);
+    const fecha = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() + i - 1);
     dias.push({
       fecha: `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`,
       etiquetaDia: DIAS_SEMANA_CORTO[fecha.getDay()],
       numero: fecha.getDate(),
-      disponible: i !== cantidad, // el último día de la tanda queda sin cupos, para mostrar el estado deshabilitado
+      mes: MESES_CORTO[fecha.getMonth()],
+      // En la tanda corta de 4 días, el último queda sin cupos para mostrar el estado deshabilitado.
+      disponible: cantidad > CANTIDAD_CORTA || i !== cantidad,
     });
   }
   return dias;
 }
 
-export const DIAS = proximosDias(4);
+export const DIAS = proximosDias(CANTIDAD_CORTA);
+
+// Los días que se ofrecen, a partir de primerDia (o de mañana si no se pasa).
+export function diasDesde(primerDia?: string, cantidad: number = CANTIDAD_CORTA) {
+  return proximosDias(cantidad, primerDia);
+}
 
 export function formatearFechaLarga(fecha: string) {
   const [anio, mes, dia] = fecha.split('-').map(Number);
@@ -69,6 +90,8 @@ type Props = {
   onElegirFecha: (fecha: string) => void;
   onElegirHora: (hora: string) => void;
   color?: string; // color del rol para lo seleccionado (por defecto, el del paciente)
+  primerDia?: string; // primer día que se ofrece (por defecto, mañana)
+  cantidadDias?: number; // cuántos días se ofrecen (por defecto 4; Sacar turno y Reprogramar usan 28)
 };
 
 // Selector de días + grilla de horarios mañana/tarde. Lo usan Sacar turno (paso 3) y Reprogramar.
@@ -79,7 +102,12 @@ export function SelectorHorario({
   onElegirFecha,
   onElegirHora,
   color = COLOR_PACIENTE,
+  primerDia,
+  cantidadDias = CANTIDAD_CORTA,
 }: Props) {
+  const dias = diasDesde(primerDia, cantidadDias);
+  // Con más de 4 días, la fila se desliza hacia el costado.
+  const deslizable = dias.length > CANTIDAD_CORTA;
   function renderGrilla(turno: Horario['turno']) {
     return (
       <View style={styles.grillaHorarios}>
@@ -114,8 +142,13 @@ export function SelectorHorario({
 
   return (
     <View>
-      <View style={styles.filaDias}>
-        {DIAS.map((dia) => {
+      <ScrollView
+        horizontal={deslizable}
+        scrollEnabled={deslizable}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filaDias}
+        style={styles.contenedorDias}>
+        {dias.map((dia) => {
           const seleccionado = dia.fecha === fecha;
           return (
             <Pressable
@@ -123,6 +156,7 @@ export function SelectorHorario({
               disabled={!dia.disponible}
               style={[
                 styles.diaCaja,
+                deslizable && styles.diaCajaFija,
                 seleccionado && styles.diaCajaSeleccionada,
                 seleccionado && { backgroundColor: color },
                 !dia.disponible && styles.diaCajaDeshabilitada,
@@ -144,10 +178,20 @@ export function SelectorHorario({
                 ]}>
                 {dia.numero}
               </Text>
+              {deslizable && (
+                <Text
+                  style={[
+                    styles.diaMes,
+                    seleccionado && styles.diaTextoSeleccionado,
+                    !dia.disponible && styles.diaTextoDeshabilitado,
+                  ]}>
+                  {dia.mes}
+                </Text>
+              )}
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       <View style={styles.tarjetaHorarios}>
         <Text style={styles.horariosTitulo}>Horarios del {formatearFechaLarga(fecha)}</Text>
@@ -164,10 +208,25 @@ export function SelectorHorario({
 }
 
 const styles = StyleSheet.create({
+  contenedorDias: {
+    flexGrow: 0,
+    marginBottom: 16,
+  },
   filaDias: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
+  },
+  // Con muchos días, cada caja tiene ancho fijo (sin estirarse) y la fila se desliza.
+  diaCajaFija: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    width: 64,
+  },
+  diaMes: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8A8A8A',
   },
   diaCaja: {
     flex: 1,

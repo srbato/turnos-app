@@ -4,11 +4,12 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { usePersonal } from '@/contextos/PersonalContext';
+import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
+import { atiendeEseDia } from '@/datos/atencion';
 import { HORAS_BASE } from '@/datos/atencion';
-import { HOY, MEDICOS, NOMBRE_CONSULTORIO, PACIENTES } from '@/datos/consultorio';
+import { HOY, NOMBRE_CONSULTORIO, PACIENTES } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
@@ -40,7 +41,10 @@ export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerr
   const [idPaciente, setIdPaciente] = useState('');
   const [busqueda, setBusqueda] = useState('');
 
-  const medicosActivos = medicos.filter((m) => m.estado === 'activo');
+  // Médicos que atienden ese día: no de baja, no de licencia en esa fecha y con ese día entre sus días de atención.
+  const medicosActivos = medicos.filter(
+    (m) => m.estado !== 'baja' && !enLicencia(m, fecha) && atiendeEseDia(m.dias, fecha)
+  );
   // Un horario ofrecido a la lista de espera queda reservado hasta que el paciente responda.
   const reservadas = horasReservadas(ofertas, turnos, medico, fecha);
   const horasLibres = HORAS_BASE.filter(
@@ -57,7 +61,8 @@ export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerr
   const puedeGuardar = medico !== '' && hora !== '' && idPaciente !== '';
 
   function guardar() {
-    const datosMedico = MEDICOS.find((m) => m.nombre === medico);
+    // Se busca en el personal (incluye a los médicos dados de alta desde la app), no en la lista fija de ejemplo.
+    const datosMedico = medicos.find((m) => m.nombre === medico);
     const datosPaciente = PACIENTES.find((p) => p.id === idPaciente);
     if (!datosMedico || !datosPaciente || hora === '') return;
     agregarTurno({
@@ -70,7 +75,7 @@ export function NuevoTurnoSecretaria({ fecha, medicoInicial, horaInicial, onCerr
       hora,
       sede: NOMBRE_CONSULTORIO,
       cobertura: `${datosPaciente.cobertura} ${datosPaciente.plan}`.trim(),
-      estado: 'confirmado', // lo carga Secretaría, queda confirmado
+      estado: 'pendiente', // lo carga Secretaría: queda pendiente hasta que el paciente confirme (ella le avisa unos días antes)
       instrucciones: [],
       reservadoEl: HOY,
     });

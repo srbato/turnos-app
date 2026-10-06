@@ -13,7 +13,7 @@ import { usePreferencias, type Idioma } from '@/contextos/PreferenciasContext';
 import { nombreCobertura } from '@/datos/catalogo';
 import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 
-const ROLES = ['paciente', 'medico', 'secretaria', 'administrador'] as const;
+const ROLES = ['paciente', 'medico', 'secretaria'] as const;
 type Rol = (typeof ROLES)[number];
 
 function normalizarRol(valor: string | string[] | undefined): Rol {
@@ -42,11 +42,6 @@ const PERFILES: Record<Rol, InfoPerfil> = {
     nombre: 'Norma Aguilar',
     iniciales: 'NA',
     email: 'norma.aguilar@consultoriosrivadavia.com',
-  },
-  administrador: {
-    nombre: 'Gustavo Aráoz',
-    iniciales: 'GA',
-    email: 'gustavo.araoz@consultoriosrivadavia.com',
   },
 };
 

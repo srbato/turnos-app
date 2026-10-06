@@ -65,11 +65,11 @@ export function crearHorarioLibre(
 }
 
 // Los horarios libres que se pueden ofrecer: los liberados por cancelaciones y los que Secretaría publicó desde la
-// agenda del médico, siempre que nadie los haya ocupado y cumplan los 3 días.
-export function horariosParaOfrecer(turnos: Turno[], publicados: Turno[]) {
+// agenda del médico, siempre que nadie los haya ocupado, cumplan los 3 días y no se hayan retirado de la oferta.
+export function horariosParaOfrecer(turnos: Turno[], publicados: Turno[], retirados: string[] = []) {
   const libres = publicados.filter((slot) => !horarioOcupado(slot, turnos));
   return [...turnosLiberados(turnos), ...libres]
-    .filter(permiteAdelanto)
+    .filter((horario) => permiteAdelanto(horario) && !retirados.includes(claveHorario(horario)))
     .sort((a, b) => (momento(a) < momento(b) ? -1 : 1));
 }
 
@@ -133,10 +133,15 @@ export function candidatosDisponibles(horario: Turno, turnos: Turno[], ofertas: 
 }
 
 // Las ofertas que hay que crear ahora: cada horario libre sin oferta vigente se le ofrece al primer candidato disponible.
-export function proximasOfertas(turnos: Turno[], publicados: Turno[], ofertas: Oferta[]): Oferta[] {
+export function proximasOfertas(
+  turnos: Turno[],
+  publicados: Turno[],
+  ofertas: Oferta[],
+  retirados: string[] = []
+): Oferta[] {
   const nuevas: Oferta[] = [];
   const vigentes = ofertasVigentes(ofertas, turnos);
-  horariosParaOfrecer(turnos, publicados).forEach((horario) => {
+  horariosParaOfrecer(turnos, publicados, retirados).forEach((horario) => {
     if (vigentes.some((o) => claveHorario(o.horario) === claveHorario(horario))) return;
     const candidato = candidatosDisponibles(horario, turnos, [...ofertas, ...nuevas])[0];
     if (!candidato) return;

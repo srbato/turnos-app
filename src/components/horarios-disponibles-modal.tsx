@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
-import { useAdelantos } from '@/contextos/AdelantosContext';
-import { usePersonal } from '@/contextos/PersonalContext';
+import { useAdelantos, type Oferta } from '@/contextos/AdelantosContext';
+import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import {
   candidatosDisponibles,
@@ -21,25 +21,31 @@ const DIAS_A_MIRAR = 30;
 
 type Props = {
   medico: string | null; // null = cerrado
+  oferta?: Oferta | null; // si viene, se está reprogramando esa oferta (el horario ofrecido) para el mismo paciente
   onCerrar: () => void;
 };
 
 // Agenda del médico desde dentro de 3 días: Secretaría elige un horario libre y se lo ofrece a la lista de espera
 // (primero al que hace más tiempo espera).
-export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
+export function HorariosDisponiblesModal({ medico, oferta = null, onCerrar }: Props) {
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
-  const { ofertas, publicados, ofrecerHorario } = useAdelantos();
+  const { ofertas, publicados, ofrecerHorario, reprogramarOferta } = useAdelantos();
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
 
   const datos = medicos.find((m) => m.nombre === medico);
   const esperando = listaDeEspera(turnos).filter((turno) => turno.medico === medico);
   // Solo tiene sentido ofrecer horarios anteriores al último turno de la lista (si no, nadie lo adelantaría).
-  const ultimoMomento = esperando.map((t) => `${t.fecha} ${t.hora}`).sort().pop() ?? '';
+  // Al reprogramar una oferta, el tope es el turno del paciente que la tiene.
+  const turnoDeLaOferta = oferta ? turnos.find((t) => t.id === oferta.idTurno) : undefined;
+  const ultimoMomento = turnoDeLaOferta
+    ? `${turnoDeLaOferta.fecha} ${turnoDeLaOferta.hora}`
+    : (esperando.map((t) => `${t.fecha} ${t.hora}`).sort().pop() ?? '');
 
   // Hay a quién ofrecérselo: alguien de la lista con un turno más tarde y sin otra oferta pendiente.
   function hayAQuien(fecha: string, h: string) {
+    if (oferta) return true; // el destinatario ya está elegido
     return datos !== undefined && candidatosDisponibles(crearHorarioLibre(datos, fecha, h), turnos, ofertas).length > 0;
   }
 
@@ -55,14 +61,14 @@ export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
 
   // Si todos los que esperan ya tienen una oferta pendiente, no se puede ofrecer nada hasta que respondan.
   const conOferta = new Set(ofertasVigentes(ofertas, turnos).map((o) => o.idTurno));
-  const todosOcupados = esperando.length > 0 && esperando.every((t) => conOferta.has(t.id));
+  const todosOcupados = !oferta && esperando.length > 0 && esperando.every((t) => conOferta.has(t.id));
 
   // Días con atención y horarios libres, desde dentro de 3 días.
   const dias: string[] = [];
-  if (datos && datos.estado === 'activo') {
+  if (datos && datos.estado !== 'baja') {
     for (let i = DIAS_MINIMOS_ADELANTO; i < DIAS_MINIMOS_ADELANTO + DIAS_A_MIRAR; i++) {
       const fecha = fechaDentroDe(i);
-      if (atiendeEseDia(datos.dias, fecha) && HORAS_BASE.some((h) => estaLibre(fecha, h))) {
+      if (!enLicencia(datos, fecha) && atiendeEseDia(datos.dias, fecha) && HORAS_BASE.some((h) => estaLibre(fecha, h))) {
         dias.push(fecha);
       }
     }
@@ -73,7 +79,7 @@ export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
   const horaElegida = horasLibres.includes(hora) ? hora : '';
 
   const horario = datos && diaElegido && horaElegida ? crearHorarioLibre(datos, diaElegido, horaElegida) : null;
-  const primero = horario ? candidatosDisponibles(horario, turnos, ofertas)[0] : undefined;
+  const primero = horario ? (turnoDeLaOferta ?? candidatosDisponibles(horario, turnos, ofertas)[0]) : undefined;
 
   function cerrar() {
     setDia('');
@@ -83,7 +89,11 @@ export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
 
   function ofrecer() {
     if (!horario) return;
-    ofrecerHorario(horario);
+    if (oferta) {
+      reprogramarOferta(oferta, horario);
+    } else {
+      ofrecerHorario(horario);
+    }
     cerrar();
   }
 
@@ -91,11 +101,12 @@ export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
     <Modal visible={medico !== null} animationType="fade" transparent onRequestClose={cerrar}>
       <View style={styles.fondo}>
         <View style={styles.tarjeta}>
-          <Text style={styles.titulo}>Horarios disponibles</Text>
+          <Text style={styles.titulo}>{oferta ? 'Reprogramar oferta' : 'Horarios disponibles'}</Text>
           <Text style={styles.medico}>{medico}</Text>
           <Text style={styles.ayuda}>
-            Desde dentro de {DIAS_MINIMOS_ADELANTO} días y antes del último turno de la lista. Cada paciente recibe una
-            sola oferta a la vez: se le ofrece a quien hace más tiempo espera y no tiene otra pendiente.
+            {oferta
+              ? `Elegí otro horario libre, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual del paciente. La oferta pasa al nuevo horario.`
+              : `Desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del último turno de la lista. Cada paciente recibe una sola oferta a la vez: se le ofrece a quien hace más tiempo espera y no tiene otra pendiente.`}
           </Text>
 
           {dias.length === 0 ? (
@@ -137,7 +148,7 @@ export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
 
               {primero && (
                 <Text style={styles.destino}>
-                  Se le ofrece primero a{' '}
+                  {oferta ? 'La oferta sigue siendo para' : 'Se le ofrece primero a'}{' '}
                   <Text style={styles.destinoNegrita}>
                     {PACIENTES.find((p) => p.id === primero.idPaciente)?.nombre}{' '}
                     {PACIENTES.find((p) => p.id === primero.idPaciente)?.apellido}
@@ -157,7 +168,7 @@ export function HorariosDisponiblesModal({ medico, onCerrar }: Props) {
               disabled={!horario}
               style={[styles.botonPrimario, !horario && styles.botonDeshabilitado]}
               onPress={ofrecer}>
-              <Text style={styles.botonPrimarioTexto}>Ofrecer a la lista</Text>
+              <Text style={styles.botonPrimarioTexto}>{oferta ? 'Cambiar horario' : 'Ofrecer a la lista'}</Text>
             </Pressable>
           </View>
         </View>

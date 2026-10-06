@@ -36,13 +36,6 @@ const TEMAS = {
     etiqueta: 'Ingreso secretaría',
     alternativo: '',
   },
-  administrador: {
-    color: '#7c3aed',
-    fondo: '#f5f3ff',
-    colorCard: '#ffffff',
-    etiqueta: 'Ingreso administrador',
-    alternativo: '',
-  },
 };
 
 // Credenciales de prueba: todavía no hay backend, se validan a mano.
@@ -50,7 +43,6 @@ const TEMAS = {
 const CREDENCIALES = {
   paciente: { email: 'p@t.com', password: 'p' },
   secretaria: { email: 's@t.com', password: 's' },
-  administrador: { email: 'a@t.com', password: 'a' },
 };
 
 export default function Login() {
@@ -64,9 +56,6 @@ export default function Login() {
     } else if (rol === 'secretaria') {
         tema = TEMAS.secretaria;
         credenciales = CREDENCIALES.secretaria;
-    } else if (rol === 'administrador') {
-        tema = TEMAS.administrador;
-        credenciales = CREDENCIALES.administrador;
     }
 
     const [email, setEmail] = useState('');

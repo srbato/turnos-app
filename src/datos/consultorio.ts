@@ -117,12 +117,6 @@ export const SECRETARIA = {
   horario: 'Lunes a viernes · 8:00 a 16:00',
 };
 
-export const ADMINISTRADOR = {
-  nombre: 'Gustavo Aráoz',
-  iniciales: 'GA',
-  email: 'gustavo.araoz@consultoriosrivadavia.com',
-};
-
 export const NOMBRE_CONSULTORIO = 'Consultorios Rivadavia';
 
 // ============================================================

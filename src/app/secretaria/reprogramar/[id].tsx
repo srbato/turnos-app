@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import {
   DIAS,
+  DIAS_OFRECIDOS,
   formatearFechaCorta,
   formatearFechaLarga,
   SelectorHorario,
@@ -55,7 +56,7 @@ export default function ReprogramarSecretaria() {
   function confirmar() {
     if (!turno || !hora) return;
     // La secretaría confirma el turno al reprogramarlo.
-    reprogramarTurno(turno.id, fechaSeleccionada, hora, 'confirmado');
+    reprogramarTurno(turno.id, fechaSeleccionada, hora, 'pendiente'); // queda pendiente hasta que el paciente confirme
     setConfirmado(true);
   }
 
@@ -91,6 +92,7 @@ export default function ReprogramarSecretaria() {
           onElegirFecha={elegirFecha}
           onElegirHora={setHora}
           color={COLOR_SECRETARIA}
+          cantidadDias={DIAS_OFRECIDOS}
         />
       </ScrollView>
 
@@ -116,7 +118,7 @@ export default function ReprogramarSecretaria() {
             <Text style={styles.modalDato}>
               {formatearFechaLarga(fechaSeleccionada)} · {hora} h
             </Text>
-            <Text style={styles.modalDato}>Queda confirmado.</Text>
+            <Text style={styles.modalDato}>Queda pendiente de confirmación del paciente.</Text>
             <Pressable style={styles.botonModal} onPress={() => router.replace(RUTA_AGENDA_SECRETARIA)}>
               <Text style={styles.botonConfirmarTexto}>Volver a la agenda</Text>
             </Pressable>

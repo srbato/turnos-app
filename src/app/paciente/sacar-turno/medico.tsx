@@ -4,20 +4,25 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ResumenEspecialidad } from '@/components/resumen-turno';
 import { COLOR_MEDICO, FONDO_PACIENTE } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
+import { formatearFecha } from '@/utilidades/turnos';
 import { coberturaQueAtiende, medicosParaPaciente, type Medico } from '@/datos/catalogo';
 
 export default function ElegirMedico() {
   const { especialidad, elegirMedico } = useSacarTurno();
   const { coberturaIds } = usePerfilPaciente();
+  const { medicos: personal } = usePersonal();
 
   // Si se entra a esta URL directo (sin haber elegido especialidad), se vuelve al paso 1.
   if (!especialidad) {
     return <Redirect href="/paciente/sacar-turno" />;
   }
 
-  // Solo los médicos que aceptan alguna cobertura del paciente.
-  const medicos = medicosParaPaciente(especialidad.id, coberturaIds);
+  // Solo los médicos que aceptan alguna cobertura del paciente y que atienden ahora (no de licencia ni de baja).
+  const medicos = medicosParaPaciente(especialidad.id, coberturaIds).filter((medico) =>
+    aceptaTurnos(personal, medico.nombre)
+  );
 
   function elegir(medico: Medico) {
     elegirMedico(medico);
@@ -44,7 +49,7 @@ export default function ElegirMedico() {
           <Text style={styles.vacioTexto}>
             {coberturaIds.length === 0
               ? 'Todavía no cargaste tu obra social. Agregala en Perfil > Editar perfil.'
-              : `No hay profesionales de ${especialidad.nombre} que atiendan tus obras sociales.`}
+              : `No hay profesionales de ${especialidad.nombre} disponibles ahora que atiendan tus obras sociales.`}
           </Text>
         </View>
       }
@@ -56,6 +61,11 @@ export default function ElegirMedico() {
           <View style={styles.textos}>
             <Text style={styles.nombre}>{item.nombre}</Text>
             <Text style={styles.cobertura}>Atiende {coberturaQueAtiende(item, coberturaIds)}</Text>
+            {fechaDeVuelta(personal, item.nombre) && (
+              <Text style={styles.licencia}>
+                De licencia · vuelve el {formatearFecha(fechaDeVuelta(personal, item.nombre) ?? '').slice(0, 5)}
+              </Text>
+            )}
           </View>
           <Text style={styles.flecha}>›</Text>
         </Pressable>
@@ -65,6 +75,12 @@ export default function ElegirMedico() {
 }
 
 const styles = StyleSheet.create({
+  licencia: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#A66F00',
+    marginTop: 2,
+  },
   pantalla: {
     flex: 1,
     backgroundColor: FONDO_PACIENTE,

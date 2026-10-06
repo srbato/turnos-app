@@ -5,13 +5,15 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { OpcionAdelanto } from '@/components/opcion-adelanto';
 import { ResumenEspecialidad, ResumenMedico } from '@/components/resumen-turno';
 import {
-  DIAS,
+  DIAS_OFRECIDOS,
+  diasDesde,
   formatearFechaCorta,
   formatearFechaLarga,
   SelectorHorario,
 } from '@/components/selector-horario';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
@@ -24,6 +26,7 @@ export default function ElegirHorario() {
   const { especialidad, medico, fecha, hora, elegirFecha, elegirHora } = useSacarTurno();
   const { turnos, agregarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
+  const { medicos: personal } = usePersonal();
   const { coberturaIds } = usePerfilPaciente();
   const [confirmado, setConfirmado] = useState(false);
   // Si quiere que le ofrezcan adelantar el turno cuando se libere un horario (lista de espera).
@@ -33,12 +36,15 @@ export default function ElegirHorario() {
   if (!especialidad) {
     return <Redirect href="/paciente/sacar-turno" />;
   }
-  if (!medico) {
+  if (!medico || !aceptaTurnos(personal, medico.nombre)) {
     return <Redirect href="/paciente/sacar-turno/medico" />;
   }
 
-  // Mientras no elija otro día, se muestra el primero.
-  const fechaSeleccionada = fecha ?? DIAS[0].fecha;
+  // Si el médico está de licencia, los días disponibles arrancan cuando vuelve.
+  const vuelta = fechaDeVuelta(personal, medico.nombre);
+  const dias = diasDesde(vuelta, DIAS_OFRECIDOS);
+  // Mientras no elija otro día (o si el que había elegido ya no se ofrece), se muestra el primero.
+  const fechaSeleccionada = fecha && dias.some((dia) => dia.fecha === fecha) ? fecha : dias[0].fecha;
 
   function confirmar() {
     if (!especialidad || !medico || !hora) return;
@@ -76,7 +82,17 @@ export default function ElegirHorario() {
           onCambiar={() => router.dismissTo('/paciente/sacar-turno/medico')}
         />
 
+        {vuelta && (
+          <View style={styles.avisoLicencia}>
+            <Text style={styles.avisoLicenciaTexto}>
+              {medico.nombre} está de licencia y vuelve el {formatearFechaCorta(vuelta)}. Podés sacar turno desde ese día.
+            </Text>
+          </View>
+        )}
+
         <SelectorHorario
+          primerDia={vuelta}
+          cantidadDias={DIAS_OFRECIDOS}
           fecha={fechaSeleccionada}
           hora={hora}
           ocupadas={[
@@ -125,6 +141,17 @@ export default function ElegirHorario() {
 }
 
 const styles = StyleSheet.create({
+  avisoLicencia: {
+    backgroundColor: '#FCF1DC',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  avisoLicenciaTexto: {
+    fontSize: 13,
+    color: '#7A5200',
+    fontWeight: '600',
+  },
   pantalla: {
     flex: 1,
     backgroundColor: FONDO_PACIENTE,

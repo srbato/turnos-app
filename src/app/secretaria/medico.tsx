@@ -12,9 +12,10 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { usePersonal } from '@/contextos/PersonalContext';
+import { enLicencia, estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import { HOY } from '@/datos/consultorio';
+import { fechaDentroDe, HOY } from '@/datos/consultorio';
+import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
 const COLOR_BAJA = '#8A8A8A';
 
@@ -34,6 +35,9 @@ export default function FichaMedico() {
   const [dias, setDias] = useState(medico?.dias ?? '');
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
+  // Eligiendo la fecha de vuelta de una licencia.
+  const [eligiendoLicencia, setEligiendoLicencia] = useState(false);
+  const [fechaVuelta, setFechaVuelta] = useState('');
 
   if (!medico) {
     return (
@@ -56,9 +60,18 @@ export default function FichaMedico() {
   const textoProximos =
     proximos === 0 ? 'No tiene turnos próximos.' : `Tiene ${proximos} turno${proximos === 1 ? '' : 's'} próximo${proximos === 1 ? '' : 's'}.`;
 
-  const colorEstado =
-    medico.estado === 'activo' ? COLOR_CONFIRMADO : medico.estado === 'licencia' ? COLOR_PENDIENTE : COLOR_BAJA;
-  const etiquetaEstado = medico.estado === 'activo' ? 'Activo' : medico.estado === 'licencia' ? 'Licencia' : 'Baja';
+  // Una licencia que ya terminó cuenta como activo.
+  const efectivo = estadoEfectivo(medico);
+  const deLicencia = efectivo === 'licencia';
+  const colorEstado = efectivo === 'activo' ? COLOR_CONFIRMADO : efectivo === 'licencia' ? COLOR_PENDIENTE : COLOR_BAJA;
+  const etiquetaEstado =
+    efectivo === 'activo'
+      ? 'Activo'
+      : efectivo === 'licencia'
+        ? `Licencia${medico.licenciaHasta ? ' · vuelve el ' + formatearFecha(medico.licenciaHasta).slice(0, 5) : ''}`
+        : 'Baja';
+  // Los próximos 60 días, para elegir cuándo vuelve.
+  const diasParaVolver = Array.from({ length: 60 }, (_, i) => fechaDentroDe(i + 1));
 
   function guardar() {
     if (especialidad.trim() === '' || matricula.trim() === '' || consultorio.trim() === '' || dias.trim() === '') {
@@ -80,7 +93,17 @@ export default function FichaMedico() {
   }
 
   function cambiarEstado(estado: 'activo' | 'licencia') {
-    editarMedico(matriculaActual, { estado });
+    // Al volver a activo se borra la fecha de vuelta de la licencia.
+    editarMedico(matriculaActual, { estado, licenciaHasta: undefined });
+    setEligiendoLicencia(false);
+    setMensaje(null);
+  }
+
+  function confirmarLicencia() {
+    if (fechaVuelta === '') return;
+    editarMedico(matriculaActual, { estado: 'licencia', licenciaHasta: fechaVuelta });
+    setEligiendoLicencia(false);
+    setFechaVuelta('');
     setMensaje(null);
   }
 
@@ -124,25 +147,83 @@ export default function FichaMedico() {
             <>
               <View style={styles.segmentos}>
                 <Pressable
-                  style={[styles.segmento, medico.estado === 'activo' && styles.segmentoActivo]}
+                  style={[styles.segmento, !deLicencia && !eligiendoLicencia && styles.segmentoActivo]}
                   onPress={() => cambiarEstado('activo')}>
-                  <Text style={[styles.segmentoTexto, medico.estado === 'activo' && styles.segmentoTextoActivo]}>
+                  <Text
+                    style={[styles.segmentoTexto, !deLicencia && !eligiendoLicencia && styles.segmentoTextoActivo]}>
                     Activo
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.segmento, medico.estado === 'licencia' && styles.segmentoActivo]}
-                  onPress={() => cambiarEstado('licencia')}>
-                  <Text style={[styles.segmentoTexto, medico.estado === 'licencia' && styles.segmentoTextoActivo]}>
+                  style={[styles.segmento, (deLicencia || eligiendoLicencia) && styles.segmentoActivo]}
+                  onPress={() => !deLicencia && setEligiendoLicencia(true)}>
+                  <Text
+                    style={[styles.segmentoTexto, (deLicencia || eligiendoLicencia) && styles.segmentoTextoActivo]}>
                     De licencia
                   </Text>
                 </Pressable>
               </View>
-              <Text style={styles.ayuda}>
-                {medico.estado === 'licencia'
-                  ? 'En licencia su agenda aparece bloqueada y no se le asignan turnos nuevos.'
-                  : 'Atiende con normalidad.'}
-              </Text>
+
+              {deLicencia && !eligiendoLicencia && (
+                <>
+                  <Text style={styles.vuelta}>
+                    {medico.licenciaHasta
+                      ? `Vuelve a atender el ${detalleFecha(medico.licenciaHasta).diaSemana} ${formatearFecha(medico.licenciaHasta)}.`
+                      : 'Licencia sin fecha de vuelta.'}
+                  </Text>
+                  <Text style={styles.ayuda}>
+                    Su agenda aparece bloqueada hasta ese día. Los pacientes pueden sacar turno con él desde que vuelve.
+                  </Text>
+                  <Pressable style={styles.botonSecundario} onPress={() => setEligiendoLicencia(true)}>
+                    <Text style={styles.botonSecundarioTexto}>Cambiar fecha de vuelta</Text>
+                  </Pressable>
+                </>
+              )}
+
+              {eligiendoLicencia && (
+                <>
+                  <Text style={styles.vuelta}>¿Cuándo vuelve a atender?</Text>
+                  <Text style={styles.ayuda}>
+                    Elegí el primer día en que ya atiende. Hasta entonces está de licencia.
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.diasFila}>
+                    {diasParaVolver.map((dia) => (
+                      <Pressable
+                        key={dia}
+                        style={[styles.diaCaja, dia === fechaVuelta && styles.diaCajaActiva]}
+                        onPress={() => setFechaVuelta(dia)}>
+                        <Text style={[styles.diaEtiqueta, dia === fechaVuelta && styles.diaTextoActivo]}>
+                          {detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
+                        </Text>
+                        <Text style={[styles.diaNumero, dia === fechaVuelta && styles.diaTextoActivo]}>
+                          {detalleFecha(dia).dia}
+                        </Text>
+                        <Text style={[styles.diaMes, dia === fechaVuelta && styles.diaTextoActivo]}>
+                          {detalleFecha(dia).mes}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                  <View style={styles.filaBotonesLicencia}>
+                    <Pressable
+                      style={styles.botonSecundarioMitad}
+                      onPress={() => {
+                        setEligiendoLicencia(false);
+                        setFechaVuelta('');
+                      }}>
+                      <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
+                    </Pressable>
+                    <Pressable
+                      disabled={fechaVuelta === ''}
+                      style={[styles.botonConfirmarLicencia, fechaVuelta === '' && styles.botonDeshabilitado]}
+                      onPress={confirmarLicencia}>
+                      <Text style={styles.botonPrimarioTexto}>Confirmar licencia</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+
+              {!deLicencia && !eligiendoLicencia && <Text style={styles.ayuda}>Atiende con normalidad.</Text>}
               <Text style={styles.ayuda}>{textoProximos}</Text>
             </>
           )}
@@ -318,6 +399,61 @@ const styles = StyleSheet.create({
   segmentoTextoActivo: {
     color: '#FFFFFF',
   },
+  vuelta: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginTop: 12,
+  },
+  diasFila: {
+    gap: 8,
+    paddingVertical: 10,
+  },
+  diaCaja: {
+    width: 56,
+    borderWidth: 1,
+    borderColor: '#B9DAD6',
+    borderRadius: 12,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  diaCajaActiva: {
+    backgroundColor: COLOR_SECRETARIA,
+    borderColor: COLOR_SECRETARIA,
+  },
+  diaEtiqueta: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8A8A8A',
+  },
+  diaNumero: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  diaMes: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8A8A8A',
+  },
+  diaTextoActivo: {
+    color: '#FFFFFF',
+  },
+  filaBotonesLicencia: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  botonConfirmarLicencia: {
+    flex: 1,
+    backgroundColor: COLOR_SECRETARIA,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  botonDeshabilitado: {
+    backgroundColor: '#8FC4BF',
+  },
   ayuda: {
     fontSize: 12,
     color: '#5A5A5A',
@@ -410,6 +546,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 16,
+  },
+  botonSecundario: {
+    borderWidth: 1,
+    borderColor: COLOR_SECRETARIA,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
   },
   botonSecundarioMitad: {
     flex: 1,

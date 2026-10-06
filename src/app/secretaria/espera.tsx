@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { DetalleOfertaSecretaria } from '@/components/detalle-oferta-secretaria';
 import { HorariosDisponiblesModal } from '@/components/horarios-disponibles-modal';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import {
@@ -12,15 +13,12 @@ import {
 } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useAdelantos, type Oferta } from '@/contextos/AdelantosContext';
-import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { useTurnos } from '@/contextos/TurnosContext';
 import {
-  claveHorario,
   DIAS_MINIMOS_ADELANTO,
   diasDesdeHoy,
-  horariosParaOfrecer,
   listaDeEspera,
   ofertasVigentes,
-  turnosLiberados,
 } from '@/datos/adelantos';
 import { PACIENTES } from '@/datos/consultorio';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
@@ -30,12 +28,14 @@ const ETIQUETAS_RESPUESTA: Record<Oferta['estado'], string> = {
   aceptada: 'Aceptó',
   rechazada: 'Rechazó',
   'sin-respuesta': 'No contestó',
+  retirada: 'Retirada',
 };
 const COLORES_RESPUESTA: Record<Oferta['estado'], string> = {
   enviada: COLOR_PENDIENTE,
   aceptada: COLOR_CONFIRMADO,
   rechazada: COLOR_CANCELADO,
   'sin-respuesta': '#8A8A8A',
+  retirada: '#8A8A8A',
 };
 
 // "Dr. Ricardo Paz" -> "Dr. Paz"
@@ -58,9 +58,11 @@ function nombreDelPaciente(idPaciente: string) {
 // ofrece a un solo paciente. Si uno no acepta, el horario pasa al siguiente que esté libre de ofertas.
 export default function EsperaSecretaria() {
   const { turnos } = useTurnos();
-  const { ofertas, publicados, noContesta } = useAdelantos();
+  const { ofertas, noContesta } = useAdelantos();
   // Médico cuya agenda se está mirando para ofrecer un horario (null = cerrado).
   const [medicoAbierto, setMedicoAbierto] = useState<string | null>(null);
+  // Oferta cuyo detalle se está mirando, para modificarla ('' = cerrado).
+  const [idOferta, setIdOferta] = useState('');
 
   const vigentes = ofertasVigentes(ofertas, turnos).sort((a, b) =>
     `${a.horario.fecha} ${a.horario.hora}` < `${b.horario.fecha} ${b.horario.hora}` ? -1 : 1
@@ -68,38 +70,6 @@ export default function EsperaSecretaria() {
   const enLista = listaDeEspera(turnos);
   const medicosEnLista = [...new Set(enLista.map((turno) => turno.medico))];
   const respuestas = ofertas.filter((oferta) => oferta.estado !== 'enviada');
-
-  // Por qué un horario libre no se le ofrece a nadie.
-  function motivoSinOferta(horario: Turno) {
-    const delMedico = enLista.filter((turno) => turno.medico === horario.medico);
-    if (delMedico.length === 0) {
-      return 'Nadie en la lista de espera de este médico';
-    }
-    const posteriores = delMedico.filter(
-      (turno) => `${turno.fecha} ${turno.hora}` > `${horario.fecha} ${horario.hora}`
-    );
-    if (posteriores.length === 0) {
-      return 'Nadie en la lista tiene un turno posterior a este horario (no sería un adelanto)';
-    }
-    const libres = posteriores.filter((turno) => !vigentes.some((oferta) => oferta.idTurno === turno.id));
-    if (libres.length === 0) {
-      return 'Los que podían adelantar ya tienen otra oferta esperando respuesta';
-    }
-    return 'Los que podían adelantar ya respondieron por este horario';
-  }
-
-  // Horarios libres sin oferta: los de menos de 3 días (no se ofrecen por lista de espera) y los que no tienen a quién.
-  const sinOferta = [
-    ...turnosLiberados(turnos)
-      .filter((horario) => diasDesdeHoy(horario.fecha) < DIAS_MINIMOS_ADELANTO)
-      .map((horario) => ({
-        horario,
-        motivo: `Faltan menos de ${DIAS_MINIMOS_ADELANTO} días: no se ofrece por lista de espera`,
-      })),
-    ...horariosParaOfrecer(turnos, publicados)
-      .filter((horario) => !vigentes.some((oferta) => claveHorario(oferta.horario) === claveHorario(horario)))
-      .map((horario) => ({ horario, motivo: motivoSinOferta(horario) })),
-  ];
 
   return (
     <View style={styles.pantalla}>
@@ -121,7 +91,7 @@ export default function EsperaSecretaria() {
           const turno = turnos.find((t) => t.id === oferta.idTurno);
           if (!turno) return null;
           return (
-            <View key={oferta.id} style={styles.panelOferta}>
+            <Pressable key={oferta.id} style={styles.panelOferta} onPress={() => setIdOferta(oferta.id)}>
               <View style={styles.encabezadoOferta}>
                 <Text style={styles.etiquetaLiberado}>HORARIO OFRECIDO</Text>
                 <View style={styles.chip}>
@@ -146,25 +116,10 @@ export default function EsperaSecretaria() {
                   <Text style={styles.noContesta}>No contesta</Text>
                 </Pressable>
               </View>
-            </View>
+              <Text style={styles.modificar}>Tocá para reprogramar o cancelar la oferta</Text>
+            </Pressable>
           );
         })}
-
-        {sinOferta.length > 0 && (
-          <>
-            <Text style={styles.seccion}>HORARIOS LIBRES SIN OFERTA</Text>
-            <View style={styles.panel}>
-              {sinOferta.map(({ horario, motivo }, indice) => (
-                <View key={claveHorario(horario)} style={[styles.filaSimple, indice > 0 && styles.filaBorde]}>
-                  <Text style={styles.filaTitulo}>
-                    {textoCorto(horario.fecha, horario.hora)} · {medicoCorto(horario.medico)}
-                  </Text>
-                  <Text style={styles.detalle}>{motivo}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
 
         <Text style={styles.seccion}>EN ESPERA ({enLista.length})</Text>
         {enLista.length === 0 && (
@@ -188,7 +143,11 @@ export default function EsperaSecretaria() {
               {delMedico.map((turno, indice) => {
                 const oferta = vigentes.find((o) => o.idTurno === turno.id);
                 return (
-                  <View key={turno.id} style={[styles.candidato, oferta && styles.candidatoConOferta]}>
+                  <Pressable
+                    key={turno.id}
+                    disabled={!oferta}
+                    style={[styles.candidato, oferta && styles.candidatoConOferta]}
+                    onPress={() => oferta && setIdOferta(oferta.id)}>
                     <View style={styles.posicion}>
                       <Text style={styles.posicionTexto}>{indice + 1}</Text>
                     </View>
@@ -204,7 +163,7 @@ export default function EsperaSecretaria() {
                         </Text>
                       )}
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </View>
@@ -235,6 +194,8 @@ export default function EsperaSecretaria() {
       </ScrollView>
 
       <MenuSecretaria activa="espera" />
+
+      <DetalleOfertaSecretaria idOferta={idOferta} onCerrar={() => setIdOferta('')} />
 
       <HorariosDisponiblesModal medico={medicoAbierto} onCerrar={() => setMedicoAbierto(null)} />
     </View>
@@ -338,6 +299,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#5A5A5A',
     marginLeft: 8,
+  },
+  modificar: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLOR_SECRETARIA,
+    marginTop: 10,
   },
   panelTitulo: {
     fontSize: 16,

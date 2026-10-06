@@ -10,12 +10,17 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { useAdelantos } from '@/contextos/AdelantosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
+import { ofertasVigentes } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
-import { fechaComoTexto } from '@/utilidades/turnos';
+import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
+
+// Lo único que suma puntos de riesgo (ver datos/ausentismo.ts).
+const REGLAS = [{ puntos: '+1', texto: 'Cada falta (no asistió)' }];
 
 // "Dra. Lucía Fernández" -> "Dra. Fernández"
 function medicoCorto(nombre: string) {
@@ -23,43 +28,32 @@ function medicoCorto(nombre: string) {
   return `${palabras[0]} ${palabras[palabras.length - 1]}`;
 }
 
-// Reglas que suman puntos de riesgo (ver datos/ausentismo.ts).
-const REGLAS = [
-  { puntos: '+1 a 3', texto: 'Faltas anteriores' },
-  { puntos: '+1', texto: 'Primera consulta' },
-  { puntos: '+1', texto: 'Reserva con 3+ meses' },
-  { puntos: '+1', texto: 'Turno sin confirmar' },
-];
-
-// Alertas: pacientes con turno hoy o mañana que todavía no confirmaron y tienen más chances de faltar.
-// La idea: avisarles, y si no responden, liberar el horario para la lista de espera.
+// Alertas: todos los turnos que todavía no confirmó el paciente. Un turno nuevo nace "pendiente", así que acá
+// están todos hasta que se confirmen. La idea: avisarles para que confirmen y, si no responden, liberar el horario.
 export default function AlertasSecretaria() {
   const { turnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
   const pacientes = pacientesConPerfil(usePerfilPaciente());
+  const { ofertas } = useAdelantos();
 
   const hoy = new Date();
   const manana = fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1));
 
-  const aContactar = turnos
-    .filter((turno) => turno.estado === 'pendiente' && (turno.fecha === HOY || turno.fecha === manana))
+  const sinConfirmar = turnos
+    .filter((turno) => turno.estado === 'pendiente' && turno.fecha >= HOY)
+    .sort((a, b) => (`${a.fecha} ${a.hora}` < `${b.fecha} ${b.hora}` ? -1 : 1))
     .map((turno) => {
       const paciente = pacientes.find((p) => p.id === turno.idPaciente);
-      return { turno, paciente, riesgo: paciente ? evaluarRiesgo(turno, paciente, turnos) : undefined };
-    })
-    .filter((item) => item.riesgo !== undefined && item.riesgo.nivel !== 'bajo')
-    .sort((a, b) => (b.riesgo?.puntaje ?? 0) - (a.riesgo?.puntaje ?? 0));
+      return { turno, paciente, riesgo: paciente ? evaluarRiesgo(paciente, turnos) : undefined };
+    });
 
-  // Turnos cancelados que nadie volvió a ocupar: se pueden ofrecer a la lista de espera.
-  const liberados = turnos.filter(
-    (turno) =>
-      turno.estado === 'cancelado' &&
-      turno.fecha >= HOY &&
-      !turnos.some(
-        (otro) =>
-          otro.estado !== 'cancelado' && otro.medico === turno.medico && otro.fecha === turno.fecha && otro.hora === turno.hora
-      )
-  ).length;
+  function cuando(fecha: string, hora: string) {
+    if (fecha === HOY) return `Hoy ${hora} h`;
+    if (fecha === manana) return `Mañana ${hora} h`;
+    return `${detalleFecha(fecha).diaSemana.slice(0, 3)} ${formatearFecha(fecha).slice(0, 5)} · ${hora} h`;
+  }
 
+  // Ofertas de adelanto esperando respuesta: son las que se ven en la pantalla Espera.
+  const ofertasEnCurso = ofertasVigentes(ofertas, turnos).length;
   const noAsistieron = turnos.filter((turno) => turno.fecha === HOY && turno.estado === 'ausente');
 
   return (
@@ -67,41 +61,47 @@ export default function AlertasSecretaria() {
       <ScrollView contentContainerStyle={styles.contenido}>
         <Text style={styles.titulo}>Alertas</Text>
         <Text style={styles.subtitulo}>
-          Pacientes con turno hoy o mañana que no confirmaron y podrían faltar. Avisales para confirmar; si no
-          responden, liberá el horario.
+          Turnos que todavía no confirmaron los pacientes. Avisales para que confirmen; si no responden, liberá el
+          horario.
         </Text>
 
-        {liberados > 0 && (
+        {ofertasEnCurso > 0 && (
           <Pressable style={styles.banner} onPress={() => router.replace('/secretaria/espera')}>
             <Text style={styles.bannerTexto}>
-              {liberados === 1 ? 'Hay 1 turno liberado' : `Hay ${liberados} turnos liberados`} para la lista de espera
+              {ofertasEnCurso === 1
+                ? 'Hay 1 oferta de adelanto esperando respuesta'
+                : `Hay ${ofertasEnCurso} ofertas de adelanto esperando respuesta`}
             </Text>
             <Text style={styles.bannerFlecha}>›</Text>
           </Pressable>
         )}
 
-        <Text style={styles.seccion}>PARA CONTACTAR ({aContactar.length})</Text>
+        <Text style={styles.seccion}>SIN CONFIRMAR ({sinConfirmar.length})</Text>
 
-        {aContactar.length === 0 && (
+        {sinConfirmar.length === 0 && (
           <View style={styles.tarjeta}>
             <Text style={styles.vacioTitulo}>Todo en orden</Text>
-            <Text style={styles.detalle}>No hay turnos sin confirmar con riesgo de ausencia.</Text>
+            <Text style={styles.detalle}>No hay turnos pendientes de confirmar.</Text>
           </View>
         )}
 
-        {aContactar.map(({ turno, paciente, riesgo }) => {
+        {sinConfirmar.map(({ turno, paciente, riesgo }) => {
+          const faltas = riesgo?.puntaje ?? 0;
           const alto = riesgo?.nivel === 'alto';
           const color = alto ? COLOR_CANCELADO : COLOR_PENDIENTE;
           return (
             <View key={turno.id} style={[styles.tarjeta, { borderLeftColor: color }]}>
               <View style={styles.filaEncabezado}>
                 <Text style={styles.nombre}>{paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'}</Text>
-                <Text style={[styles.nivel, { color }]}>{alto ? 'Riesgo alto' : 'Riesgo medio'}</Text>
+                {faltas > 0 && (
+                  <Text style={[styles.nivel, { color }]}>
+                    {faltas} {faltas === 1 ? 'falta' : 'faltas'} · riesgo {alto ? 'alto' : 'medio'}
+                  </Text>
+                )}
               </View>
               <Text style={styles.detalle}>
-                {turno.fecha === HOY ? 'Hoy' : 'Mañana'} {turno.hora} h · {medicoCorto(turno.medico)}
+                {cuando(turno.fecha, turno.hora)} · {medicoCorto(turno.medico)}
               </Text>
-              <Text style={styles.motivos}>Por qué: {riesgo?.reglas.join(', ')}</Text>
 
               <View style={styles.filaBotones}>
                 <Pressable style={styles.botonPrimario} onPress={() => cambiarEstadoTurno(turno.id, 'confirmado')}>
@@ -135,7 +135,10 @@ export default function AlertasSecretaria() {
 
         <View style={styles.panel}>
           <Text style={styles.panelTitulo}>Cómo se calcula el riesgo</Text>
-          <Text style={styles.panelAyuda}>Cada regla suma puntos. Desde 2 es riesgo medio; desde 3, alto.</Text>
+          <Text style={styles.panelAyuda}>
+            Solo suman puntos las faltas. 1 punto es riesgo medio y 2 o más, riesgo alto. No confirmar un turno no suma
+            puntos. Los puntos de cada paciente están en su ficha.
+          </Text>
           <View style={styles.fichas}>
             {REGLAS.map((regla) => (
               <View key={regla.texto} style={styles.fichaRegla}>
@@ -221,6 +224,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   nombre: {
+    flex: 1,
     fontSize: 16,
     fontWeight: '700',
     color: '#1A1A1A',
@@ -228,16 +232,12 @@ const styles = StyleSheet.create({
   nivel: {
     fontSize: 12,
     fontWeight: '700',
+    marginLeft: 8,
   },
   detalle: {
     fontSize: 13,
     color: '#5A5A5A',
     marginTop: 2,
-  },
-  motivos: {
-    fontSize: 13,
-    color: '#3A3A3A',
-    marginTop: 8,
   },
   filaBotones: {
     flexDirection: 'row',

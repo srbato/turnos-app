@@ -79,15 +79,6 @@ export default function SeleccionRol (){
           colorCuadro={COLOR_SECRETARIA}
           onPress={() => router.push('/login?rol=secretaria')}
         />
-
-        <OpcionRol
-          letra="A"
-          titulo="Administrador"
-          subtitulo="Métricas, personal y consultorio"
-          colorFondo="#f5f3ff"
-          colorCuadro="#7c3aed"
-          onPress={() => router.push('/login?rol=administrador')}
-        />
       </View>
 
       <View style={styles.pie}>

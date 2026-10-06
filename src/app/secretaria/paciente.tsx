@@ -1,10 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, Pressable, View } from 'react-native';
 
-import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
+import { evaluarRiesgo } from '@/datos/ausentismo';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import {
   COLORES_ESTADO,
@@ -48,6 +49,14 @@ export default function FichaPacienteSecretaria() {
       (a, b) => fechaHoraComoDate(b.fecha, b.hora).getTime() - fechaHoraComoDate(a.fecha, a.hora).getTime()
     );
 
+  // Puntos de riesgo de ausencia: solo suman las faltas (turnos marcados "No asistió").
+  const riesgo = evaluarRiesgo(paciente, turnos);
+  const colorRiesgo =
+    riesgo.nivel === 'alto' ? COLOR_CANCELADO : riesgo.nivel === 'en-riesgo' ? COLOR_PENDIENTE : COLOR_CONFIRMADO;
+  const etiquetaRiesgo =
+    riesgo.nivel === 'alto' ? 'Riesgo alto' : riesgo.nivel === 'en-riesgo' ? 'Riesgo medio' : 'Riesgo bajo';
+  const ausenciasEnApp = turnosDelPaciente.filter((turno) => turno.estado === 'ausente');
+
   return (
     <View style={styles.pantalla}>
       <View style={styles.encabezado}>
@@ -78,6 +87,34 @@ export default function FichaPacienteSecretaria() {
           <Text style={styles.valor}>{paciente.numeroAfiliado}</Text>
           <Text style={styles.etiqueta}>Email de contacto</Text>
           <Text style={styles.valor}>{paciente.email}</Text>
+        </View>
+
+        <Text style={styles.seccion}>Riesgo de ausencia</Text>
+        <View style={styles.tarjeta}>
+          <View style={styles.riesgoFila}>
+            <View style={[styles.riesgoPuntos, { backgroundColor: colorRiesgo }]}>
+              <Text style={styles.riesgoPuntosNumero}>{riesgo.puntaje}</Text>
+              <Text style={styles.riesgoPuntosTexto}>{riesgo.puntaje === 1 ? 'punto' : 'puntos'}</Text>
+            </View>
+            <View style={styles.riesgoTextos}>
+              <Text style={[styles.riesgoNivel, { color: colorRiesgo }]}>{etiquetaRiesgo}</Text>
+              <Text style={styles.riesgoDetalle}>
+                {riesgo.puntaje === 0
+                  ? 'Nunca faltó a un turno.'
+                  : `Faltó ${riesgo.puntaje} ${riesgo.puntaje === 1 ? 'vez' : 'veces'}. Cada falta suma 1 punto.`}
+              </Text>
+            </View>
+          </View>
+          {ausenciasEnApp.length > 0 && (
+            <>
+              <Text style={styles.etiqueta}>Turnos a los que no asistió</Text>
+              {ausenciasEnApp.map((turno) => (
+                <Text key={turno.id} style={styles.valor}>
+                  {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h · {turno.medico}
+                </Text>
+              ))}
+            </>
+          )}
         </View>
 
         <Text style={styles.seccion}>Turnos</Text>
@@ -186,6 +223,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
+    marginTop: 2,
+  },
+  riesgoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  riesgoPuntos: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  riesgoPuntosNumero: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  riesgoPuntosTexto: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  riesgoTextos: {
+    flex: 1,
+  },
+  riesgoNivel: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  riesgoDetalle: {
+    fontSize: 13,
+    color: '#5A5A5A',
     marginTop: 2,
   },
   vacioTexto: {

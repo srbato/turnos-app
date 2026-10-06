@@ -2,21 +2,24 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { DetalleOfertaSecretaria } from '@/components/detalle-oferta-secretaria';
 import { DetalleTurnoSecretaria } from '@/components/detalle-turno-secretaria';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import { apellidoDelMedico, NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { COLOR_CANCELADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { useAdelantos } from '@/contextos/AdelantosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
+import { ofertasVigentes } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 const COLOR_AUSENTE = '#B03A3A';
-const DIAS_VISIBLES = 7;
+const DIAS_VISIBLES = 28; // 4 semanas hacia adelante
 
 // Los próximos días a partir de hoy.
 function diasDeLaSemana() {
@@ -30,20 +33,37 @@ function diasDeLaSemana() {
 export default function TurnosDelDia() {
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
+  const { ofertas } = useAdelantos();
   const pacientes = pacientesConPerfil(usePerfilPaciente());
 
   const [diaElegido, setDiaElegido] = useState(HOY);
   const [medicoFiltro, setMedicoFiltro] = useState(''); // '' = todos
   const [idTurnoSeleccionado, setIdTurnoSeleccionado] = useState('');
+  const [idOfertaSeleccionada, setIdOfertaSeleccionada] = useState('');
   const [nuevoAbierto, setNuevoAbierto] = useState(false);
 
   const turnosDelDia = turnos
     .filter((turno) => turno.fecha === diaElegido && turno.estado !== 'cancelado')
     .sort((a, b) => (a.hora < b.hora ? -1 : 1));
   const visibles = turnosDelDia.filter((turno) => medicoFiltro === '' || turno.medico === medicoFiltro);
+  // Horarios ofrecidos a la lista de espera ese día: están reservados hasta que el paciente responda.
+  const ofrecidos = ofertasVigentes(ofertas, turnos).filter(
+    (oferta) => oferta.horario.fecha === diaElegido && (medicoFiltro === '' || oferta.horario.medico === medicoFiltro)
+  );
+  // Todo junto, en orden de horario.
+  const items = [
+    ...visibles.map((turno) => ({ tipo: 'turno' as const, hora: turno.hora, turno })),
+    ...ofrecidos.map((oferta) => ({ tipo: 'oferta' as const, hora: oferta.horario.hora, oferta })),
+  ].sort((a, b) => (a.hora < b.hora ? -1 : 1));
 
   const sinConfirmar = turnosDelDia.filter((turno) => turno.estado === 'pendiente').length;
-  const medicosDelDia = medicos.filter((medico) => turnosDelDia.some((turno) => turno.medico === medico.nombre));
+  const medicosDelDia = medicos.filter(
+    (medico) =>
+      turnosDelDia.some((turno) => turno.medico === medico.nombre) ||
+      ofertasVigentes(ofertas, turnos).some(
+        (oferta) => oferta.horario.fecha === diaElegido && oferta.horario.medico === medico.nombre
+      )
+  );
 
   return (
     <View style={styles.pantalla}>
@@ -73,6 +93,7 @@ export default function TurnosDelDia() {
                   {dia === HOY ? 'HOY' : detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
                 </Text>
                 <Text style={[styles.diaNumero, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).dia}</Text>
+                <Text style={[styles.diaMes, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).mes}</Text>
                 <Text style={[styles.diaCantidad, seleccionado && styles.diaTextoSeleccionado]}>{cantidad} t.</Text>
               </Pressable>
             );
@@ -102,7 +123,7 @@ export default function TurnosDelDia() {
           <Pressable style={[styles.chip, medicoFiltro === '' && styles.chipActivo]} onPress={() => setMedicoFiltro('')}>
             <Text style={[styles.chipTexto, medicoFiltro === '' && styles.chipTextoActivo]}>Todos</Text>
           </Pressable>
-          {medicosDelDia.map((medico) => (
+          {medicos.filter((medico) => medico.estado !== 'baja').map((medico) => (
             <Pressable
               key={medico.nombre}
               style={[styles.chip, medicoFiltro === medico.nombre && styles.chipActivo]}
@@ -114,15 +135,45 @@ export default function TurnosDelDia() {
           ))}
         </ScrollView>
 
-        {visibles.length === 0 && (
+        {items.length === 0 && (
           <View style={styles.vacio}>
             <Text style={styles.vacioTexto}>No hay turnos para este día.</Text>
           </View>
         )}
 
-        {visibles.map((turno) => {
+        {items.map((item) => {
+          if (item.tipo === 'oferta') {
+            const { oferta } = item;
+            const turnoOfrecido = turnos.find((t) => t.id === oferta.idTurno);
+            const pacienteOfrecido = pacientes.find((p) => p.id === turnoOfrecido?.idPaciente);
+            return (
+              <Pressable
+                key={oferta.id}
+                style={[styles.tarjeta, styles.tarjetaOfrecida]}
+                onPress={() => setIdOfertaSeleccionada(oferta.id)}>
+                <Text style={styles.hora}>{oferta.horario.hora}</Text>
+                <View style={[styles.barra, { backgroundColor: COLOR_PENDIENTE }]} />
+                <View style={styles.tarjetaTextos}>
+                  <Text style={styles.paciente} numberOfLines={1}>
+                    {pacienteOfrecido ? `${pacienteOfrecido.nombre} ${pacienteOfrecido.apellido}` : 'Paciente'}
+                  </Text>
+                  <Text style={styles.detalle} numberOfLines={1}>
+                    Horario ofrecido · {oferta.horario.medico}
+                  </Text>
+                  <Text style={styles.detalle} numberOfLines={1}>
+                    {oferta.horario.especialidad} · {oferta.horario.consultorio}
+                  </Text>
+                </View>
+                <View style={styles.tarjetaEstado}>
+                  <Text style={[styles.estado, { color: '#A66F00' }]}>Ofrecido</Text>
+                  <Text style={styles.riesgo}>Esperando respuesta</Text>
+                </View>
+              </Pressable>
+            );
+          }
+          const { turno } = item;
           const paciente = pacientes.find((p) => p.id === turno.idPaciente);
-          const riesgo = paciente ? evaluarRiesgo(turno, paciente, turnos) : undefined;
+          const riesgo = paciente ? evaluarRiesgo(paciente, turnos) : undefined;
           const riesgoAlto = riesgo?.nivel === 'alto' && (turno.estado === 'pendiente' || turno.estado === 'confirmado');
           const color = turno.estado === 'ausente' ? COLOR_AUSENTE : COLORES_ESTADO[turno.estado];
           return (
@@ -151,6 +202,7 @@ export default function TurnosDelDia() {
 
       <MenuSecretaria activa="agendas" />
 
+      <DetalleOfertaSecretaria idOferta={idOfertaSeleccionada} onCerrar={() => setIdOfertaSeleccionada('')} />
       <DetalleTurnoSecretaria idTurno={idTurnoSeleccionado} onCerrar={() => setIdTurnoSeleccionado('')} />
 
       {nuevoAbierto && (
@@ -229,6 +281,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1A1A',
   },
+  diaMes: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8A8A8A',
+  },
   diaCantidad: {
     fontSize: 10,
     color: '#5A5A5A',
@@ -304,6 +361,12 @@ const styles = StyleSheet.create({
   vacioTexto: {
     fontSize: 14,
     color: '#5A5A5A',
+  },
+  tarjetaOfrecida: {
+    backgroundColor: '#FDF4DE',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLOR_PENDIENTE,
   },
   tarjeta: {
     flexDirection: 'row',

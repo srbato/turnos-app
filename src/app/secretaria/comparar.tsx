@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { DetalleOfertaSecretaria } from '@/components/detalle-oferta-secretaria';
 import { DetalleTurnoSecretaria } from '@/components/detalle-turno-secretaria';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import { apellidoDelMedico, HORAS_BASE, NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
@@ -10,17 +11,18 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { usePersonal } from '@/contextos/PersonalContext';
+import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertaDelHorario } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
+import { atiendeEseDia } from '@/datos/atencion';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto } from '@/utilidades/turnos';
 
 const COLOR_AUSENTE = '#B03A3A';
 const MAXIMO_MEDICOS = 4;
-const DIAS_VISIBLES = 7;
+const DIAS_VISIBLES = 28; // 4 semanas hacia adelante
 
 // Los próximos días a partir de hoy.
 function diasDeLaSemana() {
@@ -47,7 +49,7 @@ export default function CompararHorarios() {
   // Columnas: por defecto, los 3 médicos activos con más turnos hoy.
   const [medicosElegidos, setMedicosElegidos] = useState<string[]>(() =>
     medicos
-      .filter((medico) => medico.estado === 'activo')
+      .filter((medico) => !enLicencia(medico, HOY))
       .map((medico) => ({
         nombre: medico.nombre,
         cantidad: turnos.filter((t) => t.medico === medico.nombre && t.fecha === HOY && t.estado !== 'cancelado').length,
@@ -58,6 +60,7 @@ export default function CompararHorarios() {
   );
   const [eligiendoMedicos, setEligiendoMedicos] = useState(false);
   const [idTurnoSeleccionado, setIdTurnoSeleccionado] = useState('');
+  const [idOfertaSeleccionada, setIdOfertaSeleccionada] = useState('');
   // Alta de turno tocando un horario libre: null = cerrado.
   const [nuevo, setNuevo] = useState<{ medico: string; hora: string } | null>(null);
 
@@ -114,6 +117,7 @@ export default function CompararHorarios() {
                   {dia === HOY ? 'HOY' : detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
                 </Text>
                 <Text style={[styles.diaNumero, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).dia}</Text>
+                <Text style={[styles.diaMes, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).mes}</Text>
                 <Text style={[styles.diaCantidad, seleccionado && styles.diaTextoSeleccionado]}>{cantidad} t.</Text>
               </Pressable>
             );
@@ -142,7 +146,7 @@ export default function CompararHorarios() {
               <Text style={styles.horaTexto}>{hora}</Text>
             </View>
             {columnas.map((medico) => {
-              if (medico.estado === 'licencia') {
+              if (enLicencia(medico, diaElegido)) {
                 return (
                   <View key={medico.nombre} style={[styles.celda, styles.celdaBloqueo]}>
                     <Text style={styles.celdaBloqueoTexto}>Licencia</Text>
@@ -156,11 +160,22 @@ export default function CompararHorarios() {
                 if (oferta) {
                   const idPaciente = turnos.find((t) => t.id === oferta.idTurno)?.idPaciente ?? '';
                   return (
-                    <View key={medico.nombre} style={[styles.celda, styles.celdaOfrecida]}>
+                    <Pressable
+                      key={medico.nombre}
+                      style={[styles.celda, styles.celdaOfrecida]}
+                      onPress={() => setIdOfertaSeleccionada(oferta.id)}>
                       <Text style={styles.celdaOfrecidaTitulo}>Ofrecido</Text>
                       <Text style={styles.celdaOfrecidaTexto} numberOfLines={1}>
                         a {nombreAbreviado(idPaciente)}
                       </Text>
+                    </Pressable>
+                  );
+                }
+                // Un día en que el médico no atiende no se puede asignar (si ya había un turno, se muestra igual).
+                if (!atiendeEseDia(medico.dias, diaElegido)) {
+                  return (
+                    <View key={medico.nombre} style={[styles.celda, styles.celdaBloqueo]}>
+                      <Text style={styles.celdaBloqueoTexto}>No atiende</Text>
                     </View>
                   );
                 }
@@ -174,7 +189,7 @@ export default function CompararHorarios() {
                 );
               }
               const paciente = pacientes.find((p) => p.id === turno.idPaciente);
-              const riesgo = paciente ? evaluarRiesgo(turno, paciente, turnos) : undefined;
+              const riesgo = paciente ? evaluarRiesgo(paciente, turnos) : undefined;
               const riesgoAlto = riesgo?.nivel === 'alto' && (turno.estado === 'pendiente' || turno.estado === 'confirmado');
               const color = riesgoAlto ? COLOR_CANCELADO : turno.estado === 'ausente' ? COLOR_AUSENTE : COLORES_ESTADO[turno.estado];
               return (
@@ -197,6 +212,7 @@ export default function CompararHorarios() {
 
       <MenuSecretaria activa="agendas" />
 
+      <DetalleOfertaSecretaria idOferta={idOfertaSeleccionada} onCerrar={() => setIdOfertaSeleccionada('')} />
       <DetalleTurnoSecretaria idTurno={idTurnoSeleccionado} onCerrar={() => setIdTurnoSeleccionado('')} />
 
       {nuevo && (
@@ -304,6 +320,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#1A1A1A',
+  },
+  diaMes: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#8A8A8A',
   },
   diaCantidad: {
     fontSize: 10,

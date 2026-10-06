@@ -6,7 +6,8 @@ import { MenuSecretaria } from '@/components/menu-secretaria';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { usePersonal } from '@/contextos/PersonalContext';
+import { estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
+import { formatearFecha } from '@/utilidades/turnos';
 
 type Pestana = 'medicos' | 'secretarias';
 
@@ -79,9 +80,14 @@ export default function PersonalSecretaria() {
                 </Text>
                 <Text style={styles.detalle}>Mat. {medico.matricula}</Text>
               </View>
-              <Text style={[styles.estado, { color: COLORES_ESTADO_MEDICO[medico.estado] }]}>
-                {ETIQUETAS_ESTADO_MEDICO[medico.estado]}
-              </Text>
+              <View style={styles.estadoCaja}>
+                <Text style={[styles.estado, { color: COLORES_ESTADO_MEDICO[estadoEfectivo(medico)] }]}>
+                  {ETIQUETAS_ESTADO_MEDICO[estadoEfectivo(medico)]}
+                </Text>
+                {estadoEfectivo(medico) === 'licencia' && medico.licenciaHasta && (
+                  <Text style={styles.vuelve}>Vuelve el {formatearFecha(medico.licenciaHasta).slice(0, 5)}</Text>
+                )}
+              </View>
               <Text style={styles.flecha}>›</Text>
             </Pressable>
           ))}
@@ -258,6 +264,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#8A8A8A',
     marginLeft: 8,
+  },
+  estadoCaja: {
+    alignItems: 'flex-end',
+    marginLeft: 8,
+  },
+  vuelve: {
+    fontSize: 11,
+    color: '#8A5A00',
+    marginTop: 1,
   },
   estado: {
     fontSize: 12,

@@ -1,7 +1,7 @@
 // Textos de la pantalla de Perfil en cada idioma.
 import type { Idioma } from '@/contextos/PreferenciasContext';
 
-type Rol = 'paciente' | 'medico' | 'secretaria' | 'administrador';
+type Rol = 'paciente' | 'medico' | 'secretaria';
 
 type TextosPerfil = {
   tituloPantalla: string;
@@ -70,25 +70,21 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
       paciente: 'Paciente',
       medico: 'Médico',
       secretaria: 'Secretaría',
-      administrador: 'Administrador',
     },
     chips: {
       paciente: 'Paciente · Swiss Medical',
       medico: 'Médico · Clínica médica',
       secretaria: 'Secretaría · Consultorios Rivadavia',
-      administrador: 'Administrador · Consultorios Rivadavia',
     },
     filaTitulos: {
       paciente: 'Cobertura médica',
       medico: 'Matrícula',
       secretaria: 'Turno de trabajo',
-      administrador: 'Acceso',
     },
     filaSubtitulos: {
       paciente: 'Swiss Medical SMG20 · 62-4418902/01',
       medico: 'MN 118.402',
       secretaria: 'Lunes a viernes · 8:00 a 16:00',
-      administrador: 'Gestión completa del consultorio',
     },
   },
   en: {
@@ -117,25 +113,21 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
       paciente: 'Patient',
       medico: 'Doctor',
       secretaria: 'Secretary',
-      administrador: 'Administrator',
     },
     chips: {
       paciente: 'Patient · Swiss Medical',
       medico: 'Doctor · General medicine',
       secretaria: 'Secretary · Consultorios Rivadavia',
-      administrador: 'Administrator · Consultorios Rivadavia',
     },
     filaTitulos: {
       paciente: 'Health insurance',
       medico: 'License number',
       secretaria: 'Work shift',
-      administrador: 'Access',
     },
     filaSubtitulos: {
       paciente: 'Swiss Medical SMG20 · 62-4418902/01',
       medico: 'MN 118.402',
       secretaria: 'Monday to Friday · 8:00 to 16:00',
-      administrador: 'Full clinic management',
     },
   },
 };

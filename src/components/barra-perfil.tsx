@@ -10,7 +10,7 @@ import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 
 const COLOR_PERFIL = '#C9A24C';
 
-type Rol = 'paciente' | 'medico' | 'secretaria' | 'administrador';
+type Rol = 'paciente' | 'medico' | 'secretaria';
 type Clave =
   | 'inicio'
   | 'turnos'
