@@ -8,7 +8,6 @@ import {
   FONDO_PACIENTE,
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
-import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 
 type PropsOpcionRol = {
   letra: string;
@@ -46,21 +45,12 @@ function OpcionRol(props: PropsOpcionRol) {
 }
 
 export default function SeleccionRol (){
-  const { nombre: nombreConsultorio } = useConfiguracion();
   return (
     <View style={styles.container}>
       <View style={styles.logo}><Text style={styles.logoTexto}>C</Text></View>
 
       <Text style={styles.titulo}>¿Cómo querés ingresar?</Text>
       <Text style={styles.subTitulo}>Elegí tu perfil para continuar.</Text>
-
-      <Pressable style={styles.consultorio} onPress={() => router.push('/consultorios' as Href)}>
-        <View style={styles.consultorioTextos}>
-          <Text style={styles.consultorioEtiqueta}>Consultorio</Text>
-          <Text style={styles.consultorioNombre}>{nombreConsultorio}</Text>
-        </View>
-        <Text style={styles.consultorioCambiar}>Cambiar ›</Text>
-      </Pressable>
 
       <View style={styles.lista}>
         <OpcionRol
@@ -133,37 +123,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  consultorio: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginTop: 18,
-  },
-  consultorioTextos: {
-    flex: 1,
-  },
-  consultorioEtiqueta: {
-    color: '#64748b',
-    fontSize: 11,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  consultorioNombre: {
-    color: 'black',
-    fontSize: 15,
-    fontWeight: 'bold',
-    marginTop: 1,
-  },
-  consultorioCambiar: {
-    color: COLOR_PACIENTE,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   lista: {
-    marginTop: 18,
+    marginTop: 26,
   },
   opcion: {
     flexDirection: 'row',
