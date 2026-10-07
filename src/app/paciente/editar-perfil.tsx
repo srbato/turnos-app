@@ -60,10 +60,28 @@ export default function EditarPerfil() {
     base64: true,
   };
 
+  // La foto se guarda apenas se elige o se quita, como en cualquier app (el resto de los datos, con "Guardar cambios").
+  // Por eso se guardan los demás datos tal como estaban, no lo que se esté escribiendo en el formulario.
+  function cambiarFoto(nueva: string | null) {
+    setFotoUri(nueva);
+    perfil.actualizarPerfil({
+      nombre: perfil.nombre,
+      dni: perfil.dni,
+      contrasena: perfil.contrasena,
+      email: perfil.email,
+      telefono: perfil.telefono,
+      domicilio: perfil.domicilio,
+      alergias: perfil.alergias,
+      numerosAfiliado: perfil.numerosAfiliado,
+      coberturaIds: perfil.coberturaIds,
+      fotoUri: nueva,
+    });
+  }
+
   function usarResultado(resultado: ImagePicker.ImagePickerResult) {
     if (!resultado.canceled) {
       const imagen = resultado.assets[0];
-      setFotoUri(
+      cambiarFoto(
         imagen.base64 ? `data:${imagen.mimeType ?? 'image/jpeg'};base64,${imagen.base64}` : imagen.uri
       );
     }
@@ -187,14 +205,20 @@ export default function EditarPerfil() {
 
         <View style={styles.bloqueFoto}>
           <View style={styles.avatarFoto}>
-            <AvatarPaciente tamano={88} colorTexto={COLOR_PERFIL} colorBorde={COLOR_PERFIL} />
+            {/* Se le pasa el borrador (no el perfil guardado) para que la foto elegida se vea antes de guardar. */}
+            <AvatarPaciente
+              tamano={88}
+              colorTexto={COLOR_PERFIL}
+              colorBorde={COLOR_PERFIL}
+              datos={{ nombre, fotoUri }}
+            />
           </View>
           <Pressable style={styles.botonFoto} onPress={() => setOpcionesFotoAbiertas(true)}>
             <Text style={styles.botonFotoTexto}>{textos.cambiarFoto}</Text>
           </Pressable>
           {errorFoto !== '' && <Text style={[styles.mensajeError, styles.errorFoto]}>{errorFoto}</Text>}
           {fotoUri !== null && (
-            <Pressable onPress={() => setFotoUri(null)}>
+            <Pressable onPress={() => cambiarFoto(null)}>
               <Text style={[styles.quitarFoto, { color: tema.textoSecundario }]}>{textos.quitarFoto}</Text>
             </Pressable>
           )}

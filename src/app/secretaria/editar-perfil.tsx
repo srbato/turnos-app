@@ -60,10 +60,24 @@ export default function EditarPerfilSecretaria() {
     base64: true,
   };
 
+  // La foto se guarda apenas se elige o se quita, como en cualquier app (el resto de los datos, con "Guardar cambios").
+  // Por eso se guardan los demás datos tal como estaban, no lo que se esté escribiendo en el formulario.
+  function cambiarFoto(nueva: string | null) {
+    setFotoUri(nueva);
+    perfil.actualizarPerfil({
+      nombre: perfil.nombre,
+      email: perfil.email,
+      telefono: perfil.telefono,
+      domicilio: perfil.domicilio,
+      turnoTrabajo: perfil.turnoTrabajo,
+      fotoUri: nueva,
+    });
+  }
+
   function usarResultado(resultado: ImagePicker.ImagePickerResult) {
     if (!resultado.canceled) {
       const imagen = resultado.assets[0];
-      setFotoUri(
+      cambiarFoto(
         imagen.base64 ? `data:${imagen.mimeType ?? 'image/jpeg'};base64,${imagen.base64}` : imagen.uri
       );
     }
@@ -177,7 +191,7 @@ export default function EditarPerfilSecretaria() {
           </Pressable>
           {errorFoto !== '' && <Text style={[styles.mensajeError, styles.errorFoto]}>{errorFoto}</Text>}
           {fotoUri !== null && (
-            <Pressable onPress={() => setFotoUri(null)}>
+            <Pressable onPress={() => cambiarFoto(null)}>
               <Text style={[styles.quitarFoto, { color: tema.textoSecundario }]}>{textos.quitarFoto}</Text>
             </Pressable>
           )}
