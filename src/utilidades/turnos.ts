@@ -1,9 +1,9 @@
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes/colores';
-import type { Turno } from '@/contextos/TurnosContext';
+import { Turno } from '@/contextos/TurnosContext';
 
 const COLOR_ATENDIDO = '#5A6B7D'; // gris azulado: el turno ya se realizó
 const COLOR_AUSENTE = '#B03A3A'; // rojo oscuro: el paciente no se presentó
-import type { EstadoTurno } from '@/contextos/TurnosContext';
+import { EstadoTurno } from '@/datos/consultorio';
 
 export const COLORES_ESTADO: Record<EstadoTurno, string> = {
   confirmado: COLOR_CONFIRMADO,

@@ -9,10 +9,10 @@ import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
+import { enLicencia, horariosDelMedico, usePersonal } from '@/contextos/PersonalContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import { atiendeEseDia } from '@/datos/atencion';
+import { atiendeEseDia, textoDeDias } from '@/datos/atencion';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
@@ -34,7 +34,10 @@ function medicoCorto(nombre: string) {
 function celdasDelMes(anio: number, mes: number) {
   const vacias = (new Date(anio, mes, 1).getDay() + 6) % 7;
   const cantidadDias = new Date(anio, mes + 1, 0).getDate();
-  const celdas: (string | null)[] = Array.from({ length: vacias }, () => null);
+  const celdas: (string | null)[] = [];
+  for (let i = 0; i < vacias; i++) {
+    celdas.push(null);
+  }
   for (let dia = 1; dia <= cantidadDias; dia++) {
     celdas.push(fechaComoTexto(new Date(anio, mes, dia)));
   }
@@ -48,7 +51,7 @@ export default function CalendarioMedico() {
   const { medicos } = usePersonal();
   const { turnos } = useTurnos();
   const { consultorio } = useConsultorio();
-  const { horarios } = useConfiguracion();
+  const { duracionTurno } = useConfiguracion();
   const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
   const medico = medicos.find((m) => m.matricula === matricula);
 
@@ -92,13 +95,25 @@ export default function CalendarioMedico() {
 
   // Un día se atiende si el médico no está de baja ni de licencia y ese día de la semana es de atención.
   function atiende(fecha: string) {
-    return medico!.estado !== 'baja' && !enLicencia(medico, fecha) && atiendeEseDia(medico!.dias, fecha);
+    return medico!.estado !== 'baja' && !enLicencia(medico, fecha) && atiendeEseDia(medico!.franjas, fecha);
   }
 
   const turnosDelDia = turnosDelMedico.filter((t) => t.fecha === diaElegido).sort((a, b) => (a.hora < b.hora ? -1 : 1));
-  const horasLibres = horarios.filter((h) => !turnosDelDia.some((t) => t.hora === h)).length;
+  const horasLibres = horariosDelMedico(medicos, medico.nombre, diaElegido, duracionTurno).filter(
+    (h) => !turnosDelDia.some((t) => t.hora === h)
+  ).length;
   const deLicenciaEseDia = medico.estado === 'licencia' && enLicencia(medico, diaElegido);
   const atiendeEseDiaElegido = atiende(diaElegido);
+
+  // Resumen del día elegido, debajo de la fecha.
+  let textoDelDia = `${turnosDelDia.length} turnos · ${horasLibres} horarios libres`;
+  if (deLicenciaEseDia) {
+    textoDelDia = 'De licencia este día.';
+  } else if (!atiendeEseDiaElegido) {
+    textoDelDia = 'No atiende este día.';
+  } else if (turnosDelDia.length === 1) {
+    textoDelDia = `1 turno · ${horasLibres} horarios libres`;
+  }
 
   return (
     <View style={styles.pantalla}>
@@ -108,7 +123,7 @@ export default function CalendarioMedico() {
         </Pressable>
         <Text style={styles.titulo}>Calendario de {medicoCorto(medico.nombre)}</Text>
         <Text style={styles.subtitulo}>
-          {medico.especialidad} · atiende {medico.dias}
+          {medico.especialidad} · atiende {textoDeDias(medico.franjas)}
         </Text>
 
         <View style={styles.mesFila}>
@@ -174,13 +189,7 @@ export default function CalendarioMedico() {
             <Text style={styles.diaTitulo}>
               {detalleFecha(diaElegido).diaSemana} {formatearFecha(diaElegido).slice(0, 5)}
             </Text>
-            <Text style={styles.detalle}>
-              {deLicenciaEseDia
-                ? 'De licencia este día.'
-                : !atiendeEseDiaElegido
-                  ? 'No atiende este día.'
-                  : `${turnosDelDia.length} turno${turnosDelDia.length === 1 ? '' : 's'} · ${horasLibres} horarios libres`}
-            </Text>
+            <Text style={styles.detalle}>{textoDelDia}</Text>
           </View>
           {atiendeEseDiaElegido && diaElegido >= HOY && (
             <Pressable style={styles.botonNuevo} onPress={() => setNuevoAbierto(true)}>

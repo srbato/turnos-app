@@ -2,11 +2,13 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { EditorHorarios } from '@/components/editor-horarios';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
+import { FranjaHoraria, textoDeDias } from '@/datos/atencion';
 import { formatearFecha } from '@/utilidades/turnos';
 
 type Pestana = 'medicos' | 'secretarias';
@@ -22,23 +24,27 @@ export default function PersonalSecretaria() {
   const [nombre, setNombre] = useState('');
   const [matricula, setMatricula] = useState('');
   const [especialidad, setEspecialidad] = useState('');
-  const [dias, setDias] = useState('');
+  const [franjas, setFranjas] = useState<FranjaHoraria[]>([]);
   const [error, setError] = useState('');
 
   function darDeAlta() {
-    if (nombre.trim() === '' || matricula.trim() === '' || especialidad.trim() === '' || dias.trim() === '') {
+    if (nombre.trim() === '' || matricula.trim() === '' || especialidad.trim() === '') {
       setError('Completá todos los campos.');
+      return;
+    }
+    if (franjas.length === 0) {
+      setError('Cargá al menos un horario de atención.');
       return;
     }
     if (medicos.some((medico) => medico.matricula === matricula.trim())) {
       setError('Ya hay un médico con esa matrícula.');
       return;
     }
-    altaMedico({ nombre, matricula, especialidad, dias });
+    altaMedico({ nombre, matricula, especialidad, franjas });
     setNombre('');
     setMatricula('');
     setEspecialidad('');
-    setDias('');
+    setFranjas([]);
     setError('');
     setFormularioAbierto(false);
   }
@@ -76,7 +82,7 @@ export default function PersonalSecretaria() {
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.nombre}>{medico.nombre}</Text>
                 <Text style={styles.detalle}>
-                  {medico.especialidad} · {medico.dias}
+                  {medico.especialidad} · {textoDeDias(medico.franjas)}
                 </Text>
                 <Text style={styles.detalle}>Mat. {medico.matricula}</Text>
               </View>
@@ -143,14 +149,8 @@ export default function PersonalSecretaria() {
               placeholderTextColor="#8FB9B5"
             />
 
-            <Text style={styles.etiqueta}>Días y horarios</Text>
-            <TextInput
-              style={styles.campo}
-              value={dias}
-              onChangeText={setDias}
-              placeholder="lun y mié · 9 a 13"
-              placeholderTextColor="#8FB9B5"
-            />
+            <Text style={styles.etiqueta}>Horarios de atención</Text>
+            <EditorHorarios franjas={franjas} onCambiar={setFranjas} />
 
             {error !== '' && <Text style={styles.error}>{error}</Text>}
 

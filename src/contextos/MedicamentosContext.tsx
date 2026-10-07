@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 // Medicamentos que el propio paciente agrega (los recetados por el médico viven en datos/recetas.ts).
 export type MedicamentoPropio = {
@@ -22,10 +22,18 @@ const MEDICAMENTOS_INICIALES: MedicamentoPropio[] = [
   { id: '1', nombre: 'Ibuprofeno 400 mg', dosis: 'Cada 8 h si hay dolor', motivo: 'Dolor' },
 ];
 
-const MedicamentosContext = createContext<MedicamentosContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: MedicamentosContextType = {
+  medicamentos: MEDICAMENTOS_INICIALES,
+  agregarMedicamento: () => {},
+  editarMedicamento: () => {},
+  eliminarMedicamento: () => {},
+};
+
+const MedicamentosContext = createContext(VALOR_POR_DEFECTO);
 
 export function MedicamentosProvider({ children }: { children: ReactNode }) {
-  const [medicamentos, setMedicamentos] = useState<MedicamentoPropio[]>(MEDICAMENTOS_INICIALES);
+  const [medicamentos, setMedicamentos] = useState(MEDICAMENTOS_INICIALES);
 
   // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
   useEffect(() => {
@@ -42,37 +50,44 @@ export function MedicamentosProvider({ children }: { children: ReactNode }) {
     cargarMedicamentos();
   }, []);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    // Actualiza la lista en memoria y la guarda en el dispositivo.
-    async function guardarLista(nuevos: MedicamentoPropio[]) {
-      setMedicamentos(nuevos);
-      try {
-        await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevos));
-      } catch {
-        // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
-      }
+  // Actualiza la lista en memoria y la guarda en el dispositivo.
+  async function guardarLista(nuevos: MedicamentoPropio[]) {
+    setMedicamentos(nuevos);
+    try {
+      await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevos));
+    } catch {
+      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
     }
-    function agregarMedicamento(medicamento: MedicamentoPropio) {
-      guardarLista([...medicamentos, medicamento]);
-    }
-    // Reemplaza el medicamento que tenga el mismo id.
-    function editarMedicamento(medicamento: MedicamentoPropio) {
-      guardarLista(medicamentos.map((m) => (m.id === medicamento.id ? medicamento : m)));
-    }
-    function eliminarMedicamento(id: string) {
-      guardarLista(medicamentos.filter((m) => m.id !== id));
-    }
-    return { medicamentos, agregarMedicamento, editarMedicamento, eliminarMedicamento };
-  }, [medicamentos]);
+  }
 
-  return <MedicamentosContext.Provider value={value}>{children}</MedicamentosContext.Provider>;
+  function agregarMedicamento(medicamento: MedicamentoPropio) {
+    guardarLista([...medicamentos, medicamento]);
+  }
+
+  // Reemplaza el medicamento que tenga el mismo id.
+  function editarMedicamento(medicamento: MedicamentoPropio) {
+    guardarLista(
+      medicamentos.map((m) => {
+        if (m.id === medicamento.id) {
+          return medicamento;
+        }
+        return m;
+      })
+    );
+  }
+
+  function eliminarMedicamento(id: string) {
+    guardarLista(medicamentos.filter((m) => m.id !== id));
+  }
+
+  return (
+    <MedicamentosContext.Provider
+      value={{ medicamentos, agregarMedicamento, editarMedicamento, eliminarMedicamento }}>
+      {children}
+    </MedicamentosContext.Provider>
+  );
 }
 
 export function useMedicamentos() {
-  const contexto = useContext(MedicamentosContext);
-  if (contexto === undefined) {
-    throw new Error('useMedicamentos tiene que usarse dentro de un MedicamentosProvider');
-  }
-  return contexto;
+  return useContext(MedicamentosContext);
 }

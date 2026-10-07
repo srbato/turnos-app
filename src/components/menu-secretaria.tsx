@@ -1,4 +1,4 @@
-import { MenuInferior, type SeccionMenu } from '@/components/menu-inferior';
+import { MenuInferior, SeccionMenu } from '@/components/menu-inferior';
 import { COLOR_SECRETARIA } from '@/constantes/colores';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 

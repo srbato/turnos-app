@@ -1,7 +1,7 @@
-import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useState } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { type Medico } from '@/datos/consultorio';
+import { CONSULTORIOS, Medico } from '@/datos/consultorio';
 
 // Guarda qué médico inició sesión, para que la agenda y el perfil muestren sus datos.
 // Todavía no hay backend: el login compara usuario y contraseña de prueba (ver los médicos de cada consultorio en datos/consultorio).
@@ -11,23 +11,24 @@ type SesionContextType = {
   setMedicoLogueado: (medico: Medico) => void;
 };
 
-const SesionContext = createContext<SesionContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: SesionContextType = {
+  medicoLogueado: CONSULTORIOS[0].medicos[0],
+  setMedicoLogueado: () => {},
+};
+
+const SesionContext = createContext(VALOR_POR_DEFECTO);
 
 export function SesionProvider({ children }: { children: ReactNode }) {
   const { consultorio } = useConsultorio();
   // Por defecto, el primer médico del consultorio (para entrar directo a /medico sin pasar por el login).
-  const [medicoLogueado, setMedicoLogueado] = useState<Medico>(consultorio.medicos[0]);
+  const [medicoLogueado, setMedicoLogueado] = useState(consultorio.medicos[0]);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => ({ medicoLogueado, setMedicoLogueado }), [medicoLogueado]);
-
-  return <SesionContext.Provider value={value}>{children}</SesionContext.Provider>;
+  return (
+    <SesionContext.Provider value={{ medicoLogueado, setMedicoLogueado }}>{children}</SesionContext.Provider>
+  );
 }
 
 export function useSesion() {
-  const contexto = useContext(SesionContext);
-  if (contexto === undefined) {
-    throw new Error('useSesion tiene que usarse dentro de un SesionProvider');
-  }
-  return contexto;
+  return useContext(SesionContext);
 }

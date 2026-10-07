@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router, Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconoAnimado } from '@/components/icono-animado';

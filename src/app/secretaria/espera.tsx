@@ -12,27 +12,28 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { useAdelantos, type Oferta } from '@/contextos/AdelantosContext';
+import { EstadoOferta, useAdelantos, Oferta } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import {
   DIAS_MINIMOS_ADELANTO,
   diasDesdeHoy,
   listaDeEspera,
   ofertasVigentes,
 } from '@/datos/adelantos';
-import { evaluarRiesgo, textoPuntaje } from '@/datos/ausentismo';
+import { evaluarRiesgo, nombreNivelRiesgo, textoPuntaje } from '@/datos/ausentismo';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+import { sinRepetidos } from '@/utilidades/listas';
 
-const ETIQUETAS_RESPUESTA: Record<Oferta['estado'], string> = {
+const ETIQUETAS_RESPUESTA: Record<EstadoOferta, string> = {
   enviada: 'Esperando respuesta',
   aceptada: 'Aceptó',
   rechazada: 'Rechazó',
   'sin-respuesta': 'No contestó',
   retirada: 'Retirada',
 };
-const COLORES_RESPUESTA: Record<Oferta['estado'], string> = {
+const COLORES_RESPUESTA: Record<EstadoOferta, string> = {
   enviada: COLOR_PENDIENTE,
   aceptada: COLOR_CONFIRMADO,
   rechazada: COLOR_CANCELADO,
@@ -69,7 +70,7 @@ export default function EsperaSecretaria() {
     const paciente = consultorio.pacientes.find((p) => p.id === idPaciente);
     if (!paciente) return '';
     const riesgo = evaluarRiesgo(paciente, turnos, reglasRiesgo);
-    const nivel = riesgo.nivel === 'alto' ? 'alto' : riesgo.nivel === 'en-riesgo' ? 'medio' : 'bajo';
+    const nivel = nombreNivelRiesgo(riesgo.nivel);
     return `Historial: riesgo ${nivel} · ${textoPuntaje(riesgo.puntaje)} pts`;
   }
   // Médico cuya agenda se está mirando para ofrecer un horario (null = cerrado).
@@ -83,7 +84,7 @@ export default function EsperaSecretaria() {
     `${a.horario.fecha} ${a.horario.hora}` < `${b.horario.fecha} ${b.horario.hora}` ? -1 : 1
   );
   const enLista = listaDeEspera(turnos);
-  const medicosEnLista = [...new Set(enLista.map((turno) => turno.medico))];
+  const medicosEnLista = sinRepetidos(enLista.map((turno) => turno.medico));
   const respuestas = ofertas.filter((oferta) => oferta.estado !== 'enviada');
 
   return (

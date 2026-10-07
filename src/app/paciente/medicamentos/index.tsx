@@ -3,7 +3,7 @@ import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useRecetas } from '@/contextos/RecetasContext';
-import { recetaVigente, vencimientoReceta, type Receta } from '@/datos/recetas';
+import { recetaVigente, vencimientoReceta, Receta } from '@/datos/recetas';
 import { formatearFecha } from '@/utilidades/turnos';
 
 // Tab "Recetados": medicamentos que asignó el médico, cada uno con su receta.

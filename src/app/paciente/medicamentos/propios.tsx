@@ -3,7 +3,7 @@ import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'r
 
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
-import { useMedicamentos, type MedicamentoPropio } from '@/contextos/MedicamentosContext';
+import { useMedicamentos, MedicamentoPropio } from '@/contextos/MedicamentosContext';
 
 // Tab "Agregados por mí": medicamentos que el paciente carga por su cuenta.
 export default function MedicamentosPropios() {

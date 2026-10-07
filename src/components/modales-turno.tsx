@@ -4,9 +4,9 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { OpcionAdelanto } from '@/components/opcion-adelanto';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
-import { usePersonal, type MiembroMedico } from '@/contextos/PersonalContext';
+import { usePersonal, MiembroMedico } from '@/contextos/PersonalContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
-import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import {
   COLORES_ESTADO,
   detalleFecha,
@@ -84,6 +84,17 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                       • {instruccion}
                     </Text>
                   ))}
+                </View>
+              )}
+
+              {/* Lo que anotó el médico al atenderlo (sin sus notas privadas). */}
+              {turnoActual?.consulta && (
+                <View style={styles.consultaCaja}>
+                  <Text style={styles.consultaTitulo}>Lo que indicó el médico</Text>
+                  <Text style={styles.consultaTexto}>Diagnóstico: {turnoActual.consulta.diagnostico}</Text>
+                  {turnoActual.consulta.indicaciones !== '' && (
+                    <Text style={styles.consultaTexto}>{turnoActual.consulta.indicaciones}</Text>
+                  )}
                 </View>
               )}
 
@@ -324,6 +335,23 @@ const styles = StyleSheet.create({
   avisoTexto: {
     fontSize: 13,
     color: '#7A5A12',
+    lineHeight: 19,
+  },
+  consultaCaja: {
+    backgroundColor: FONDO_PACIENTE,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  consultaTitulo: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLOR_PACIENTE,
+    marginBottom: 4,
+  },
+  consultaTexto: {
+    fontSize: 13,
+    color: '#1A1A1A',
     lineHeight: 19,
   },
   botones: {

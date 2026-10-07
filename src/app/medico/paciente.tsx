@@ -2,13 +2,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DetalleConsulta } from '@/components/detalle-consulta';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useSesion } from '@/contextos/SesionContext';
-import { useTurnos } from '@/contextos/TurnosContext';
+import { historiaClinica, useTurnos } from '@/contextos/TurnosContext';
 import { EstadoTurno } from '@/datos/consultorio';
 import { filasPreconsulta } from '@/datos/preconsulta';
 import { datosParaMedico } from '@/utilidades/datos-medico';
@@ -78,6 +79,9 @@ export default function FichaPaciente() {
   const recetasDelPaciente = recetas
     .filter((receta) => receta.idPaciente === pacienteDeLaFicha.id && receta.medico === medicoLogueado.nombre)
     .sort((a, b) => (a.fechaEmision < b.fechaEmision ? 1 : -1));
+
+  // Consultas anotadas con cualquier médico del consultorio, de la más nueva a la más vieja.
+  const historia = historiaClinica(turnos, pacienteDeLaFicha.id);
 
   // Turnos de este paciente con este médico, del más nuevo al más viejo.
   const turnosConElMedico = turnos
@@ -170,6 +174,26 @@ export default function FichaPaciente() {
             </View>
           ))}
         </View>
+
+        <Text style={styles.seccion}>Historia clínica</Text>
+        {historia.length === 0 && (
+          <View style={styles.tarjeta}>
+            <Text style={styles.valor}>Todavía no hay consultas anotadas.</Text>
+          </View>
+        )}
+        {historia.map((turno) => {
+          const esTuya = turno.medico === medicoLogueado.nombre;
+          return (
+            <View key={turno.id} style={styles.tarjeta}>
+              <Text style={styles.valor}>
+                {formatearFecha(turno.fecha)} · {esTuya ? 'Con vos' : turno.medico}
+              </Text>
+              <Text style={styles.detalleMedicamento}>{turno.especialidad}</Text>
+              {/* Las notas privadas solo las ve el médico que las escribió. */}
+              {turno.consulta && <DetalleConsulta consulta={turno.consulta} conNotas={esTuya} />}
+            </View>
+          );
+        })}
 
         <Text style={styles.seccion}>Turnos con vos</Text>
         {turnosConElMedico.map((turno) => {

@@ -5,7 +5,7 @@ import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { evaluarRiesgo } from '@/datos/ausentismo';
-import type { Paciente } from '@/datos/consultorio';
+import { Paciente } from '@/datos/consultorio';
 import { buscarProximoTurno } from '@/utilidades/turnos';
 
 type Props = {

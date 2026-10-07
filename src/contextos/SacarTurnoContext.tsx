@@ -1,6 +1,6 @@
-import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useState } from 'react';
 
-import type { Especialidad, Medico } from '@/datos/catalogo';
+import { Especialidad, Medico } from '@/datos/catalogo';
 
 type SacarTurnoContextType = {
   especialidad: Especialidad | null;
@@ -13,7 +13,19 @@ type SacarTurnoContextType = {
   elegirHora: (hora: string) => void;
 };
 
-const SacarTurnoContext = createContext<SacarTurnoContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: SacarTurnoContextType = {
+  especialidad: null,
+  medico: null,
+  fecha: null,
+  hora: null,
+  elegirEspecialidad: () => {},
+  elegirMedico: () => {},
+  elegirFecha: () => {},
+  elegirHora: () => {},
+};
+
+const SacarTurnoContext = createContext(VALOR_POR_DEFECTO);
 
 type PropsProvider = {
   children: ReactNode;
@@ -23,43 +35,39 @@ type PropsProvider = {
 };
 
 export function SacarTurnoProvider({ children, especialidadInicial, medicoInicial }: PropsProvider) {
-  const [especialidad, setEspecialidad] = useState<Especialidad | null>(especialidadInicial ?? null);
-  const [medico, setMedico] = useState<Medico | null>(medicoInicial ?? null);
+  const [especialidad, setEspecialidad] = useState<Especialidad | null>(especialidadInicial || null);
+  const [medico, setMedico] = useState<Medico | null>(medicoInicial || null);
   const [fecha, setFecha] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  // Las funciones van adentro porque solo usan los setState, que son estables.
-  const value = useMemo(() => {
-    // Cada elección invalida lo que dependía de ella.
-    function elegirEspecialidad(nueva: Especialidad) {
-      setEspecialidad(nueva);
-      setMedico(null);
-      setFecha(null);
-      setHora(null);
-    }
-    function elegirMedico(nuevo: Medico) {
-      setMedico(nuevo);
-      setFecha(null);
-      setHora(null);
-    }
-    function elegirFecha(nueva: string) {
-      setFecha(nueva);
-      setHora(null);
-    }
-    function elegirHora(nueva: string) {
-      setHora(nueva);
-    }
-    return { especialidad, medico, fecha, hora, elegirEspecialidad, elegirMedico, elegirFecha, elegirHora };
-  }, [especialidad, medico, fecha, hora]);
+  // Cada elección invalida lo que dependía de ella.
+  function elegirEspecialidad(nueva: Especialidad) {
+    setEspecialidad(nueva);
+    setMedico(null);
+    setFecha(null);
+    setHora(null);
+  }
+  function elegirMedico(nuevo: Medico) {
+    setMedico(nuevo);
+    setFecha(null);
+    setHora(null);
+  }
+  function elegirFecha(nueva: string) {
+    setFecha(nueva);
+    setHora(null);
+  }
+  function elegirHora(nueva: string) {
+    setHora(nueva);
+  }
 
-  return <SacarTurnoContext.Provider value={value}>{children}</SacarTurnoContext.Provider>;
+  return (
+    <SacarTurnoContext.Provider
+      value={{ especialidad, medico, fecha, hora, elegirEspecialidad, elegirMedico, elegirFecha, elegirHora }}>
+      {children}
+    </SacarTurnoContext.Provider>
+  );
 }
 
 export function useSacarTurno() {
-  const contexto = useContext(SacarTurnoContext);
-  if (contexto === undefined) {
-    throw new Error('useSacarTurno tiene que usarse dentro de un SacarTurnoProvider');
-  }
-  return contexto;
+  return useContext(SacarTurnoContext);
 }

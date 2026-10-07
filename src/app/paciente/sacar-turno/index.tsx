@@ -4,7 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { aceptaTurnos, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
-import { especialidadesDe, type Especialidad } from '@/datos/catalogo';
+import { especialidadesDe, Especialidad } from '@/datos/catalogo';
 
 export default function ElegirEspecialidad() {
   const { elegirEspecialidad } = useSacarTurno();

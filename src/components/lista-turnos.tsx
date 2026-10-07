@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CancelarTurnoModal, DetalleTurnoModal } from '@/components/modales-turno';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
-import type { Turno } from '@/contextos/TurnosContext';
+import { Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO } from '@/utilidades/turnos';
 
 type Props = {

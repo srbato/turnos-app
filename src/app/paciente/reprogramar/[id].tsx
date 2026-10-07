@@ -113,6 +113,7 @@ export default function Reprogramar() {
         )}
 
         <SelectorHorario
+          medico={medico.nombre}
           primerDia={vuelta}
           cantidadDias={DIAS_OFRECIDOS}
           atiende={atiende}

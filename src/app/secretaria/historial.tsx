@@ -7,10 +7,11 @@ import { COLOR_CANCELADO, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constante
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { useTurnos, type EstadoTurno } from '@/contextos/TurnosContext';
-import { HOY } from '@/datos/consultorio';
+import { useTurnos } from '@/contextos/TurnosContext';
+import { EstadoTurno, HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, formatearFecha } from '@/utilidades/turnos';
+import { sinRepetidos } from '@/utilidades/listas';
 
 type Filtro = 'todos' | EstadoTurno;
 
@@ -55,7 +56,7 @@ export default function HistorialTurnos() {
     .sort((a, b) => (`${a.fecha} ${a.hora}` < `${b.fecha} ${b.hora}` ? 1 : -1)); // el más nuevo primero
 
   // Agrupados por día.
-  const dias = [...new Set(visibles.map((turno) => turno.fecha))];
+  const dias = sinRepetidos(visibles.map((turno) => turno.fecha));
   const cantidad = (estado: EstadoTurno) => delHistorial.filter((turno) => turno.estado === estado).length;
 
   return (

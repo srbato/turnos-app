@@ -1,6 +1,10 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { palabras } from '@/utilidades/texto';
+
+// Datos de la persona que se muestra (si no se pasan, se usan los del paciente).
+export type DatosAvatar = { nombre: string; fotoUri: string | null; iniciales?: string };
 
 type Props = {
   tamano: number;
@@ -9,13 +13,12 @@ type Props = {
   colorBorde?: string;
   // Si se pasan, se muestran estos datos en lugar de los del paciente (por ejemplo, los de Secretaría).
   // Las iniciales son opcionales: un médico las trae armadas (RP), porque su nombre empieza con "Dr." o "Dra.".
-  datos?: { nombre: string; fotoUri: string | null; iniciales?: string };
+  datos?: DatosAvatar;
 };
 
 // Iniciales del nombre: las de las dos primeras palabras, o la primera letra si es una sola.
 function iniciales(nombre: string) {
-  const palabras = nombre.trim().split(/\s+/).filter((palabra) => palabra !== '');
-  return palabras
+  return palabras(nombre)
     .slice(0, 2)
     .map((palabra) => palabra[0].toUpperCase())
     .join('');

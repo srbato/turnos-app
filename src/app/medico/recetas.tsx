@@ -20,7 +20,7 @@ import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import { recetaVigente, vencimientoReceta, type Receta } from '@/datos/recetas';
+import { recetaVigente, vencimientoReceta, Receta } from '@/datos/recetas';
 import { datosParaMedico } from '@/utilidades/datos-medico';
 import { formatearFecha } from '@/utilidades/turnos';
 

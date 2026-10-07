@@ -1,26 +1,20 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AvatarPaciente } from '@/components/avatar-paciente';
+import { AvatarPaciente, DatosAvatar } from '@/components/avatar-paciente';
 import { BarraPerfil } from '@/components/barra-perfil';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { TEMA_CLARO, TEMA_OSCURO, type Tema } from '@/constantes/tema';
+import { TEMA_CLARO, TEMA_OSCURO, Tema } from '@/constantes/tema';
 import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { useSesion } from '@/contextos/SesionContext';
-import { usePreferencias, type Idioma } from '@/contextos/PreferenciasContext';
+import { usePreferencias, Idioma } from '@/contextos/PreferenciasContext';
 import { nombreCobertura } from '@/datos/catalogo';
 import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 
-const ROLES = ['paciente', 'medico', 'secretaria'] as const;
-type Rol = (typeof ROLES)[number];
-
-function normalizarRol(valor: string | string[] | undefined): Rol {
-  const candidato = Array.isArray(valor) ? valor[0] : valor;
-  return (ROLES as readonly string[]).includes(candidato ?? '') ? (candidato as Rol) : 'paciente';
-}
+type Rol = 'paciente' | 'medico' | 'secretaria';
 
 type InfoPerfil = {
   nombre: string;
@@ -55,7 +49,14 @@ const COLOR_PERFIL = '#C9A24C';
 
 export default function Perfil() {
   const { rol: rolParam } = useLocalSearchParams();
-  const rol = normalizarRol(rolParam);
+
+  // Si el rol de la URL no es uno conocido, se muestra el perfil del paciente.
+  let rol: Rol = 'paciente';
+  if (rolParam === 'medico') {
+    rol = 'medico';
+  } else if (rolParam === 'secretaria') {
+    rol = 'secretaria';
+  }
   const perfilPaciente = usePerfilPaciente();
   const perfilSecretaria = usePerfilSecretaria();
   const perfilMedico = usePerfilMedico();
@@ -87,37 +88,52 @@ export default function Perfil() {
     const numero = perfilPaciente.numerosAfiliado[id];
     return numero ? `${nombreCobertura(id)} · ${numero}` : nombreCobertura(id);
   });
-  const chip =
-    rol === 'paciente'
-      ? `${textos.roles.paciente}${obrasSociales.length > 0 ? ' · ' + nombreCobertura(perfilPaciente.coberturaIds[0]) : ''}`
-      : rol === 'medico'
-        ? `${textos.roles.medico} · ${medicoLogueado.especialidad}`
-        : textos.chips[rol];
-  const filaSubtitulo =
-    rol === 'paciente'
-      ? obrasSociales.join('\n') || '—'
-      : rol === 'medico'
-        ? medicoLogueado.matricula
-        : rol === 'secretaria'
-          ? perfilSecretaria.turnoTrabajo || '—'
-          : textos.filaSubtitulos[rol];
+  // Chip (debajo del nombre) y subtítulo de la fila de datos, según el rol.
+  let chip = textos.chips[rol];
+  let filaSubtitulo = textos.filaSubtitulos[rol];
+  if (rol === 'paciente') {
+    chip = textos.roles.paciente;
+    if (obrasSociales.length > 0) {
+      chip = chip + ' · ' + nombreCobertura(perfilPaciente.coberturaIds[0]);
+    }
+    filaSubtitulo = obrasSociales.join('\n') || '—';
+  } else if (rol === 'medico') {
+    chip = `${textos.roles.medico} · ${medicoLogueado.especialidad}`;
+    filaSubtitulo = medicoLogueado.matricula;
+  } else if (rol === 'secretaria') {
+    filaSubtitulo = perfilSecretaria.turnoTrabajo || '—';
+  }
 
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
   // Al cerrar sesión se vacía la pila de pantallas y se vuelve al inicio: así deslizar hacia atrás
   // no devuelve a una pantalla de la sesión que ya se cerró.
+  // Si no quedaron pantallas atrás (por ejemplo, se llegó con replace), no hay nada que cerrar.
   function cerrarSesion() {
-    router.dismissAll();
+    if (router.canDismiss()) {
+      router.dismissAll();
+    }
     router.replace('/');
   }
 
   // Los tres roles tienen su editor de perfil.
-  const irAlEditor =
-    rol === 'paciente'
-      ? () => router.push('/paciente/editar-perfil' as Href)
-      : rol === 'secretaria'
-        ? () => router.push('/secretaria/editar-perfil' as Href)
-        : () => router.push('/medico/editar-perfil' as Href);
+  function irAlEditor() {
+    if (rol === 'paciente') {
+      router.push('/paciente/editar-perfil');
+    } else if (rol === 'secretaria') {
+      router.push('/secretaria/editar-perfil');
+    } else {
+      router.push('/medico/editar-perfil');
+    }
+  }
+
+  // Datos de la foto/iniciales: el paciente usa los suyos (por eso queda undefined).
+  let datosAvatar: DatosAvatar | undefined = undefined;
+  if (rol === 'secretaria') {
+    datosAvatar = perfilSecretaria;
+  } else if (rol === 'medico') {
+    datosAvatar = { nombre: info.nombre, fotoUri: perfilMedico.fotoUri, iniciales: info.iniciales };
+  }
 
   return (
     <View style={[styles.pantalla, { backgroundColor: tema.fondo }]}>
@@ -139,13 +155,7 @@ export default function Perfil() {
               tamano={64}
               colorTexto={COLOR_PERFIL}
               colorBorde={COLOR_PERFIL}
-              datos={
-                rol === 'secretaria'
-                  ? perfilSecretaria
-                  : rol === 'medico'
-                    ? { nombre: info.nombre, fotoUri: perfilMedico.fotoUri, iniciales: info.iniciales }
-                    : undefined
-              }
+              datos={datosAvatar}
             />
           </View>
           <View style={styles.datosPerfil}>

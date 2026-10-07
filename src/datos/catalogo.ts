@@ -1,7 +1,8 @@
 // Catálogo que ve el paciente al sacar un turno. Las coberturas son las que existen en la app; las especialidades y los
 // médicos NO son una lista aparte: salen del personal del consultorio (altas, bajas y licencias incluidas), así lo que
 // ve el paciente coincide siempre con lo que ven Secretaría y los médicos.
-import type { MiembroMedico } from '@/contextos/PersonalContext';
+import { MiembroMedico } from '@/contextos/PersonalContext';
+import { palabrasDeLetras, sinTildes } from '@/utilidades/texto';
 
 export type Cobertura = {
   id: string;
@@ -33,13 +34,9 @@ export function nombreCobertura(id: string) {
   return COBERTURAS.find((cobertura) => cobertura.id === id)?.nombre ?? id;
 }
 
-function sinTildes(texto: string) {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
 // "Clínica médica" -> "clinica-medica"
 function idDeEspecialidad(nombre: string) {
-  return sinTildes(nombre).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return palabrasDeLetras(sinTildes(nombre).toLowerCase()).join('-');
 }
 
 // Las especialidades que tiene el consultorio, en el orden en que aparecen sus médicos.

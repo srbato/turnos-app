@@ -1,18 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { horasDeAtencion, type DuracionDeTurno } from '@/datos/atencion';
-import { REGLAS_RIESGO_POR_DEFECTO, type ReglasRiesgo } from '@/datos/ausentismo';
+import { REGLAS_RIESGO_POR_DEFECTO, ReglasRiesgo } from '@/datos/ausentismo';
 
 // Configuración del consultorio que edita Secretaría. Se guarda en el dispositivo, aparte para cada consultorio.
-// De acá salen la grilla de horarios y las reglas de riesgo que usan los tres roles, para que todos coincidan.
+// De acá salen la duración de los turnos y las reglas de riesgo que usan los tres roles, para que todos coincidan.
 export type Configuracion = {
   nombre: string;
   direccion: string;
   ciudad: string;
   telefono: string;
-  duracionTurno: DuracionDeTurno; // minutos de cada turno
+  duracionTurno: number; // minutos de cada turno (15, 20, 30 o 45)
   atencion: string; // días y horarios de atención
   sobreturnos: number; // por día
   recordatorioAutomatico: boolean; // aviso 24 h antes del turno
@@ -21,33 +20,47 @@ export type Configuracion = {
   avisosAntesDeActuar: number; // avisos que Secretaría tiene que mandar antes de poder reprogramar o cancelar
 };
 
+// Lo que se comparte: la configuración, las reglas de riesgo que salen de ella y la función para guardarla.
 type ConfiguracionContextType = Configuracion & {
-  horarios: string[]; // los horarios de turno de un día, según la duración elegida
   reglasRiesgo: ReglasRiesgo; // para evaluar el riesgo de un paciente (datos/ausentismo.ts)
-  guardarConfiguracion: (cambios: Partial<Configuracion>) => void;
+  guardarConfiguracion: (configuracionNueva: Configuracion) => void;
 };
 
 const CLAVE_STORAGE = 'configuracion-consultorio';
 
-const ConfiguracionContext = createContext<ConfiguracionContextType | undefined>(undefined);
+const CONFIGURACION_POR_DEFECTO: Configuracion = {
+  nombre: '',
+  direccion: '',
+  ciudad: 'CABA',
+  telefono: '11 4903-7712',
+  duracionTurno: 20,
+  atencion: 'Lun a vie 8–20 · sáb 9–13',
+  sobreturnos: 2,
+  recordatorioAutomatico: true,
+  puntosRiesgoMedio: REGLAS_RIESGO_POR_DEFECTO.medio,
+  puntosRiesgoAlto: REGLAS_RIESGO_POR_DEFECTO.alto,
+  avisosAntesDeActuar: REGLAS_RIESGO_POR_DEFECTO.avisos,
+};
+
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: ConfiguracionContextType = {
+  ...CONFIGURACION_POR_DEFECTO,
+  reglasRiesgo: REGLAS_RIESGO_POR_DEFECTO,
+  guardarConfiguracion: () => {},
+};
+
+const ConfiguracionContext = createContext(VALOR_POR_DEFECTO);
 
 export function ConfiguracionProvider({ children }: { children: ReactNode }) {
   const { consultorio } = useConsultorio();
+  // La configuración arranca con el nombre y la dirección del consultorio activo.
   const configuracionInicial: Configuracion = {
+    ...CONFIGURACION_POR_DEFECTO,
     nombre: consultorio.nombre,
     direccion: consultorio.direccion,
-    ciudad: 'CABA',
-    telefono: '11 4903-7712',
-    duracionTurno: 20,
-    atencion: 'Lun a vie 8–20 · sáb 9–13',
-    sobreturnos: 2,
-    recordatorioAutomatico: true,
-    puntosRiesgoMedio: REGLAS_RIESGO_POR_DEFECTO.medio,
-    puntosRiesgoAlto: REGLAS_RIESGO_POR_DEFECTO.alto,
-    avisosAntesDeActuar: REGLAS_RIESGO_POR_DEFECTO.avisos,
   };
   const claveStorage = `${CLAVE_STORAGE}-${consultorio.id}`;
-  const [configuracion, setConfiguracion] = useState<Configuracion>(configuracionInicial);
+  const [configuracion, setConfiguracion] = useState(configuracionInicial);
 
   // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
   useEffect(() => {
@@ -64,36 +77,34 @@ export function ConfiguracionProvider({ children }: { children: ReactNode }) {
     cargarConfiguracion();
   }, []);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    async function guardarConfiguracion(cambios: Partial<Configuracion>) {
-      const nueva = { ...configuracion, ...cambios };
-      setConfiguracion(nueva);
-      try {
-        await AsyncStorage.setItem(claveStorage, JSON.stringify(nueva));
-      } catch {
-        // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
-      }
+  // Reemplaza la configuración por la nueva y la guarda en el dispositivo.
+  async function guardarConfiguracion(configuracionNueva: Configuracion) {
+    setConfiguracion(configuracionNueva);
+    try {
+      await AsyncStorage.setItem(claveStorage, JSON.stringify(configuracionNueva));
+    } catch {
+      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
     }
-    return {
-      ...configuracion,
-      horarios: horasDeAtencion(configuracion.duracionTurno),
-      reglasRiesgo: {
-        medio: configuracion.puntosRiesgoMedio,
-        alto: configuracion.puntosRiesgoAlto,
-        avisos: configuracion.avisosAntesDeActuar,
-      },
-      guardarConfiguracion,
-    };
-  }, [configuracion]);
+  }
 
-  return <ConfiguracionContext.Provider value={value}>{children}</ConfiguracionContext.Provider>;
+  const reglasRiesgo: ReglasRiesgo = {
+    medio: configuracion.puntosRiesgoMedio,
+    alto: configuracion.puntosRiesgoAlto,
+    avisos: configuracion.avisosAntesDeActuar,
+  };
+
+  return (
+    <ConfiguracionContext.Provider
+      value={{
+        ...configuracion,
+        reglasRiesgo: reglasRiesgo,
+        guardarConfiguracion,
+      }}>
+      {children}
+    </ConfiguracionContext.Provider>
+  );
 }
 
 export function useConfiguracion() {
-  const contexto = useContext(ConfiguracionContext);
-  if (contexto === undefined) {
-    throw new Error('useConfiguracion tiene que usarse dentro de un ConfiguracionProvider');
-  }
-  return contexto;
+  return useContext(ConfiguracionContext);
 }

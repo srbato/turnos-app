@@ -7,8 +7,9 @@ import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
-import { DURACIONES_DE_TURNO, horasDeAtencion } from '@/datos/atencion';
+import { DURACIONES_DE_TURNO } from '@/datos/atencion';
 import { textoPuntaje } from '@/datos/ausentismo';
+import { soloNumeros } from '@/utilidades/texto';
 
 const PASO_PUNTOS = 0.5;
 const MAXIMO_PUNTOS = 10;
@@ -54,10 +55,6 @@ export default function AjustesSecretaria() {
   const [error, setError] = useState('');
   const [guardado, setGuardado] = useState(false);
 
-  function modificar<T>(setter: (valor: T) => void, valor: T) {
-    setter(valor);
-    setGuardado(false);
-  }
 
   function guardar() {
     // El riesgo alto tiene que empezar más arriba que el medio, si no no habría nivel medio.
@@ -98,16 +95,16 @@ export default function AjustesSecretaria() {
         <Text style={styles.seccion}>DATOS DEL CONSULTORIO</Text>
         <View style={styles.tarjeta}>
           <Text style={styles.etiqueta}>Nombre</Text>
-          <TextInput style={styles.campo} value={nombre} onChangeText={(t) => modificar(setNombre, t)} />
+          <TextInput style={styles.campo} value={nombre} onChangeText={(t) => { setNombre(t); setGuardado(false); }} />
           <Text style={styles.etiqueta}>Dirección</Text>
-          <TextInput style={styles.campo} value={direccion} onChangeText={(t) => modificar(setDireccion, t)} />
+          <TextInput style={styles.campo} value={direccion} onChangeText={(t) => { setDireccion(t); setGuardado(false); }} />
           <Text style={styles.etiqueta}>Ciudad</Text>
-          <TextInput style={styles.campo} value={ciudad} onChangeText={(t) => modificar(setCiudad, t)} />
+          <TextInput style={styles.campo} value={ciudad} onChangeText={(t) => { setCiudad(t); setGuardado(false); }} />
           <Text style={styles.etiqueta}>Teléfono</Text>
           <TextInput
             style={styles.campo}
             value={telefono}
-            onChangeText={(t) => modificar(setTelefono, t)}
+            onChangeText={(t) => { setTelefono(t); setGuardado(false); }}
             keyboardType="phone-pad"
           />
         </View>
@@ -119,7 +116,7 @@ export default function AjustesSecretaria() {
               <Pressable
                 key={minutos}
                 style={[styles.duracion, duracion === minutos && styles.duracionActiva]}
-                onPress={() => modificar(setDuracion, minutos)}>
+                onPress={() => { setDuracion(minutos); setGuardado(false); }}>
                 <Text style={[styles.duracionTexto, duracion === minutos && styles.duracionTextoActiva]}>
                   {minutos} min
                 </Text>
@@ -127,8 +124,9 @@ export default function AjustesSecretaria() {
             ))}
           </View>
           <Text style={styles.nota}>
-            Con {duracion} minutos son {horasDeAtencion(duracion).length} horarios por día (de 9 a 12 y de 15 a 17:20). Es la
-            misma grilla para pacientes, médicos y Secretaría. Los turnos que ya están cargados se mantienen.
+            Cada médico atiende en sus propios horarios (se cargan en su ficha, en Personal). Con {duracion} minutos, un
+            horario de 9 a 12 tiene {Math.floor(180 / duracion)} turnos. Es la misma duración para pacientes, médicos y
+            Secretaría. Los turnos que ya están cargados se mantienen.
           </Text>
         </View>
 
@@ -146,8 +144,8 @@ export default function AjustesSecretaria() {
             <Contador
               valor={riesgoMedio}
               texto={textoPuntaje(riesgoMedio)}
-              onMenos={() => modificar(setRiesgoMedio, Math.max(PASO_PUNTOS, riesgoMedio - PASO_PUNTOS))}
-              onMas={() => modificar(setRiesgoMedio, Math.min(MAXIMO_PUNTOS, riesgoMedio + PASO_PUNTOS))}
+              onMenos={() => { setRiesgoMedio(Math.max(PASO_PUNTOS, riesgoMedio - PASO_PUNTOS)); setGuardado(false); }}
+              onMas={() => { setRiesgoMedio(Math.min(MAXIMO_PUNTOS, riesgoMedio + PASO_PUNTOS)); setGuardado(false); }}
             />
           </View>
           <View style={styles.filaContador}>
@@ -158,8 +156,8 @@ export default function AjustesSecretaria() {
             <Contador
               valor={riesgoAlto}
               texto={textoPuntaje(riesgoAlto)}
-              onMenos={() => modificar(setRiesgoAlto, Math.max(PASO_PUNTOS, riesgoAlto - PASO_PUNTOS))}
-              onMas={() => modificar(setRiesgoAlto, Math.min(MAXIMO_PUNTOS, riesgoAlto + PASO_PUNTOS))}
+              onMenos={() => { setRiesgoAlto(Math.max(PASO_PUNTOS, riesgoAlto - PASO_PUNTOS)); setGuardado(false); }}
+              onMas={() => { setRiesgoAlto(Math.min(MAXIMO_PUNTOS, riesgoAlto + PASO_PUNTOS)); setGuardado(false); }}
             />
           </View>
           <View style={styles.filaContador}>
@@ -172,8 +170,8 @@ export default function AjustesSecretaria() {
             <Contador
               valor={avisos}
               texto={String(avisos)}
-              onMenos={() => modificar(setAvisos, Math.max(1, avisos - 1))}
-              onMas={() => modificar(setAvisos, Math.min(MAXIMO_AVISOS, avisos + 1))}
+              onMenos={() => { setAvisos(Math.max(1, avisos - 1)); setGuardado(false); }}
+              onMas={() => { setAvisos(Math.min(MAXIMO_AVISOS, avisos + 1)); setGuardado(false); }}
             />
           </View>
         </View>
@@ -181,12 +179,12 @@ export default function AjustesSecretaria() {
         <Text style={styles.seccion}>HORARIOS Y REGLAS</Text>
         <View style={styles.tarjeta}>
           <Text style={styles.etiqueta}>Atención</Text>
-          <TextInput style={styles.campo} value={atencion} onChangeText={(t) => modificar(setAtencion, t)} />
+          <TextInput style={styles.campo} value={atencion} onChangeText={(t) => { setAtencion(t); setGuardado(false); }} />
           <Text style={styles.etiqueta}>Sobreturnos por día</Text>
           <TextInput
             style={styles.campo}
             value={sobreturnos}
-            onChangeText={(t) => modificar(setSobreturnos, t.replace(/[^0-9]/g, ''))}
+            onChangeText={(t) => { setSobreturnos(soloNumeros(t)); setGuardado(false); }}
             keyboardType="number-pad"
           />
           <View style={styles.filaSwitch}>
@@ -196,7 +194,7 @@ export default function AjustesSecretaria() {
             </View>
             <Switch
               value={recordatorio}
-              onValueChange={(valor) => modificar(setRecordatorio, valor)}
+              onValueChange={(valor) => { setRecordatorio(valor); setGuardado(false); }}
               trackColor={{ true: COLOR_SECRETARIA, false: '#C9D6D4' }}
             />
           </View>

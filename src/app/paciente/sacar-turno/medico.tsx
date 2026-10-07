@@ -7,7 +7,7 @@ import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { formatearFecha } from '@/utilidades/turnos';
-import { coberturaQueAtiende, medicosDelCatalogo, medicosParaPaciente, type Medico } from '@/datos/catalogo';
+import { coberturaQueAtiende, medicosDelCatalogo, medicosParaPaciente, Medico } from '@/datos/catalogo';
 
 export default function ElegirMedico() {
   const { especialidad, elegirMedico } = useSacarTurno();

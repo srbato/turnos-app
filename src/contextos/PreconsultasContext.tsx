@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-import type { Preconsulta } from '@/datos/preconsulta';
+import { Preconsulta } from '@/datos/preconsulta';
 
 type PreconsultasContextType = {
   preconsultas: Preconsulta[];
@@ -11,7 +11,14 @@ type PreconsultasContextType = {
 
 const CLAVE_STORAGE = 'preconsultas';
 
-const PreconsultasContext = createContext<PreconsultasContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: PreconsultasContextType = {
+  preconsultas: [],
+  buscarPorTurno: () => undefined,
+  enviarPreconsulta: () => {},
+};
+
+const PreconsultasContext = createContext(VALOR_POR_DEFECTO);
 
 export function PreconsultasProvider({ children }: { children: ReactNode }) {
   const [preconsultas, setPreconsultas] = useState<Preconsulta[]>([]);
@@ -31,31 +38,28 @@ export function PreconsultasProvider({ children }: { children: ReactNode }) {
     cargarPreconsultas();
   }, []);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    function buscarPorTurno(turnoId: string) {
-      return preconsultas.find((preconsulta) => preconsulta.turnoId === turnoId);
-    }
-    // Una preconsulta por turno: si ya había una, se reemplaza.
-    async function enviarPreconsulta(preconsulta: Preconsulta) {
-      const nuevas = [...preconsultas.filter((p) => p.turnoId !== preconsulta.turnoId), preconsulta];
-      setPreconsultas(nuevas);
-      try {
-        await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevas));
-      } catch {
-        // Si falla el guardado, queda en memoria hasta cerrar la app.
-      }
-    }
-    return { preconsultas, buscarPorTurno, enviarPreconsulta };
-  }, [preconsultas]);
+  function buscarPorTurno(turnoId: string) {
+    return preconsultas.find((preconsulta) => preconsulta.turnoId === turnoId);
+  }
 
-  return <PreconsultasContext.Provider value={value}>{children}</PreconsultasContext.Provider>;
+  // Una preconsulta por turno: si ya había una, se reemplaza.
+  async function enviarPreconsulta(preconsulta: Preconsulta) {
+    const nuevas = [...preconsultas.filter((p) => p.turnoId !== preconsulta.turnoId), preconsulta];
+    setPreconsultas(nuevas);
+    try {
+      await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevas));
+    } catch {
+      // Si falla el guardado, queda en memoria hasta cerrar la app.
+    }
+  }
+
+  return (
+    <PreconsultasContext.Provider value={{ preconsultas, buscarPorTurno, enviarPreconsulta }}>
+      {children}
+    </PreconsultasContext.Provider>
+  );
 }
 
 export function usePreconsultas() {
-  const contexto = useContext(PreconsultasContext);
-  if (contexto === undefined) {
-    throw new Error('usePreconsultas tiene que usarse dentro de un PreconsultasProvider');
-  }
-  return contexto;
+  return useContext(PreconsultasContext);
 }

@@ -1,4 +1,4 @@
-import { MenuInferior, type SeccionMenu } from '@/components/menu-inferior';
+import { MenuInferior, SeccionMenu } from '@/components/menu-inferior';
 import { COLOR_MEDICO } from '@/constantes/colores';
 
 type Seccion = 'agenda' | 'pacientes' | 'recetas' | 'perfil';

@@ -1,5 +1,5 @@
 // Textos de la pantalla de Perfil en cada idioma.
-import type { Idioma } from '@/contextos/PreferenciasContext';
+import { Idioma } from '@/contextos/PreferenciasContext';
 
 type Rol = 'paciente' | 'medico' | 'secretaria';
 

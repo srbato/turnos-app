@@ -7,13 +7,7 @@ import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import {
-  evaluarRiesgo,
-  PUNTOS_POR_ASISTENCIA,
-  PUNTOS_POR_CONFIRMACION,
-  PUNTOS_POR_FALTA,
-  textoPuntaje,
-} from '@/datos/ausentismo';
+import { colorNivelRiesgo, evaluarRiesgo, nombreNivelRiesgo, PUNTOS_POR_ASISTENCIA, PUNTOS_POR_CONFIRMACION, PUNTOS_POR_FALTA, textoPuntaje } from '@/datos/ausentismo';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import {
   COLORES_ESTADO,
@@ -61,10 +55,8 @@ export default function FichaPacienteSecretaria() {
 
   // Puntos de riesgo de ausencia: las faltas suman; asistir y confirmar restan (ver datos/ausentismo.ts).
   const riesgo = evaluarRiesgo(paciente, turnos, reglasRiesgo);
-  const colorRiesgo =
-    riesgo.nivel === 'alto' ? COLOR_CANCELADO : riesgo.nivel === 'en-riesgo' ? COLOR_PENDIENTE : COLOR_CONFIRMADO;
-  const etiquetaRiesgo =
-    riesgo.nivel === 'alto' ? 'Riesgo alto' : riesgo.nivel === 'en-riesgo' ? 'Riesgo medio' : 'Riesgo bajo';
+  const colorRiesgo = colorNivelRiesgo(riesgo.nivel);
+  const etiquetaRiesgo = 'Riesgo ' + nombreNivelRiesgo(riesgo.nivel);
   const ausenciasEnApp = turnosDelPaciente.filter((turno) => turno.estado === 'ausente');
 
   return (

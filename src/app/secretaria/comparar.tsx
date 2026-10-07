@@ -13,14 +13,14 @@ import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
+import { enLicencia, horariosDelMedico, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertaDelHorario } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
-import { atiendeEseDia } from '@/datos/atencion';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto } from '@/utilidades/turnos';
+import { sinRepetidos } from '@/utilidades/listas';
 
 const COLOR_AUSENTE = '#B03A3A';
 const MAXIMO_MEDICOS = 4;
@@ -29,9 +29,11 @@ const DIAS_VISIBLES = 28; // 4 semanas hacia adelante
 // Los próximos días a partir de hoy.
 function diasDeLaSemana() {
   const hoy = new Date();
-  return Array.from({ length: DIAS_VISIBLES }, (_, i) =>
-    fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i))
-  );
+  const dias: string[] = [];
+  for (let i = 0; i < DIAS_VISIBLES; i++) {
+    dias.push(fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i)));
+  }
+  return dias;
 }
 
 // "Cardiología" -> "Cardiol"
@@ -46,7 +48,7 @@ export default function CompararHorarios() {
   // Los médicos dados de baja ya no tienen agenda.
   const medicos = usePersonal().medicos.filter((medico) => medico.estado !== 'baja');
   const { consultorio } = useConsultorio();
-  const { reglasRiesgo, horarios } = useConfiguracion();
+  const { reglasRiesgo, duracionTurno } = useConfiguracion();
   const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
 
   const [diaElegido, setDiaElegido] = useState(HOY);
@@ -84,11 +86,20 @@ export default function CompararHorarios() {
 
   const columnas = medicos.filter((medico) => medicosElegidos.includes(medico.nombre));
 
-  // Filas: los horarios base más cualquier otro horario con turnos ese día.
+  // Los horarios de cada médico elegido ese día, según sus franjas.
+  function horariosDe(medico: string) {
+    return horariosDelMedico(medicos, medico, diaElegido, duracionTurno);
+  }
+
+  // Filas: los horarios de todos los médicos elegidos más cualquier otro horario con turnos ese día.
+  const horasDeLosMedicos: string[] = [];
+  columnas.forEach((medico) => {
+    horariosDe(medico.nombre).forEach((hora) => horasDeLosMedicos.push(hora));
+  });
   const horasConTurno = turnos
     .filter((t) => t.fecha === diaElegido && t.estado !== 'cancelado' && medicosElegidos.includes(t.medico))
     .map((t) => t.hora);
-  const filas = [...new Set([...horarios, ...horasConTurno])].sort();
+  const filas = sinRepetidos([...horasDeLosMedicos, ...horasConTurno]).sort();
 
   function nombreAbreviado(idPaciente: string) {
     const paciente = pacientes.find((p) => p.id === idPaciente);
@@ -175,8 +186,8 @@ export default function CompararHorarios() {
                     </Pressable>
                   );
                 }
-                // Un día en que el médico no atiende no se puede asignar (si ya había un turno, se muestra igual).
-                if (!atiendeEseDia(medico.dias, diaElegido)) {
+                // Fuera de los horarios del médico no se puede asignar (si ya había un turno, se muestra igual).
+                if (!horariosDe(medico.nombre).includes(hora)) {
                   return (
                     <View key={medico.nombre} style={[styles.celda, styles.celdaBloqueo]}>
                       <Text style={styles.celdaBloqueoTexto}>No atiende</Text>
@@ -195,7 +206,12 @@ export default function CompararHorarios() {
               const paciente = pacientes.find((p) => p.id === turno.idPaciente);
               const riesgo = paciente ? evaluarRiesgo(paciente, turnos, reglasRiesgo) : undefined;
               const riesgoAlto = riesgo?.nivel === 'alto' && (turno.estado === 'pendiente' || turno.estado === 'confirmado');
-              const color = riesgoAlto ? COLOR_CANCELADO : turno.estado === 'ausente' ? COLOR_AUSENTE : COLORES_ESTADO[turno.estado];
+              let color = COLORES_ESTADO[turno.estado];
+              if (riesgoAlto) {
+                color = COLOR_CANCELADO;
+              } else if (turno.estado === 'ausente') {
+                color = COLOR_AUSENTE;
+              }
               return (
                 <Pressable
                   key={medico.nombre}

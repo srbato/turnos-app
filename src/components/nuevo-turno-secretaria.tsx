@@ -6,7 +6,7 @@ import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
+import { enLicencia, horariosDelMedico, MiembroMedico, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { atiendeEseDia } from '@/datos/atencion';
@@ -48,7 +48,7 @@ export function NuevoTurnoSecretaria({
   const { ofertas } = useAdelantos();
   const { medicos } = usePersonal();
   const { consultorio } = useConsultorio();
-  const { horarios, nombre: nombreConsultorio } = useConfiguracion();
+  const { duracionTurno, nombre: nombreConsultorio } = useConfiguracion();
   const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
 
   const [fecha, setFecha] = useState(fechaInicial);
@@ -58,17 +58,18 @@ export function NuevoTurnoSecretaria({
   const [busqueda, setBusqueda] = useState('');
   const elegirDia = idPacienteInicial !== '';
   const pacienteElegido = pacientes.find((p) => p.id === idPacienteInicial);
-  const dias = Array.from({ length: DIAS_ELEGIBLES }, (_, i) => {
-    const hoy = new Date();
-    return fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i));
-  });
+  const hoy = new Date();
+  const dias: string[] = [];
+  for (let i = 0; i < DIAS_ELEGIBLES; i++) {
+    dias.push(fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i)));
+  }
 
   // Médicos que atienden ese día: no de baja, no de licencia en esa fecha y con ese día entre sus días de atención.
-  function atiendeEn(m: (typeof medicos)[number], dia: string) {
+  function atiendeEn(m: MiembroMedico, dia: string) {
     return (
       m.estado !== 'baja' &&
       !enLicencia(m, dia) &&
-      atiendeEseDia(m.dias, dia) &&
+      atiendeEseDia(m.franjas, dia) &&
       (medicoFijo === undefined || m.nombre === medicoFijo)
     );
   }
@@ -81,10 +82,10 @@ export function NuevoTurnoSecretaria({
   }
   // Un horario ofrecido a la lista de espera queda reservado hasta que el paciente responda.
   const reservadas = horasReservadas(ofertas, turnos, medico, fecha);
-  const horasLibres = horarios.filter(
+  const horasLibres = horariosDelMedico(medicos, medico, fecha, duracionTurno).filter(
     (h) => !reservadas.includes(h) && !turnos.some((t) => t.medico === medico && t.fecha === fecha && t.hora === h && t.estado !== 'cancelado')
   );
-  // Si se llegó tocando un horario fuera de la grilla base, se agrega para poder elegirlo.
+  // Si se llegó tocando un horario fuera de los horarios del médico, se agrega para poder elegirlo.
   const horasOfrecidas = horaInicial !== '' && !horasLibres.includes(horaInicial) && medico === medicoInicial
     ? [...horasLibres, horaInicial].sort()
     : horasLibres;

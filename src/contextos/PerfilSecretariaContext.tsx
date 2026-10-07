@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 
@@ -15,13 +15,25 @@ export type PerfilSecretaria = {
   fotoUri: string | null; // foto elegida (data URI), o null para mostrar las iniciales
 };
 
+// Lo que se comparte: los datos del perfil y la función para cambiarlos.
 type PerfilSecretariaContextType = PerfilSecretaria & {
-  actualizarPerfil: (cambios: Partial<PerfilSecretaria>) => void;
+  actualizarPerfil: (perfilNuevo: PerfilSecretaria) => void;
 };
 
 const CLAVE_STORAGE = 'perfil-secretaria';
 
-const PerfilSecretariaContext = createContext<PerfilSecretariaContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: PerfilSecretariaContextType = {
+  nombre: '',
+  email: '',
+  telefono: '',
+  domicilio: '',
+  turnoTrabajo: '',
+  fotoUri: null,
+  actualizarPerfil: () => {},
+};
+
+const PerfilSecretariaContext = createContext(VALOR_POR_DEFECTO);
 
 export function PerfilSecretariaProvider({ children }: { children: ReactNode }) {
   // La secretaria que usa la app es la primera de su consultorio.
@@ -36,7 +48,7 @@ export function PerfilSecretariaProvider({ children }: { children: ReactNode }) 
     fotoUri: null,
   };
   const claveStorage = `${CLAVE_STORAGE}-${consultorio.id}`;
-  const [perfil, setPerfil] = useState<PerfilSecretaria>(perfilInicial);
+  const [perfil, setPerfil] = useState(perfilInicial);
 
   // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
   useEffect(() => {
@@ -53,27 +65,23 @@ export function PerfilSecretariaProvider({ children }: { children: ReactNode }) 
     cargarPerfil();
   }, []);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    async function actualizarPerfil(cambios: Partial<PerfilSecretaria>) {
-      const nuevo = { ...perfil, ...cambios };
-      setPerfil(nuevo);
-      try {
-        await AsyncStorage.setItem(claveStorage, JSON.stringify(nuevo));
-      } catch {
-        // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
-      }
+  // Reemplaza el perfil por el nuevo y lo guarda en el dispositivo.
+  async function actualizarPerfil(perfilNuevo: PerfilSecretaria) {
+    setPerfil(perfilNuevo);
+    try {
+      await AsyncStorage.setItem(claveStorage, JSON.stringify(perfilNuevo));
+    } catch {
+      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
     }
-    return { ...perfil, actualizarPerfil };
-  }, [perfil]);
+  }
 
-  return <PerfilSecretariaContext.Provider value={value}>{children}</PerfilSecretariaContext.Provider>;
+  return (
+    <PerfilSecretariaContext.Provider value={{ ...perfil, actualizarPerfil }}>
+      {children}
+    </PerfilSecretariaContext.Provider>
+  );
 }
 
 export function usePerfilSecretaria() {
-  const contexto = useContext(PerfilSecretariaContext);
-  if (contexto === undefined) {
-    throw new Error('usePerfilSecretaria tiene que usarse dentro de un PerfilSecretariaProvider');
-  }
-  return contexto;
+  return useContext(PerfilSecretariaContext);
 }

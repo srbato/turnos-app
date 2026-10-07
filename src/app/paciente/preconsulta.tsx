@@ -11,32 +11,28 @@ import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import {
+  CAMPOS_PRECONSULTA,
   ETIQUETAS_CAMPOS,
   PASOS,
   RESPUESTAS_VACIAS,
   SINTOMAS,
-  type RespuestasPreconsulta,
+  RespuestasPreconsulta,
 } from '@/datos/preconsulta';
-import { pedirRespuestaIA } from '@/servicios/preconsulta-ia';
+import { respuestaDelAsistente } from '@/servicios/preconsulta-ia';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+
+type AutorMensaje = 'asistente' | 'paciente';
 
 type Mensaje = {
   id: string;
-  autor: 'asistente' | 'paciente';
+  autor: AutorMensaje;
   texto: string;
 };
 
 type Fase = 'chat' | 'resumen' | 'enviada';
 
 // Campos del resumen que se editan como texto (los síntomas se muestran separados por coma).
-const CAMPOS_RESUMEN: (keyof RespuestasPreconsulta)[] = [
-  'motivo',
-  'duracion',
-  'sintomas',
-  'medicacion',
-  'alergias',
-  'adicional',
-];
+const CAMPOS_RESUMEN = CAMPOS_PRECONSULTA;
 
 function volver() {
   if (router.canGoBack()) {
@@ -65,7 +61,6 @@ export default function PantallaPreconsulta() {
   );
   const [texto, setTexto] = useState('');
   const [sintomasMarcados, setSintomasMarcados] = useState<string[]>([]);
-  const [escribiendo, setEscribiendo] = useState(false);
   // Texto que el paciente ve y edita en el resumen (los síntomas como una sola línea).
   const [sintomasTexto, setSintomasTexto] = useState(
     existente ? existente.respuestas.sintomas.join(', ') : ''
@@ -84,14 +79,8 @@ export default function PantallaPreconsulta() {
 
   // Al entrar (si no había una preconsulta enviada) el asistente saluda y hace la primera pregunta.
   useEffect(() => {
-    async function empezar() {
-      setEscribiendo(true);
-      const textos = await pedirRespuestaIA(0, RESPUESTAS_VACIAS, contexto);
-      agregarMensajes('asistente', textos);
-      setEscribiendo(false);
-    }
     if (turno && !existente) {
-      empezar();
+      agregarMensajes('asistente', respuestaDelAsistente(0, RESPUESTAS_VACIAS, contexto));
     }
     // Solo al montar la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -102,7 +91,7 @@ export default function PantallaPreconsulta() {
     return <Redirect href="/paciente" />;
   }
 
-  function agregarMensajes(autor: Mensaje['autor'], textos: string[]) {
+  function agregarMensajes(autor: AutorMensaje, textos: string[]) {
     setMensajes((anteriores) => [
       ...anteriores,
       ...textos.map((t, indice) => ({ id: `${Date.now()}-${anteriores.length}-${indice}`, autor, texto: t })),
@@ -110,7 +99,7 @@ export default function PantallaPreconsulta() {
   }
 
   // Guarda la respuesta, la muestra en el chat y pide al asistente el siguiente mensaje.
-  async function responder(textoPaciente: string, nuevasRespuestas: RespuestasPreconsulta) {
+  function responder(textoPaciente: string, nuevasRespuestas: RespuestasPreconsulta) {
     agregarMensajes('paciente', [textoPaciente]);
     setRespuestas(nuevasRespuestas);
     setTexto('');
@@ -118,10 +107,7 @@ export default function PantallaPreconsulta() {
 
     const siguiente = paso + 1;
     setPaso(siguiente);
-    setEscribiendo(true);
-    const textos = await pedirRespuestaIA(siguiente, nuevasRespuestas, contexto);
-    agregarMensajes('asistente', textos);
-    setEscribiendo(false);
+    agregarMensajes('asistente', respuestaDelAsistente(siguiente, nuevasRespuestas, contexto));
     if (siguiente === PASOS.length) {
       setSintomasTexto(nuevasRespuestas.sintomas.join(', '));
       if (nuevasRespuestas.alergias === '') {
@@ -213,15 +199,6 @@ export default function PantallaPreconsulta() {
             contentContainerStyle={styles.chatContenido}
             data={[...mensajes].reverse()}
             keyExtractor={(mensaje) => mensaje.id}
-            ListHeaderComponent={
-              escribiendo ? (
-                <View style={styles.filaAsistente}>
-                  <View style={styles.burbujaAsistente}>
-                    <Text style={styles.escribiendo}>Escribiendo…</Text>
-                  </View>
-                </View>
-              ) : null
-            }
             renderItem={({ item }) =>
               item.autor === 'asistente' ? (
                 <View style={styles.filaAsistente}>
@@ -242,7 +219,7 @@ export default function PantallaPreconsulta() {
             }
           />
 
-          {!escribiendo && paso < PASOS.length && PASOS[paso].tipo === 'sintomas' && (
+          {paso < PASOS.length && PASOS[paso].tipo === 'sintomas' && (
             <View style={styles.zonaRespuesta}>
               <View style={styles.chipsFila}>
                 {SINTOMAS.map((sintoma) => {
@@ -268,7 +245,7 @@ export default function PantallaPreconsulta() {
             </View>
           )}
 
-          {!escribiendo && paso < PASOS.length && PASOS[paso].tipo === 'texto' && (
+          {paso < PASOS.length && PASOS[paso].tipo === 'texto' && (
             <View style={styles.zonaRespuesta}>
               <View style={styles.filaInput}>
                 <TextInput
@@ -436,11 +413,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1A1A1A',
     lineHeight: 20,
-  },
-  escribiendo: {
-    fontSize: 13,
-    color: '#8A8A8A',
-    fontStyle: 'italic',
   },
   filaPaciente: {
     alignItems: 'flex-end',

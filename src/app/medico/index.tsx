@@ -1,8 +1,19 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AvatarPaciente } from '@/components/avatar-paciente';
+import { DetalleConsulta } from '@/components/detalle-consulta';
 import { MenuMedico } from '@/components/menu-medico';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -11,7 +22,7 @@ import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useSesion } from '@/contextos/SesionContext';
-import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { historiaClinica, useTurnos, Turno } from '@/contextos/TurnosContext';
 import { EstadoTurno, HOY, Paciente } from '@/datos/consultorio';
 import { filasPreconsulta } from '@/datos/preconsulta';
 import { datosParaMedico } from '@/utilidades/datos-medico';
@@ -132,7 +143,7 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
 }
 
 export default function AgendaMedico() {
-  const { turnos, cancelarTurno, cambiarEstadoTurno } = useTurnos();
+  const { turnos, cancelarTurno, cambiarEstadoTurno, registrarConsulta } = useTurnos();
   const perfilMedico = usePerfilMedico();
   const { medicoLogueado } = useSesion();
   const { buscarPorTurno } = usePreconsultas();
@@ -153,6 +164,13 @@ export default function AgendaMedico() {
   // Se guarda el id (y no el turno) para que el Modal muestre siempre el estado actualizado.
   const [idTurnoSeleccionado, setIdTurnoSeleccionado] = useState('');
   const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
+  // Formulario de la consulta: se abre al marcar el turno como atendido.
+  const [registrandoConsulta, setRegistrandoConsulta] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const [diagnostico, setDiagnostico] = useState('');
+  const [indicaciones, setIndicaciones] = useState('');
+  const [notas, setNotas] = useState('');
+  const [errorConsulta, setErrorConsulta] = useState('');
 
   function buscarPaciente(idPaciente: string) {
     return pacientes.find((pacienteDeLaLista) => pacienteDeLaLista.id === idPaciente);
@@ -171,6 +189,40 @@ export default function AgendaMedico() {
   function cerrarDetalle() {
     setIdTurnoSeleccionado('');
     setConfirmandoCancelacion(false);
+    setRegistrandoConsulta(false);
+  }
+
+  // Abre el formulario con lo que ya se había anotado. La primera vez, el motivo sale de la preconsulta (si la hizo).
+  function abrirConsulta(turno: Turno) {
+    if (turno.consulta) {
+      setMotivo(turno.consulta.motivo);
+      setDiagnostico(turno.consulta.diagnostico);
+      setIndicaciones(turno.consulta.indicaciones);
+      setNotas(turno.consulta.notas);
+    } else {
+      const preconsulta = buscarPorTurno(turno.id);
+      setMotivo(preconsulta ? preconsulta.respuestas.motivo : '');
+      setDiagnostico('');
+      setIndicaciones('');
+      setNotas('');
+    }
+    setErrorConsulta('');
+    setRegistrandoConsulta(true);
+  }
+
+  // Guarda la consulta y el turno queda como atendido.
+  function guardarConsulta(id: string) {
+    if (diagnostico.trim() === '') {
+      setErrorConsulta('Escribí el diagnóstico.');
+      return;
+    }
+    registrarConsulta(id, {
+      motivo: motivo.trim(),
+      diagnostico: diagnostico.trim(),
+      indicaciones: indicaciones.trim(),
+      notas: notas.trim(),
+    });
+    setRegistrandoConsulta(false);
   }
 
   function confirmarCancelacion(id: string) {
@@ -200,6 +252,11 @@ export default function AgendaMedico() {
   const sePuedeModificar =
     turnoSeleccionado !== undefined &&
     (turnoSeleccionado.estado === 'pendiente' || turnoSeleccionado.estado === 'confirmado');
+  // La consulta anterior más reciente del paciente (con cualquier médico), para tenerla a mano al atenderlo.
+  const consultasAnteriores = turnoSeleccionado
+    ? historiaClinica(turnos, turnoSeleccionado.idPaciente).filter((turno) => turno.id !== turnoSeleccionado.id)
+    : [];
+  const ultimaConsulta = consultasAnteriores.length > 0 ? consultasAnteriores[0] : undefined;
 
   return (
     <View style={styles.pantalla}>
@@ -212,7 +269,7 @@ export default function AgendaMedico() {
             </Text>
           </View>
           {/* Tocar la foto lleva a Editar perfil, donde el médico puede cambiarla. */}
-          <Pressable onPress={() => router.push('/medico/editar-perfil' as Href)} hitSlop={8}>
+          <Pressable onPress={() => router.push('/medico/editar-perfil')} hitSlop={8}>
             <AvatarPaciente
               tamano={44}
               colorFondo={COLOR_MEDICO}
@@ -310,10 +367,12 @@ export default function AgendaMedico() {
         animationType="slide"
         transparent
         onRequestClose={cerrarDetalle}>
-        <View style={styles.fondoModal}>
+        <KeyboardAvoidingView
+          style={styles.fondoModal}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
             {turnoSeleccionado && pacienteSeleccionado && (
-              <ScrollView>
+              <ScrollView keyboardShouldPersistTaps="handled">
                 <View style={styles.modalEncabezado}>
                   <Text style={styles.modalPaciente}>
                     {pacienteSeleccionado.nombre} {pacienteSeleccionado.apellido}
@@ -377,8 +436,92 @@ export default function AgendaMedico() {
                   <Text style={styles.modalEtiqueta}>Alergias</Text>
                   <Text style={styles.modalTexto}>{pacienteSeleccionado.alergias}</Text>
                 </View>
+                {ultimaConsulta && ultimaConsulta.consulta && (
+                  <View style={styles.modalFila}>
+                    <Text style={styles.modalEtiqueta}>Última consulta</Text>
+                    <Text style={styles.modalTexto}>
+                      {formatearFecha(ultimaConsulta.fecha)} · {ultimaConsulta.medico}:{' '}
+                      {ultimaConsulta.consulta.diagnostico}
+                    </Text>
+                  </View>
+                )}
 
-                {sePuedeModificar && !confirmandoCancelacion && (
+                {turnoSeleccionado.estado === 'atendido' && !registrandoConsulta && (
+                  <View>
+                    <Text style={styles.modalSeccion}>Consulta</Text>
+                    {turnoSeleccionado.consulta ? (
+                      <DetalleConsulta consulta={turnoSeleccionado.consulta} conNotas={true} />
+                    ) : (
+                      <Text style={styles.modalTexto}>Todavía no anotaste la consulta.</Text>
+                    )}
+                    <Pressable style={styles.botonEditarConsulta} onPress={() => abrirConsulta(turnoSeleccionado)}>
+                      <Text style={styles.botonAtendidoSecundarioTexto}>
+                        {turnoSeleccionado.consulta ? 'Editar consulta' : 'Anotar consulta'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+
+                {registrandoConsulta && (
+                  <View>
+                    <Text style={styles.modalSeccion}>Consulta</Text>
+                    <Text style={styles.avisoCorreccion}>
+                      Queda en la historia clínica del paciente. Al guardarla, el turno pasa a atendido.
+                    </Text>
+
+                    <Text style={styles.modalEtiqueta}>Motivo</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={motivo}
+                      onChangeText={setMotivo}
+                      placeholder="Por qué vino"
+                      placeholderTextColor="#8A8A8A"
+                    />
+
+                    <Text style={styles.modalEtiqueta}>Diagnóstico</Text>
+                    <TextInput
+                      style={[styles.input, errorConsulta !== '' && styles.inputError]}
+                      value={diagnostico}
+                      onChangeText={setDiagnostico}
+                      placeholder="Ej: Faringitis aguda"
+                      placeholderTextColor="#8A8A8A"
+                    />
+                    {errorConsulta !== '' && <Text style={styles.errorTexto}>{errorConsulta}</Text>}
+
+                    <Text style={styles.modalEtiqueta}>Indicaciones</Text>
+                    <TextInput
+                      style={[styles.input, styles.inputLargo]}
+                      value={indicaciones}
+                      onChangeText={setIndicaciones}
+                      placeholder="Tratamiento, estudios, cuándo volver"
+                      placeholderTextColor="#8A8A8A"
+                      multiline
+                    />
+
+                    <Text style={styles.modalEtiqueta}>Notas privadas</Text>
+                    <TextInput
+                      style={[styles.input, styles.inputLargo]}
+                      value={notas}
+                      onChangeText={setNotas}
+                      placeholder="Solo las ves vos"
+                      placeholderTextColor="#8A8A8A"
+                      multiline
+                    />
+
+                    <View style={styles.filaConfirmacion}>
+                      <Pressable style={styles.botonNo} onPress={() => setRegistrandoConsulta(false)}>
+                        <Text style={styles.botonNoTexto}>Volver</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.botonGuardarConsulta}
+                        onPress={() => guardarConsulta(turnoSeleccionado.id)}>
+                        <Text style={styles.botonCerrarTexto}>Guardar consulta</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {sePuedeModificar && !confirmandoCancelacion && !registrandoConsulta && (
                   <View style={styles.acciones}>
                     {turnoSeleccionado.estado === 'pendiente' ? (
                       // Pendiente: confirmar (principal) y atendido, uno al lado del otro.
@@ -390,7 +533,7 @@ export default function AgendaMedico() {
                         </Pressable>
                         <Pressable
                           style={styles.botonAtendidoSecundario}
-                          onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'atendido')}>
+                          onPress={() => abrirConsulta(turnoSeleccionado)}>
                           <Text style={styles.botonAtendidoSecundarioTexto}>Atendido</Text>
                         </Pressable>
                       </View>
@@ -398,7 +541,7 @@ export default function AgendaMedico() {
                       // Confirmado: lo único que queda es marcarlo como atendido.
                       <Pressable
                         style={styles.botonAtendido}
-                        onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'atendido')}>
+                        onPress={() => abrirConsulta(turnoSeleccionado)}>
                         <Text style={styles.botonCerrarTexto}>Marcar como atendido</Text>
                       </Pressable>
                     )}
@@ -417,14 +560,14 @@ export default function AgendaMedico() {
                   </View>
                 )}
 
-                {turnoSeleccionado.estado === 'ausente' && (
+                {turnoSeleccionado.estado === 'ausente' && !registrandoConsulta && (
                   <View style={styles.acciones}>
                     <Text style={styles.avisoCorreccion}>
                       Si lo marcaste por error, corregilo: la falta deja de sumar puntos de riesgo al paciente.
                     </Text>
                     <Pressable
                       style={styles.botonAtendido}
-                      onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'atendido')}>
+                      onPress={() => abrirConsulta(turnoSeleccionado)}>
                       <Text style={styles.botonCerrarTexto}>El paciente sí asistió</Text>
                     </Pressable>
                   </View>
@@ -450,7 +593,7 @@ export default function AgendaMedico() {
               </ScrollView>
             )}
           </SafeAreaView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <MenuMedico activa="agenda" />
@@ -729,6 +872,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#5A5A5A',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D5D8DD',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  inputLargo: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  inputError: {
+    borderColor: COLOR_RIESGO_ALTO,
+  },
+  errorTexto: {
+    fontSize: 12,
+    color: COLOR_RIESGO_ALTO,
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  // Botón solo (ocupa todo el ancho): no lleva flex.
+  botonEditarConsulta: {
+    borderWidth: 1,
+    borderColor: COLOR_MEDICO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  botonGuardarConsulta: {
+    flex: 1,
+    backgroundColor: COLOR_MEDICO,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   avisoCorreccion: {
     fontSize: 13,

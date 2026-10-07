@@ -257,6 +257,14 @@ export function fechaDeAtencion(minimoDias: number, diasSemana: number[]) {
 
 export type EstadoTurno = 'confirmado' | 'pendiente' | 'cancelado' | 'atendido' | 'ausente';
 
+// Lo que el médico anota al atender un turno. Todas las consultas de un paciente forman su historia clínica.
+export type Consulta = {
+  motivo: string;
+  diagnostico: string;
+  indicaciones: string; // tratamiento, estudios, cuándo volver
+  notas: string; // notas privadas del médico ('' si no hay)
+};
+
 // Turno de ejemplo (sin cobertura): TurnosContext lo completa y lo usa como dato inicial.
 export type TurnoDeEjemplo = {
   id: string;
@@ -274,6 +282,7 @@ export type TurnoDeEjemplo = {
   motivoCancelacion?: string; // si el sistema lo canceló solo (ej. el médico no atiende ese día); si falta, lo canceló una persona
   adelantoDesde?: string; // AAAA-MM-DD desde que está en lista de espera para adelantar este turno (si falta, no está)
   reservadoEl?: string; // AAAA-MM-DD en que se reservó (si falta, se asume que se reservó hoy)
+  consulta?: Consulta; // lo que anotó el médico al atenderlo (solo en turnos atendidos)
 };
 
 const TURNOS_RIVADAVIA: TurnoDeEjemplo[] = [
@@ -467,6 +476,61 @@ const TURNOS_RIVADAVIA: TurnoDeEjemplo[] = [
     estado: 'pendiente',
     instrucciones: [],
     adelantoDesde: '2026-09-28',
+  },
+  // ----- Consultas anteriores (la historia clínica de ejemplo) -----
+  {
+    id: '16',
+    idPaciente: 'p2',
+    medico: MEDICA.nombre,
+    especialidad: MEDICA.especialidad,
+    sala: 'Consultorio 3',
+    fecha: fechaDeAtencion(-40, [1, 2, 3, 4, 5]),
+    hora: '10:00',
+    sede: NOMBRE_RIVADAVIA,
+    estado: 'atendido',
+    instrucciones: [],
+    consulta: {
+      motivo: 'Dolor de garganta y fiebre desde hace 3 días',
+      diagnostico: 'Faringitis aguda',
+      indicaciones: 'Ibuprofeno 400 mg cada 8 horas por 5 días. Tomar mucho líquido. Volver si la fiebre sigue en 3 días.',
+      notas: 'Sin placas. Si se repite, pedir hisopado.',
+    },
+  },
+  {
+    id: '17',
+    idPaciente: 'p2',
+    medico: MEDICA.nombre,
+    especialidad: MEDICA.especialidad,
+    sala: 'Consultorio 3',
+    fecha: fechaDeAtencion(-12, [1, 2, 3, 4, 5]),
+    hora: '09:40',
+    sede: NOMBRE_RIVADAVIA,
+    estado: 'atendido',
+    instrucciones: [],
+    consulta: {
+      motivo: 'Control después de la faringitis',
+      diagnostico: 'Faringitis resuelta',
+      indicaciones: 'Alta. No hace falta medicación.',
+      notas: '',
+    },
+  },
+  {
+    id: '18',
+    idPaciente: 'p1',
+    medico: 'Dr. Ricardo Paz',
+    especialidad: 'Cardiología',
+    sala: 'Consultorio 5',
+    fecha: fechaDeAtencion(-25, [1, 2, 3, 4, 5]),
+    hora: '15:20',
+    sede: NOMBRE_RIVADAVIA,
+    estado: 'atendido',
+    instrucciones: [],
+    consulta: {
+      motivo: 'Control de presión',
+      diagnostico: 'Hipertensión arterial controlada',
+      indicaciones: 'Seguir con enalapril 10 mg a la mañana. Control en 3 meses con electrocardiograma.',
+      notas: '',
+    },
   },
 ];
 

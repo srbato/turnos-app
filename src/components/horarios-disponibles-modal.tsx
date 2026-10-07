@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
-import { useAdelantos, type Oferta } from '@/contextos/AdelantosContext';
+import { useAdelantos, Oferta } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
-import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import {
   candidatosDisponibles,
   crearHorarioLibre,
@@ -15,8 +15,8 @@ import {
   ofertaDelHorario,
   ofertasVigentes,
 } from '@/datos/adelantos';
-import { atiendeEseDia } from '@/datos/atencion';
-import { evaluarRiesgo, textoPuntaje } from '@/datos/ausentismo';
+import { horasDelDia } from '@/datos/atencion';
+import { evaluarRiesgo, nombreNivelRiesgo, textoPuntaje } from '@/datos/ausentismo';
 import { fechaDentroDe } from '@/datos/consultorio';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
@@ -37,7 +37,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
   const { consultorio } = useConsultorio();
-  const { reglasRiesgo, horarios, nombre: nombreConsultorio } = useConfiguracion();
+  const { reglasRiesgo, duracionTurno, nombre: nombreConsultorio } = useConfiguracion();
   const { ofertas, publicados, ofrecerA, reprogramarOferta } = useAdelantos();
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
@@ -72,22 +72,25 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
   }
 
   // Si todos los que esperan ya tienen una oferta pendiente, no se puede ofrecer nada hasta que respondan.
-  const conOferta = new Set(ofertasVigentes(ofertas, turnos).map((o) => o.idTurno));
-  const todosOcupados = !oferta && !turnoDestino && esperando.length > 0 && esperando.every((t) => conOferta.has(t.id));
+  const conOferta = ofertasVigentes(ofertas, turnos).map((o) => o.idTurno);
+  const todosOcupados = !oferta && !turnoDestino && esperando.length > 0 && esperando.every((t) => conOferta.includes(t.id));
 
   // Días con atención y horarios libres, desde dentro de 3 días.
   const dias: string[] = [];
   if (datos && datos.estado !== 'baja') {
     for (let i = DIAS_MINIMOS_ADELANTO; i < DIAS_MINIMOS_ADELANTO + DIAS_A_MIRAR; i++) {
       const fecha = fechaDentroDe(i);
-      if (!enLicencia(datos, fecha) && atiendeEseDia(datos.dias, fecha) && horarios.some((h) => estaLibre(fecha, h))) {
+      if (!enLicencia(datos, fecha) && horasDelDia(datos.franjas, fecha, duracionTurno).some((h) => estaLibre(fecha, h))) {
         dias.push(fecha);
       }
     }
   }
 
   const diaElegido = dias.includes(dia) ? dia : (dias[0] ?? '');
-  const horasLibres = diaElegido ? horarios.filter((h) => estaLibre(diaElegido, h)) : [];
+  let horasLibres: string[] = [];
+  if (datos && diaElegido) {
+    horasLibres = horasDelDia(datos.franjas, diaElegido, duracionTurno).filter((h) => estaLibre(diaElegido, h));
+  }
   const horaElegida = horasLibres.includes(hora) ? hora : '';
 
   const horario = datos && diaElegido && horaElegida ? crearHorarioLibre(datos, diaElegido, horaElegida, nombreConsultorio) : null;
@@ -134,21 +137,24 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
     cerrar();
   }
 
+  // Título y ayuda del Modal: cambian si se reprograma una oferta o se busca horario para un paciente.
+  let titulo = 'Horarios disponibles';
+  let ayuda = `Horarios libres desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del último turno de la lista. Elegí uno y tocá al paciente a quien se lo querés proponer. Cada paciente recibe una sola oferta a la vez.`;
+  if (oferta) {
+    titulo = 'Reprogramar oferta';
+    ayuda = `Elegí otro horario libre, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual del paciente. La oferta pasa al nuevo horario.`;
+  } else if (turnoDestino) {
+    titulo = 'Proponer un horario';
+    ayuda = `Horarios libres de ${medico}, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual de ${nombreDelPaciente(turnoDestino.idPaciente)}.`;
+  }
+
   return (
     <Modal visible={medico !== null} animationType="fade" transparent onRequestClose={cerrar}>
       <View style={styles.fondo}>
         <View style={styles.tarjeta}>
-          <Text style={styles.titulo}>
-            {oferta ? 'Reprogramar oferta' : turnoDestino ? 'Proponer un horario' : 'Horarios disponibles'}
-          </Text>
+          <Text style={styles.titulo}>{titulo}</Text>
           <Text style={styles.medico}>{medico}</Text>
-          <Text style={styles.ayuda}>
-            {oferta
-              ? `Elegí otro horario libre, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual del paciente. La oferta pasa al nuevo horario.`
-              : turnoDestino
-                ? `Horarios libres de ${medico}, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual de ${nombreDelPaciente(turnoDestino.idPaciente)}.`
-                : `Horarios libres desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del último turno de la lista. Elegí uno y tocá al paciente a quien se lo querés proponer. Cada paciente recibe una sola oferta a la vez.`}
-          </Text>
+          <Text style={styles.ayuda}>{ayuda}</Text>
 
           {dias.length === 0 ? (
             <Text style={styles.vacio}>
@@ -209,11 +215,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
                         </Text>
                         <Text style={styles.candidatoRiesgo}>
                           Historial: riesgo{' '}
-                          {riesgoDe(candidato.idPaciente)?.nivel === 'alto'
-                            ? 'alto'
-                            : riesgoDe(candidato.idPaciente)?.nivel === 'en-riesgo'
-                              ? 'medio'
-                              : 'bajo'}{' '}
+                          {nombreNivelRiesgo(riesgoDe(candidato.idPaciente)?.nivel)}{' '}
                           · {textoPuntaje(riesgoDe(candidato.idPaciente)?.puntaje ?? 0)} pts
                         </Text>
                       </View>

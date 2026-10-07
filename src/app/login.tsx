@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
@@ -259,7 +259,7 @@ export default function Login() {
               {rol === 'paciente' && (
                 <View style={styles.pie}>
                   <Text style={styles.pieTexto}>¿No tenés cuenta?</Text>
-                  <Pressable onPress={() => router.push('/registro' as Href)}>
+                  <Pressable onPress={() => router.push('/registro')}>
                     <Text style={[styles.pieLink, {color: tema.color}]}>  Registrate</Text>
                   </Pressable>
                 </View>

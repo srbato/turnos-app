@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE } from '@/constantes/colores';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { horariosDelMedico, usePersonal } from '@/contextos/PersonalContext';
 
 type DiaDisponible = {
   fecha: string; // AAAA-MM-DD
@@ -11,9 +12,11 @@ type DiaDisponible = {
   disponible: boolean;
 };
 
+type Franja = 'Mañana' | 'Tarde';
+
 type Horario = {
   hora: string;
-  turno: 'Mañana' | 'Tarde';
+  turno: Franja;
   disponible: boolean;
 };
 
@@ -69,6 +72,7 @@ export function formatearFechaCorta(fecha: string) {
 }
 
 type Props = {
+  medico: string; // nombre del médico: los horarios son los suyos
   fecha: string; // día seleccionado (AAAA-MM-DD)
   hora: string | null;
   ocupadas: string[]; // horas ya tomadas por otros turnos del médico ese día
@@ -82,6 +86,7 @@ type Props = {
 
 // Selector de días + grilla de horarios mañana/tarde. Lo usan Sacar turno (paso 3) y Reprogramar.
 export function SelectorHorario({
+  medico,
   fecha,
   hora,
   ocupadas,
@@ -92,18 +97,21 @@ export function SelectorHorario({
   cantidadDias = CANTIDAD_CORTA,
   atiende,
 }: Props) {
-  const { horarios, duracionTurno, direccion } = useConfiguracion();
-  // Los mismos horarios que tienen las agendas de Secretaría y los médicos, según la duración que configuró Secretaría.
-  // Cuáles están libres depende de los turnos del médico ese día, no de una lista fija.
-  const HORARIOS: Horario[] = horarios.map((hora) => ({
+  const { duracionTurno, direccion } = useConfiguracion();
+  const { medicos } = usePersonal();
+  // Los horarios del médico ese día (los mismos que ven Secretaría y el médico en sus agendas), según la duración que
+  // configuró Secretaría. Cuáles están libres depende de los turnos del médico ese día.
+  const HORARIOS: Horario[] = horariosDelMedico(medicos, medico, fecha, duracionTurno).map((hora) => ({
     hora,
-    turno: hora < '12:00' ? 'Mañana' : 'Tarde',
+    turno: hora < '13:00' ? 'Mañana' : 'Tarde',
     disponible: true,
   }));
+  const hayManana = HORARIOS.some((horario) => horario.turno === 'Mañana');
+  const hayTarde = HORARIOS.some((horario) => horario.turno === 'Tarde');
   const dias = diasDesde(primerDia, cantidadDias);
   // Con más de 4 días, la fila se desliza hacia el costado.
   const deslizable = dias.length > CANTIDAD_CORTA;
-  function renderGrilla(turno: Horario['turno']) {
+  function renderGrilla(turno: Franja) {
     return (
       <View style={styles.grillaHorarios}>
         {HORARIOS.filter((horario) => horario.turno === turno).map((horario) => {
@@ -193,17 +201,24 @@ export function SelectorHorario({
         <Text style={styles.horariosTitulo}>Horarios del {formatearFechaLarga(fecha)}</Text>
         <Text style={styles.horariosSubtitulo}>Turnos de {duracionTurno} minutos · {direccion}</Text>
 
-        <Text style={styles.turnoLabel}>MAÑANA</Text>
-        {renderGrilla('Mañana')}
+        {HORARIOS.length === 0 && <Text style={styles.sinHorarios}>El médico no atiende este día.</Text>}
 
-        <Text style={styles.turnoLabel}>TARDE</Text>
-        {renderGrilla('Tarde')}
+        {hayManana && <Text style={styles.turnoLabel}>MAÑANA</Text>}
+        {hayManana && renderGrilla('Mañana')}
+
+        {hayTarde && <Text style={styles.turnoLabel}>TARDE</Text>}
+        {hayTarde && renderGrilla('Tarde')}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  sinHorarios: {
+    fontSize: 14,
+    color: '#8A8A8A',
+    marginTop: 12,
+  },
   contenedorDias: {
     flexGrow: 0,
     marginBottom: 16,

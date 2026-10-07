@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { useSesion } from '@/contextos/SesionContext';
@@ -12,15 +12,22 @@ export type PerfilMedico = {
   fotoUri: string | null; // foto elegida (data URI), o null para mostrar las iniciales
 };
 
+// Lo que se comparte: los datos del perfil y la función para cambiarlos.
 type PerfilMedicoContextType = PerfilMedico & {
-  actualizarPerfil: (cambios: Partial<PerfilMedico>) => void;
+  actualizarPerfil: (perfilNuevo: PerfilMedico) => void;
 };
 
 const CLAVE_STORAGE = 'perfil-medicos';
 
 const PERFIL_VACIO: PerfilMedico = { telefono: '', domicilio: '', fotoUri: null };
 
-const PerfilMedicoContext = createContext<PerfilMedicoContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: PerfilMedicoContextType = {
+  ...PERFIL_VACIO,
+  actualizarPerfil: () => {},
+};
+
+const PerfilMedicoContext = createContext(VALOR_POR_DEFECTO);
 
 // Guarda el perfil de cada médico del consultorio (por matrícula) y expone el del médico que inició sesión.
 export function PerfilMedicoProvider({ children }: { children: ReactNode }) {
@@ -44,30 +51,29 @@ export function PerfilMedicoProvider({ children }: { children: ReactNode }) {
     cargarPerfiles();
   }, []);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    async function actualizarPerfil(cambios: Partial<PerfilMedico>) {
-      const nuevos = {
-        ...perfiles,
-        [medicoLogueado.matricula]: { ...PERFIL_VACIO, ...perfiles[medicoLogueado.matricula], ...cambios },
-      };
-      setPerfiles(nuevos);
-      try {
-        await AsyncStorage.setItem(claveStorage, JSON.stringify(nuevos));
-      } catch {
-        // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
-      }
-    }
-    return { ...PERFIL_VACIO, ...perfiles[medicoLogueado.matricula], actualizarPerfil };
-  }, [perfiles, medicoLogueado]);
+  // El perfil del médico que inició sesión (vacío si todavía no editó nada).
+  let perfil = PERFIL_VACIO;
+  if (perfiles[medicoLogueado.matricula]) {
+    perfil = perfiles[medicoLogueado.matricula];
+  }
 
-  return <PerfilMedicoContext.Provider value={value}>{children}</PerfilMedicoContext.Provider>;
+  // Guarda el perfil nuevo del médico que inició sesión, sin tocar el de los demás.
+  async function actualizarPerfil(perfilNuevo: PerfilMedico) {
+    const nuevos = { ...perfiles };
+    nuevos[medicoLogueado.matricula] = perfilNuevo;
+    setPerfiles(nuevos);
+    try {
+      await AsyncStorage.setItem(claveStorage, JSON.stringify(nuevos));
+    } catch {
+      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
+    }
+  }
+
+  return (
+    <PerfilMedicoContext.Provider value={{ ...perfil, actualizarPerfil }}>{children}</PerfilMedicoContext.Provider>
+  );
 }
 
 export function usePerfilMedico() {
-  const contexto = useContext(PerfilMedicoContext);
-  if (contexto === undefined) {
-    throw new Error('usePerfilMedico tiene que usarse dentro de un PerfilMedicoProvider');
-  }
-  return contexto;
+  return useContext(PerfilMedicoContext);
 }

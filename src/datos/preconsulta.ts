@@ -9,6 +9,17 @@ export type RespuestasPreconsulta = {
   adicional: string;
 };
 
+// Los nombres de los campos de RespuestasPreconsulta, en el orden en que se muestran.
+export type CampoPreconsulta = 'motivo' | 'duracion' | 'sintomas' | 'medicacion' | 'alergias' | 'adicional';
+export const CAMPOS_PRECONSULTA: CampoPreconsulta[] = [
+  'motivo',
+  'duracion',
+  'sintomas',
+  'medicacion',
+  'alergias',
+  'adicional',
+];
+
 export const RESPUESTAS_VACIAS: RespuestasPreconsulta = {
   motivo: '',
   duracion: '',
@@ -33,7 +44,7 @@ export type Preconsulta = {
 type TipoPaso = 'texto' | 'sintomas';
 
 type Paso = {
-  clave: keyof RespuestasPreconsulta;
+  clave: CampoPreconsulta;
   tipo: TipoPaso;
 };
 
@@ -62,7 +73,7 @@ export const SINTOMAS = [
 // Síntomas ante los que se le recomienda al paciente no esperar al turno.
 export const SINTOMAS_DE_ALARMA = ['Dolor de pecho', 'Dificultad para respirar'];
 
-export const ETIQUETAS_CAMPOS: Record<keyof RespuestasPreconsulta, string> = {
+export const ETIQUETAS_CAMPOS: Record<CampoPreconsulta, string> = {
   motivo: 'Motivo de la consulta',
   duracion: 'Desde cuándo',
   sintomas: 'Síntomas',
@@ -73,8 +84,7 @@ export const ETIQUETAS_CAMPOS: Record<keyof RespuestasPreconsulta, string> = {
 
 // Las respuestas de una preconsulta como filas (título + valor) para mostrarlas al médico.
 export function filasPreconsulta(respuestas: RespuestasPreconsulta) {
-  const campos = Object.keys(ETIQUETAS_CAMPOS) as (keyof RespuestasPreconsulta)[];
-  return campos.map((campo) => {
+  return CAMPOS_PRECONSULTA.map((campo) => {
     const valor = respuestas[campo];
     const texto = Array.isArray(valor) ? valor.join(', ') : valor;
     return { titulo: ETIQUETAS_CAMPOS[campo], valor: texto === '' ? 'No informó' : texto };

@@ -1,10 +1,10 @@
-import { router, type Href } from 'expo-router';
+import { router, Href } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconoAnimado } from '@/components/icono-animado';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
-import type { Tema } from '@/constantes/tema';
+import { Tema } from '@/constantes/tema';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 
@@ -27,10 +27,10 @@ type Clave =
 type Item = { icono: string; iconoActivo: string; clave: Clave; ruta: Href };
 
 // Cada rol tiene su propia barra. Solo el paciente tiene editor de perfil por ahora.
-const ITEMS_POR_ROL: Partial<Record<Rol, Item[]>> = {
+const ITEMS_POR_ROL: Record<Rol, Item[]> = {
   paciente: [
     { icono: '☖', iconoActivo: '☗', clave: 'inicio', ruta: '/paciente' },
-    { icono: '☐', iconoActivo: '☑', clave: 'turnos', ruta: '/paciente/mis-turnos' as Href },
+    { icono: '☐', iconoActivo: '☑', clave: 'turnos', ruta: '/paciente/mis-turnos' },
     { icono: '℞', iconoActivo: '⚕', clave: 'medicamentos', ruta: '/paciente/medicamentos' },
     { icono: '◐', iconoActivo: '⚙', clave: 'perfil', ruta: '/perfil?rol=paciente' },
   ],
@@ -60,7 +60,7 @@ type Props = {
 export function BarraPerfil({ rol, pantalla, tema }: Props) {
   const { idioma } = usePreferencias();
   const textos = TEXTOS_PERFIL[idioma];
-  const items = ITEMS_POR_ROL[rol] ?? [];
+  const items = ITEMS_POR_ROL[rol];
 
   if (items.length === 0) {
     return null;

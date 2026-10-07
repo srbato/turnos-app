@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -7,12 +7,7 @@ import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/co
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { COBERTURAS } from '@/datos/catalogo';
-
-// "40123456" -> "40.123.456"
-function formatearDni(digitos: string) {
-  const soloNumeros = digitos.replace(/\D/g, '').slice(0, 8);
-  return soloNumeros.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
+import { formatearDni, palabras, soloNumeros } from '@/utilidades/texto';
 
 // Registro de un paciente nuevo. Pide los mismos datos que después se ven y se editan en el perfil.
 // Solo las alergias son opcionales.
@@ -38,11 +33,11 @@ export default function Registro() {
   }
 
   function crearCuenta() {
-    if (nombre.trim().split(/\s+/).length < 2) {
+    if (palabras(nombre).length < 2) {
       setError('Ingresá tu nombre y apellido.');
       return;
     }
-    if (dni.replace(/\D/g, '').length < 7) {
+    if (soloNumeros(dni).length < 7) {
       setError('Ingresá un DNI válido (7 u 8 números).');
       return;
     }
@@ -50,7 +45,7 @@ export default function Registro() {
       setError('Ingresá un email válido.');
       return;
     }
-    if (telefono.replace(/\D/g, '').length < 8) {
+    if (soloNumeros(telefono).length < 8) {
       setError('Ingresá un teléfono válido (al menos 8 números).');
       return;
     }
@@ -88,7 +83,7 @@ export default function Registro() {
       fotoUri: null,
     });
     // Con la cuenta creada, se pasa al login de paciente para ingresar.
-    router.replace('/login?rol=paciente&registrado=1' as Href);
+    router.replace('/login?rol=paciente&registrado=1');
   }
 
   return (
@@ -195,7 +190,7 @@ export default function Registro() {
 
         <View style={styles.pie}>
           <Text style={styles.pieTexto}>¿Ya tenés cuenta? </Text>
-          <Pressable onPress={() => router.replace('/login?rol=paciente' as Href)}>
+          <Pressable onPress={() => router.replace('/login?rol=paciente')}>
             <Text style={styles.pieLink}>Ingresá</Text>
           </Pressable>
         </View>

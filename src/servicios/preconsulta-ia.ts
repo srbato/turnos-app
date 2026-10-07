@@ -1,10 +1,10 @@
-import { PASOS, SINTOMAS_DE_ALARMA, type RespuestasPreconsulta } from '@/datos/preconsulta';
+import { PASOS, SINTOMAS_DE_ALARMA, RespuestasPreconsulta } from '@/datos/preconsulta';
 
 // Asistente de preconsulta SIMULADO.
 //
-// Es la única función que "habla" con la IA. Hoy responde con preguntas guiadas; cuando exista el backend
-// se reemplaza el cuerpo por un fetch a un endpoint de Express que llame al LLM (la clave de la API vive
-// en el servidor, nunca en la app) y el resto de la pantalla no cambia.
+// Es la única función que "habla" con la IA. Hoy responde al instante con preguntas guiadas; cuando exista el
+// backend, se reemplaza por un fetch a un endpoint de Express que llame al LLM (la clave de la API vive en el
+// servidor, nunca en la app).
 //
 // Reglas del asistente: solo recoge información. No diagnostica, no sugiere tratamientos ni medicamentos.
 
@@ -14,20 +14,8 @@ type Contexto = {
   alergiasCargadas: string; // las que figuran en su perfil ('' si no cargó ninguna)
 };
 
-const ESPERA_SIMULADA_MS = 700;
-
-function esperar(milisegundos: number) {
-  return new Promise((resolver) => setTimeout(resolver, milisegundos));
-}
-
 // Devuelve los mensajes (burbujas) con los que el asistente responde para pasar al paso `indicePaso`.
-export async function pedirRespuestaIA(
-  indicePaso: number,
-  respuestas: RespuestasPreconsulta,
-  contexto: Contexto
-): Promise<string[]> {
-  await esperar(ESPERA_SIMULADA_MS);
-
+export function respuestaDelAsistente(indicePaso: number, respuestas: RespuestasPreconsulta, contexto: Contexto) {
   const mensajes: string[] = [];
 
   // Aviso de seguridad, solo después de que el paciente marcó síntomas de alarma.

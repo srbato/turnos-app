@@ -97,6 +97,7 @@ export default function ElegirHorario() {
         )}
 
         <SelectorHorario
+          medico={medico.nombre}
           primerDia={vuelta}
           cantidadDias={DIAS_OFRECIDOS}
           atiende={atiende}

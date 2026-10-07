@@ -9,13 +9,13 @@ import { MenuSecretaria } from '@/components/menu-secretaria';
 import { apellidoDelMedico, NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { COLOR_CANCELADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { useAdelantos } from '@/contextos/AdelantosContext';
+import { Oferta, useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { usePersonal } from '@/contextos/PersonalContext';
-import { useTurnos } from '@/contextos/TurnosContext';
+import { Turno, useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
@@ -28,12 +28,20 @@ const DIAS_VISIBLES = 28; // 4 semanas hacia adelante
 // Los próximos días a partir de hoy.
 function diasDeLaSemana() {
   const hoy = new Date();
-  return Array.from({ length: DIAS_VISIBLES }, (_, i) =>
-    fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i))
-  );
+  const dias: string[] = [];
+  for (let i = 0; i < DIAS_VISIBLES; i++) {
+    dias.push(fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i)));
+  }
+  return dias;
 }
 
 // Inicio de Secretaría: los turnos del día en orden de horario, con su médico y su estado.
+
+// Cada fila de la agenda es un turno o un horario ofrecido a la lista de espera.
+type ItemAgenda =
+  | { tipo: 'turno'; hora: string; turno: Turno }
+  | { tipo: 'oferta'; hora: string; oferta: Oferta };
+
 export default function TurnosDelDia() {
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
@@ -58,10 +66,10 @@ export default function TurnosDelDia() {
     (oferta) => oferta.horario.fecha === diaElegido && (medicoFiltro === '' || oferta.horario.medico === medicoFiltro)
   );
   // Todo junto, en orden de horario.
-  const items = [
-    ...visibles.map((turno) => ({ tipo: 'turno' as const, hora: turno.hora, turno })),
-    ...ofrecidos.map((oferta) => ({ tipo: 'oferta' as const, hora: oferta.horario.hora, oferta })),
-  ].sort((a, b) => (a.hora < b.hora ? -1 : 1));
+  const items: ItemAgenda[] = [];
+  visibles.forEach((turno) => items.push({ tipo: 'turno', hora: turno.hora, turno: turno }));
+  ofrecidos.forEach((oferta) => items.push({ tipo: 'oferta', hora: oferta.horario.hora, oferta: oferta }));
+  items.sort((a, b) => (a.hora < b.hora ? -1 : 1));
 
   const sinConfirmar = turnosDelDia.filter((turno) => turno.estado === 'pendiente').length;
   const medicosDelDia = medicos.filter(

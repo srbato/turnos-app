@@ -1,4 +1,4 @@
-import type { BottomTabNavigationOptions } from 'expo-router/js-tabs';
+import { BottomTabNavigationOptions } from 'expo-router/js-tabs';
 
 import { COLOR_PACIENTE } from '@/constantes/colores';
 

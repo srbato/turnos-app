@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PACIENTE, COLOR_PENDIENTE, FONDO_PACIENTE } from '@/constantes/colores';
-import type { EstadoEstudio, Estudio } from '@/datos/estudios';
+import { EstadoEstudio, Estudio } from '@/datos/estudios';
 
 export const COLORES_ESTUDIO: Record<EstadoEstudio, string> = {
   pendiente: COLOR_PENDIENTE,

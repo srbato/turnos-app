@@ -1,9 +1,10 @@
-import type { MedicamentoPropio } from '@/contextos/MedicamentosContext';
-import type { PerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { MedicamentoPropio } from '@/contextos/MedicamentosContext';
+import { PerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { nombreCobertura } from '@/datos/catalogo';
-import { ID_PACIENTE_APP, type Paciente } from '@/datos/consultorio';
+import { ID_PACIENTE_APP, Paciente } from '@/datos/consultorio';
 import { detectarInteracciones } from '@/datos/interacciones';
-import type { Receta } from '@/datos/recetas';
+import { Receta } from '@/datos/recetas';
+import { palabras } from '@/utilidades/texto';
 
 // Un medicamento del paciente tal como lo ve el médico.
 export type MedicamentoParaMedico = {
@@ -21,7 +22,7 @@ export type MedicamentoParaMedico = {
 // muestra los datos que editó en su perfil.
 // No incluye nada clínico del paciente de la app (medicación, recetas, interacciones): eso es solo para el médico.
 export function pacientesConPerfil(perfil: PerfilPaciente, pacientesDelConsultorio: Paciente[]) {
-  const [primerNombre, ...resto] = perfil.nombre.trim().split(/\s+/);
+  const [primerNombre, ...resto] = palabras(perfil.nombre);
   const pacientes: Paciente[] = pacientesDelConsultorio.map((paciente) => {
     if (paciente.id !== ID_PACIENTE_APP) return paciente;
     const coberturas = perfil.coberturaIds.map(nombreCobertura);
@@ -55,7 +56,8 @@ export function datosParaMedico(
   recetas: Receta[]
 ) {
   const pacientes = pacientesConPerfil(perfil, pacientesDelConsultorio);
-  const paciente = pacientes.find((p) => p.id === ID_PACIENTE_APP) as Paciente;
+  // El paciente de la app siempre está en la lista (pacientesConPerfil lo agrega).
+  const paciente = pacientes.filter((p) => p.id === ID_PACIENTE_APP)[0];
 
   const recetasDelPaciente = recetas.filter((receta) => receta.idPaciente === ID_PACIENTE_APP);
   const nombres = [
@@ -63,7 +65,11 @@ export function datosParaMedico(
     ...medicamentosPropios.map((medicamento) => medicamento.nombre),
   ];
   const interacciones = detectarInteracciones(nombres);
-  const enRiesgo = interacciones.flatMap((interaccion) => interaccion.medicamentos);
+  // Todos los medicamentos que aparecen en alguna interacción.
+  const enRiesgo: string[] = [];
+  interacciones.forEach((interaccion) => {
+    interaccion.medicamentos.forEach((medicamento) => enRiesgo.push(medicamento));
+  });
 
   const medicamentos: MedicamentoParaMedico[] = [
     ...recetasDelPaciente.map((receta) => ({

@@ -1,6 +1,6 @@
-import { createContext, ReactNode, useContext, useMemo } from 'react';
+import { createContext, ReactNode, useContext } from 'react';
 
-import { CONSULTORIOS, ID_CONSULTORIO_ACTIVO, type Consultorio } from '@/datos/consultorio';
+import { CONSULTORIOS, ID_CONSULTORIO_ACTIVO, Consultorio } from '@/datos/consultorio';
 
 // El consultorio con el que se está trabajando. Es el "super objeto" que encapsula a los pacientes, médicos,
 // secretarias y turnos: los demás contextos le piden sus datos iniciales a él y nunca leen listas sueltas, así cada
@@ -12,22 +12,28 @@ type ConsultorioContextType = {
   consultorios: Consultorio[]; // todos los que administra la app
 };
 
-const ConsultorioContext = createContext<ConsultorioContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: ConsultorioContextType = {
+  consultorio: CONSULTORIOS[0],
+  consultorios: CONSULTORIOS,
+};
+
+const ConsultorioContext = createContext(VALOR_POR_DEFECTO);
 
 export function ConsultorioProvider({ children }: { children: ReactNode }) {
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    const consultorio = CONSULTORIOS.find((c) => c.id === ID_CONSULTORIO_ACTIVO) ?? CONSULTORIOS[0];
-    return { consultorio, consultorios: CONSULTORIOS };
-  }, []);
+  let consultorio = CONSULTORIOS[0];
+  const activo = CONSULTORIOS.find((c) => c.id === ID_CONSULTORIO_ACTIVO);
+  if (activo) {
+    consultorio = activo;
+  }
 
-  return <ConsultorioContext.Provider value={value}>{children}</ConsultorioContext.Provider>;
+  return (
+    <ConsultorioContext.Provider value={{ consultorio: consultorio, consultorios: CONSULTORIOS }}>
+      {children}
+    </ConsultorioContext.Provider>
+  );
 }
 
 export function useConsultorio() {
-  const contexto = useContext(ConsultorioContext);
-  if (contexto === undefined) {
-    throw new Error('useConsultorio tiene que usarse dentro de un ConsultorioProvider');
-  }
-  return contexto;
+  return useContext(ConsultorioContext);
 }

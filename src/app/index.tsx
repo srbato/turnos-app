@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   COLOR_MEDICO_GRIS,
@@ -83,7 +83,7 @@ export default function SeleccionRol (){
 
       <View style={styles.pie}>
         <Text style={styles.pieTexto}>¿Primera vez? </Text>
-        <Pressable onPress={() => router.push('/registro' as Href)}>
+        <Pressable onPress={() => router.push('/registro')}>
           <Text style={styles.pieLink}>Registrate como paciente</Text>
         </Pressable>
       </View>

@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MenuSecretaria } from '@/components/menu-secretaria';
@@ -16,13 +16,7 @@ import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
-import {
-  evaluarRiesgo,
-  PUNTOS_POR_ASISTENCIA,
-  PUNTOS_POR_CONFIRMACION,
-  PUNTOS_POR_FALTA,
-  textoPuntaje,
-} from '@/datos/ausentismo';
+import { colorNivelRiesgo, evaluarRiesgo, nombreNivelRiesgo, PUNTOS_POR_ASISTENCIA, PUNTOS_POR_CONFIRMACION, PUNTOS_POR_FALTA, textoPuntaje } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
@@ -42,6 +36,18 @@ function medicoCorto(nombre: string) {
 
 // Alertas: todos los turnos que todavía no confirmó el paciente. Un turno nuevo nace "pendiente", así que acá
 // están todos hasta que se confirmen. La idea: avisarles para que confirmen y, si no responden, liberar el horario.
+
+// Texto que se suma al panel de historial cuando hay turnos cancelados por el sistema o por riesgo.
+function avisoCancelados(cantidad: number) {
+  if (cantidad === 0) {
+    return '';
+  }
+  if (cantidad === 1) {
+    return ' Hay 1 turno próximo cancelado por el sistema o por riesgo: avisales a los pacientes.';
+  }
+  return ` Hay ${cantidad} turnos próximos cancelados por el sistema o por riesgo: avisales a los pacientes.`;
+}
+
 export default function AlertasSecretaria() {
   const { turnos, cambiarEstadoTurno, cancelarConMotivo, enviarAviso } = useTurnos();
   const { consultorio } = useConsultorio();
@@ -117,7 +123,7 @@ export default function AlertasSecretaria() {
 
         {sinConfirmar.map(({ turno, paciente, riesgo }) => {
           const alto = riesgo?.nivel === 'alto';
-          const color = alto ? COLOR_CANCELADO : riesgo?.nivel === 'en-riesgo' ? COLOR_PENDIENTE : COLOR_CONFIRMADO;
+          const color = colorNivelRiesgo(riesgo?.nivel);
           const avisos = turno.avisos?.length ?? 0;
           // Solo a un paciente de riesgo alto que ya recibió los avisos se le puede reprogramar o cancelar el turno.
           const puedeActuar = alto && avisos >= avisosAntesDeActuar;
@@ -127,7 +133,7 @@ export default function AlertasSecretaria() {
                 <Text style={styles.nombre}>{paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'}</Text>
                 {riesgo && riesgo.faltas > 0 && (
                   <Text style={[styles.nivel, { color }]}>
-                    {textoPuntaje(riesgo.puntaje)} pts · riesgo {alto ? 'alto' : riesgo.nivel === 'en-riesgo' ? 'medio' : 'bajo'}
+                    {textoPuntaje(riesgo.puntaje)} pts · riesgo {nombreNivelRiesgo(riesgo.nivel)}
                   </Text>
                 )}
               </View>
@@ -208,11 +214,9 @@ export default function AlertasSecretaria() {
           <Text style={styles.panelTitulo}>Historial de turnos</Text>
           <Text style={styles.panelAyuda}>
             Los turnos que ya pasaron y los cancelados, con el motivo.
-            {canceladosPorSistema.length > 0
-              ? ` Hay ${canceladosPorSistema.length} turno${canceladosPorSistema.length === 1 ? '' : 's'} próximo${canceladosPorSistema.length === 1 ? '' : 's'} cancelado${canceladosPorSistema.length === 1 ? '' : 's'} por el sistema o por riesgo: avisales a los pacientes.`
-              : ''}
+            {avisoCancelados(canceladosPorSistema.length)}
           </Text>
-          <Pressable style={styles.botonHistorial} onPress={() => router.push('/secretaria/historial' as Href)}>
+          <Pressable style={styles.botonHistorial} onPress={() => router.push('/secretaria/historial')}>
             <Text style={styles.botonHistorialTexto}>Ver historial de turnos</Text>
           </Pressable>
         </View>

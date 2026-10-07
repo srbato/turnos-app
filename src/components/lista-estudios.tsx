@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DetalleEstudioModal, COLORES_ESTUDIO, ETIQUETAS_ESTUDIO } from '@/components/modal-estudio';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
-import type { Estudio } from '@/datos/estudios';
+import { Estudio } from '@/datos/estudios';
 
 type Props = {
   estudios: Estudio[];

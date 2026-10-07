@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 export type PerfilPaciente = {
   nombre: string;
@@ -14,8 +14,10 @@ export type PerfilPaciente = {
   alergias: string; // texto libre; lo ve el médico
 };
 
+// Lo que se comparte: los datos del perfil y las funciones para cambiarlos.
 type PerfilPacienteContextType = PerfilPaciente & {
-  actualizarPerfil: (cambios: Partial<PerfilPaciente>) => void;
+  actualizarPerfil: (perfilNuevo: PerfilPaciente) => void;
+  cambiarContrasena: (nueva: string) => void;
 };
 
 const CLAVE_STORAGE = 'perfil-paciente';
@@ -33,10 +35,17 @@ const PERFIL_INICIAL: PerfilPaciente = {
   alergias: 'penicilina',
 };
 
-const PerfilPacienteContext = createContext<PerfilPacienteContextType | undefined>(undefined);
+// Valor que se usa solo si una pantalla queda fuera del Provider.
+const VALOR_POR_DEFECTO: PerfilPacienteContextType = {
+  ...PERFIL_INICIAL,
+  actualizarPerfil: () => {},
+  cambiarContrasena: () => {},
+};
+
+const PerfilPacienteContext = createContext(VALOR_POR_DEFECTO);
 
 export function PerfilPacienteProvider({ children }: { children: ReactNode }) {
-  const [perfil, setPerfil] = useState<PerfilPaciente>(PERFIL_INICIAL);
+  const [perfil, setPerfil] = useState(PERFIL_INICIAL);
 
   // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
   useEffect(() => {
@@ -53,27 +62,27 @@ export function PerfilPacienteProvider({ children }: { children: ReactNode }) {
     cargarPerfil();
   }, []);
 
-  // Sin useMemo, este objeto sería nuevo en cada render y re-renderizaría a todos los consumidores.
-  const value = useMemo(() => {
-    async function actualizarPerfil(cambios: Partial<PerfilPaciente>) {
-      const nuevo = { ...perfil, ...cambios };
-      setPerfil(nuevo);
-      try {
-        await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevo));
-      } catch {
-        // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
-      }
+  // Reemplaza el perfil por el nuevo y lo guarda en el dispositivo.
+  async function actualizarPerfil(perfilNuevo: PerfilPaciente) {
+    setPerfil(perfilNuevo);
+    try {
+      await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(perfilNuevo));
+    } catch {
+      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
     }
-    return { ...perfil, actualizarPerfil };
-  }, [perfil]);
+  }
 
-  return <PerfilPacienteContext.Provider value={value}>{children}</PerfilPacienteContext.Provider>;
+  function cambiarContrasena(nueva: string) {
+    actualizarPerfil({ ...perfil, contrasena: nueva });
+  }
+
+  return (
+    <PerfilPacienteContext.Provider value={{ ...perfil, actualizarPerfil, cambiarContrasena }}>
+      {children}
+    </PerfilPacienteContext.Provider>
+  );
 }
 
 export function usePerfilPaciente() {
-  const contexto = useContext(PerfilPacienteContext);
-  if (contexto === undefined) {
-    throw new Error('usePerfilPaciente tiene que usarse dentro de un PerfilPacienteProvider');
-  }
-  return contexto;
+  return useContext(PerfilPacienteContext);
 }

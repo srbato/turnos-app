@@ -13,6 +13,7 @@ import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { COBERTURAS } from '@/datos/catalogo';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
 import { confirmarIdentidad } from '@/utilidades/biometria';
+import { palabras } from '@/utilidades/texto';
 
 const COLOR_PERFIL = '#C9A24C';
 
@@ -102,7 +103,7 @@ export default function EditarPerfil() {
 
   function guardar() {
     // Se pide nombre y apellido (al menos dos palabras), un email válido y alguna obra social.
-    if (nombre.trim().split(/\s+/).length < 2) {
+    if (palabras(nombre).length < 2) {
       setMensaje({ texto: textos.errorNombre, esError: true });
       return;
     }
@@ -120,6 +121,9 @@ export default function EditarPerfil() {
       numerosDeMarcadas[id] = (numerosAfiliado[id] ?? '').trim();
     });
     perfil.actualizarPerfil({
+      // El DNI y la contraseña no se editan acá: se mantienen los que ya tenía.
+      dni: perfil.dni,
+      contrasena: perfil.contrasena,
       nombre: nombre.trim(),
       email: email.trim(),
       telefono: telefono.trim(),
@@ -161,7 +165,7 @@ export default function EditarPerfil() {
       setErrorContrasena(textos.errorBiometria);
       return;
     }
-    perfil.actualizarPerfil({ contrasena: nueva });
+    perfil.cambiarContrasena(nueva);
     cerrarContrasena();
     setMensaje({ texto: textos.contrasenaCambiada, esError: false });
   }

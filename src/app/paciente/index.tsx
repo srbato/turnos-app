@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -17,8 +17,8 @@ import {
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { listaDeEspera, puestoEnLista } from '@/datos/adelantos';
-import { ESTUDIOS, type Estudio } from '@/datos/estudios';
-import { useTurnos, type Turno } from '@/contextos/TurnosContext';
+import { ESTUDIOS, Estudio } from '@/datos/estudios';
+import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 
@@ -51,6 +51,16 @@ export default function HubPaciente() {
     .sort(
       (a, b) => fechaHoraComoDate(a.fecha, a.hora).getTime() - fechaHoraComoDate(b.fecha, b.hora).getTime()
     )[0];
+
+  // Texto de la tarjeta de preconsulta.
+  let textoPreconsulta = 'Necesitás un turno próximo';
+  if (proximoTurno) {
+    if (buscarPorTurno(proximoTurno.id)) {
+      textoPreconsulta = 'Enviada al médico ✓';
+    } else {
+      textoPreconsulta = 'Opcional · contale a tu médico';
+    }
+  }
 
   return (
     <View style={styles.pantalla}>
@@ -134,7 +144,7 @@ export default function HubPaciente() {
           </View>
         )}
 
-        <Pressable style={styles.botonMisTurnos} onPress={() => router.push('/paciente/mis-turnos' as Href)}>
+        <Pressable style={styles.botonMisTurnos} onPress={() => router.push('/paciente/mis-turnos')}>
           <Text style={styles.botonMisTurnosTexto}>Mis turnos</Text>
         </Pressable>
 
@@ -142,7 +152,7 @@ export default function HubPaciente() {
           <View style={styles.tarjeta}>
             <View style={styles.tarjetaEncabezado}>
               <Text style={styles.tarjetaTitulo}>Mis estudios</Text>
-              <Pressable onPress={() => router.push('/paciente/estudios' as Href)}>
+              <Pressable onPress={() => router.push('/paciente/estudios')}>
                 <Text style={styles.verTodos}>Ver todos</Text>
               </Pressable>
             </View>
@@ -194,13 +204,7 @@ export default function HubPaciente() {
               router.push({ pathname: '/paciente/preconsulta', params: { turnoId: proximoTurno.id } })
             }>
             <Text style={styles.accesoPreconsultaTitulo}>Preconsulta</Text>
-            <Text style={styles.accesoPreconsultaSubtitulo}>
-              {!proximoTurno
-                ? 'Necesitás un turno próximo'
-                : buscarPorTurno(proximoTurno.id)
-                  ? 'Enviada al médico ✓'
-                  : 'Opcional · contale a tu médico'}
-            </Text>
+            <Text style={styles.accesoPreconsultaSubtitulo}>{textoPreconsulta}</Text>
           </Pressable>
           <Pressable
             style={styles.accesoMedicacion}

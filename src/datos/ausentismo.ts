@@ -1,5 +1,6 @@
-import type { Turno } from '@/contextos/TurnosContext';
-import type { Paciente } from '@/datos/consultorio';
+import { Turno } from '@/contextos/TurnosContext';
+import { Paciente } from '@/datos/consultorio';
+import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes/colores';
 
 // Riesgo de ausentismo por REGLAS (no hay datos para entrenar un modelo). Las faltas suman y la buena conducta resta:
 //   - cada falta (no se presentó):            +1 punto
@@ -21,9 +22,11 @@ export type ReglasRiesgo = {
 // Valores con los que arranca cada consultorio.
 export const REGLAS_RIESGO_POR_DEFECTO: ReglasRiesgo = { medio: 1, alto: 2, avisos: 3 };
 
+export type NivelRiesgo = 'bajo' | 'en-riesgo' | 'alto';
+
 export type Riesgo = {
   puntaje: number; // ya con las restas, redondeado a un decimal y nunca menor a 0
-  nivel: 'bajo' | 'en-riesgo' | 'alto';
+  nivel: NivelRiesgo;
   faltas: number;
   asistencias: number;
   confirmaciones: number;
@@ -61,11 +64,38 @@ export function evaluarRiesgo(
   const bruto =
     faltas * PUNTOS_POR_FALTA - asistencias * PUNTOS_POR_ASISTENCIA - confirmaciones * PUNTOS_POR_CONFIRMACION;
   const puntaje = Math.round(Math.max(0, bruto) * 10) / 10;
-  const nivel = puntaje >= reglas.alto ? 'alto' : puntaje >= reglas.medio ? 'en-riesgo' : 'bajo';
+  let nivel: NivelRiesgo = 'bajo';
+  if (puntaje >= reglas.alto) {
+    nivel = 'alto';
+  } else if (puntaje >= reglas.medio) {
+    nivel = 'en-riesgo';
+  }
   return { puntaje, nivel, faltas, asistencias, confirmaciones };
 }
 
 // El puntaje como texto con coma ("1,8"), sin decimal si es entero ("2").
 export function textoPuntaje(puntaje: number) {
   return Number.isInteger(puntaje) ? String(puntaje) : String(puntaje).replace('.', ',');
+}
+
+// Nombre del nivel para mostrar en pantalla: "alto", "medio" o "bajo".
+export function nombreNivelRiesgo(nivel: NivelRiesgo | undefined) {
+  if (nivel === 'alto') {
+    return 'alto';
+  }
+  if (nivel === 'en-riesgo') {
+    return 'medio';
+  }
+  return 'bajo';
+}
+
+// Color del nivel: rojo (alto), ámbar (medio) o verde (bajo).
+export function colorNivelRiesgo(nivel: NivelRiesgo | undefined) {
+  if (nivel === 'alto') {
+    return COLOR_CANCELADO;
+  }
+  if (nivel === 'en-riesgo') {
+    return COLOR_PENDIENTE;
+  }
+  return COLOR_CONFIRMADO;
 }

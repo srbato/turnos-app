@@ -1,5 +1,5 @@
-import type { Oferta } from '@/contextos/AdelantosContext';
-import type { Turno } from '@/contextos/TurnosContext';
+import { Oferta } from '@/contextos/AdelantosContext';
+import { Turno } from '@/contextos/TurnosContext';
 import { HOY } from '@/datos/consultorio';
 
 // Lista de espera = adelantos. Todos los pacientes sacan un turno; al sacarlo pueden pedir que se les ofrezca un
@@ -130,12 +130,12 @@ export function horasReservadas(ofertas: Oferta[], turnos: Turno[], medico: stri
 // salvo los que ya respondieron por este horario y los que ya tienen otra oferta esperando respuesta.
 export function candidatosDisponibles(horario: Turno, turnos: Turno[], ofertas: Oferta[]) {
   const clave = claveHorario(horario);
-  const ocupados = new Set(ofertasVigentes(ofertas, turnos).map((o) => o.idTurno));
+  const ocupados = ofertasVigentes(ofertas, turnos).map((o) => o.idTurno);
   return listaDeEspera(turnos).filter(
     (turno) =>
       turno.medico === horario.medico &&
       momento(turno) > momento(horario) &&
-      !ocupados.has(turno.id) &&
+      !ocupados.includes(turno.id) &&
       !ofertas.some((o) => o.idTurno === turno.id && claveHorario(o.horario) === clave && o.estado !== 'enviada')
   );
 }

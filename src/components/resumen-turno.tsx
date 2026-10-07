@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_MEDICO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { coberturaQueAtiende, type Especialidad, type Medico } from '@/datos/catalogo';
+import { coberturaQueAtiende, Especialidad, Medico } from '@/datos/catalogo';
 
 // onCambiar es opcional: en Reprogramar la especialidad y el médico están fijos y no se muestra el link.
 type PropsEspecialidad = {

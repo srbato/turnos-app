@@ -1,14 +1,13 @@
-import type { Href } from 'expo-router';
+import { Href } from 'expo-router';
 
-import { MenuInferior, type SeccionMenu } from '@/components/menu-inferior';
+import { MenuInferior, SeccionMenu } from '@/components/menu-inferior';
 import { COLOR_PACIENTE } from '@/constantes/colores';
 
 type Seccion = 'inicio' | 'turnos' | 'salud' | 'perfil';
 
-// Se usa "as Href" en Turnos porque los tipos generados de expo-router no reconocen esa ruta (Tabs).
 const SECCIONES: SeccionMenu[] = [
   { id: 'inicio', icono: '☖', iconoActivo: '☗', texto: 'Inicio', ruta: '/paciente' },
-  { id: 'turnos', icono: '☐', iconoActivo: '☑', texto: 'Turnos', ruta: '/paciente/mis-turnos' as Href },
+  { id: 'turnos', icono: '☐', iconoActivo: '☑', texto: 'Turnos', ruta: '/paciente/mis-turnos' },
   { id: 'salud', icono: '℞', iconoActivo: '⚕', texto: 'Medicamentos', ruta: '/paciente/medicamentos' },
   { id: 'perfil', icono: '◐', iconoActivo: '⚙', texto: 'Perfil', ruta: '/perfil?rol=paciente' },
 ];

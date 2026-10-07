@@ -15,7 +15,7 @@ import { SesionProvider } from '@/contextos/SesionContext';
 import { TurnosProvider } from '@/contextos/TurnosContext';
 
 // Cambio de sección del menú: un fundido corto (ms), para que no se sienta lento.
-const OPCIONES_MENU = { animation: 'fade', animationDuration: 120 } as const;
+const OPCIONES_MENU: { animation: 'fade'; animationDuration: number } = { animation: 'fade', animationDuration: 120 };
 
 // El consultorio va primero: todos los contextos de abajo toman sus datos iniciales de él.
 export default function RootLayout() {

@@ -12,6 +12,7 @@ import { DNI_SECRETARIA, usePerfilSecretaria } from '@/contextos/PerfilSecretari
 import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
 import { confirmarIdentidad } from '@/utilidades/biometria';
+import { palabras } from '@/utilidades/texto';
 
 const COLOR_PERFIL = '#C9A24C';
 
@@ -96,7 +97,7 @@ export default function EditarPerfilSecretaria() {
 
   function guardar() {
     // Se pide nombre y apellido (al menos dos palabras) y un email válido.
-    if (nombre.trim().split(/\s+/).length < 2) {
+    if (palabras(nombre).length < 2) {
       setMensaje({ texto: textos.errorNombre, esError: true });
       return;
     }

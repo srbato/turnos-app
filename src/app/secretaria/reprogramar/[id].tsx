@@ -91,6 +91,7 @@ export default function ReprogramarSecretaria() {
         </View>
 
         <SelectorHorario
+          medico={turno.medico}
           fecha={fechaSeleccionada}
           hora={hora}
           ocupadas={[

@@ -1,7 +1,8 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { EditorHorarios } from '@/components/editor-horarios';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@/constantes/colores';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { enLicencia, estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
+import { FranjaHoraria } from '@/datos/atencion';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { fechaDentroDe, HOY } from '@/datos/consultorio';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
@@ -38,7 +40,6 @@ export default function FichaMedico() {
   const [especialidad, setEspecialidad] = useState(medico?.especialidad ?? '');
   const [matricula, setMatricula] = useState(medico?.matricula ?? '');
   const [sala, setSala] = useState(medico?.sala ?? '');
-  const [dias, setDias] = useState(medico?.dias ?? '');
   const [mensaje, setMensaje] = useState<{ texto: string; esError: boolean } | null>(null);
   const [confirmandoBaja, setConfirmandoBaja] = useState(false);
   // Eligiendo la fecha de vuelta de una licencia.
@@ -63,24 +64,36 @@ export default function FichaMedico() {
       turno.fecha >= HOY &&
       (turno.estado === 'pendiente' || turno.estado === 'confirmado')
   ).length;
-  const textoProximos =
-    proximos === 0 ? 'No tiene turnos próximos.' : `Tiene ${proximos} turno${proximos === 1 ? '' : 's'} próximo${proximos === 1 ? '' : 's'}.`;
+  let textoProximos = `Tiene ${proximos} turnos próximos.`;
+  if (proximos === 0) {
+    textoProximos = 'No tiene turnos próximos.';
+  } else if (proximos === 1) {
+    textoProximos = 'Tiene 1 turno próximo.';
+  }
 
   // Una licencia que ya terminó cuenta como activo.
   const efectivo = estadoEfectivo(medico);
   const deLicencia = efectivo === 'licencia';
-  const colorEstado = efectivo === 'activo' ? COLOR_CONFIRMADO : efectivo === 'licencia' ? COLOR_PENDIENTE : COLOR_BAJA;
-  const etiquetaEstado =
-    efectivo === 'activo'
-      ? 'Activo'
-      : efectivo === 'licencia'
-        ? `Licencia${medico.licenciaHasta ? ' · vuelve el ' + formatearFecha(medico.licenciaHasta).slice(0, 5) : ''}`
-        : 'Baja';
+  let colorEstado = COLOR_BAJA;
+  let etiquetaEstado = 'Baja';
+  if (efectivo === 'activo') {
+    colorEstado = COLOR_CONFIRMADO;
+    etiquetaEstado = 'Activo';
+  } else if (efectivo === 'licencia') {
+    colorEstado = COLOR_PENDIENTE;
+    etiquetaEstado = 'Licencia';
+    if (medico.licenciaHasta) {
+      etiquetaEstado = etiquetaEstado + ' · vuelve el ' + formatearFecha(medico.licenciaHasta).slice(0, 5);
+    }
+  }
   // Los próximos 60 días, para elegir cuándo vuelve.
-  const diasParaVolver = Array.from({ length: 60 }, (_, i) => fechaDentroDe(i + 1));
+  const diasParaVolver: string[] = [];
+  for (let i = 1; i <= 60; i++) {
+    diasParaVolver.push(fechaDentroDe(i));
+  }
 
   function guardar() {
-    if (especialidad.trim() === '' || matricula.trim() === '' || sala.trim() === '' || dias.trim() === '') {
+    if (especialidad.trim() === '' || matricula.trim() === '' || sala.trim() === '') {
       setMensaje({ texto: 'Completá todos los campos.', esError: true });
       return;
     }
@@ -92,10 +105,14 @@ export default function FichaMedico() {
       especialidad: especialidad.trim(),
       matricula: matricula.trim(),
       sala: sala.trim(),
-      dias: dias.trim(),
     });
     setMatriculaActual(matricula.trim());
     setMensaje({ texto: 'Cambios guardados ✓', esError: false });
+  }
+
+  // Los horarios se guardan apenas se agrega o se quita uno.
+  function cambiarHorarios(franjas: FranjaHoraria[]) {
+    editarMedico(matriculaActual, { franjas: franjas });
   }
 
   function cambiarEstado(estado: 'activo' | 'licencia') {
@@ -238,10 +255,19 @@ export default function FichaMedico() {
           <Pressable
             style={styles.botonCalendario}
             onPress={() =>
-              router.push(`/secretaria/calendario-medico?matricula=${encodeURIComponent(medico.matricula)}` as Href)
+              router.push(`/secretaria/calendario-medico?matricula=${encodeURIComponent(medico.matricula)}`)
             }>
             <Text style={styles.botonSecundarioTexto}>▦  Ver todo el calendario de {medicoCorto(medico.nombre)}</Text>
           </Pressable>
+        </View>
+
+        <Text style={styles.seccion}>HORARIOS DE ATENCIÓN</Text>
+        <View style={styles.tarjeta}>
+          <EditorHorarios franjas={medico.franjas} onCambiar={cambiarHorarios} />
+          <Text style={styles.ayuda}>
+            Los cambios se guardan solos. Si quitás un horario, los turnos que caían ahí se cancelan y quedan en Alertas
+            para que avises a los pacientes.
+          </Text>
         </View>
 
         <Text style={styles.seccion}>DATOS DEL MÉDICO</Text>
@@ -261,15 +287,6 @@ export default function FichaMedico() {
           <Text style={styles.etiqueta}>Sala</Text>
           <TextInput style={styles.campo} value={sala} onChangeText={setSala} maxLength={30} />
 
-          <Text style={styles.etiqueta}>Días y horarios</Text>
-          <TextInput
-            style={styles.campo}
-            value={dias}
-            onChangeText={setDias}
-            placeholder="lun y mié · 9 a 13"
-            placeholderTextColor="#8FB9B5"
-            maxLength={40}
-          />
 
           {mensaje && (
             <Text style={[styles.mensaje, { color: mensaje.esError ? COLOR_CANCELADO : COLOR_CONFIRMADO }]}>
