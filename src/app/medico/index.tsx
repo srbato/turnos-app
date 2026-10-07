@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { DetalleConsulta } from '@/components/detalle-consulta';
 import { MenuMedico } from '@/components/menu-medico';
@@ -624,7 +625,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#FFFFFF',
     marginTop: 2,
   },

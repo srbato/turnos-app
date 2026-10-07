@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
     marginTop: 4,
   },

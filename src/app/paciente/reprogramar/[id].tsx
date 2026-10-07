@@ -11,6 +11,7 @@ import {
   SelectorHorario,
 } from '@/components/selector-horario';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { aceptaTurnos, atiendeEn, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   },
   volverTexto: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
     marginBottom: 16,
   },

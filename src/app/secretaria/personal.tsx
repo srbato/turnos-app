@@ -6,6 +6,7 @@ import { EditorHorarios } from '@/components/editor-horarios';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_PENDIENTE, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
 import { FranjaHoraria, textoDeDias } from '@/datos/atencion';
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: COLOR_SECRETARIA,
   },
   subtitulo: {

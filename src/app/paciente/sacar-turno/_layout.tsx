@@ -2,6 +2,7 @@ import { router, Stack, useGlobalSearchParams, usePathname } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { SacarTurnoProvider } from '@/contextos/SacarTurnoContext';
 import { aceptaTurnos, usePersonal } from '@/contextos/PersonalContext';
 import { especialidadesDe, medicosDelCatalogo } from '@/datos/catalogo';
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   },
   volverTexto: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
     marginBottom: 16,
   },

@@ -12,6 +12,7 @@ import {
   COLOR_SECRETARIA,
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { enLicencia, estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
 import { FranjaHoraria } from '@/datos/atencion';
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
   },
   nombre: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
   },
   detalle: {

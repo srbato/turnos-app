@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MenuMedico } from '@/components/menu-medico';
 import { NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { TablaPacientes } from '@/components/tabla-pacientes';
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#FFFFFF',
     marginTop: 2,
     marginBottom: 14,

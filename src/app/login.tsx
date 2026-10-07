@@ -9,6 +9,7 @@ import {
   FONDO_PACIENTE,
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
   titulo: {
     color: 'black',
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: FUENTE_TITULOS,
     marginTop: 25,
   },
   subtitulo: {

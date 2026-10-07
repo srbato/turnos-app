@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MenuMedico } from '@/components/menu-medico';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#FFFFFF',
   },
   botonNueva: {
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
   },
   modalTitulo: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
     marginBottom: 16,
   },

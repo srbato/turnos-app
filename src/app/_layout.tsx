@@ -1,4 +1,9 @@
+// Solo se importa el grosor que se usa (Bold): así no se suman a la app los otros 17 archivos de la fuente.
+import { Montserrat_700Bold } from '@expo-google-fonts/montserrat/700Bold';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 
 import { AdelantosProvider } from '@/contextos/AdelantosContext';
 import { ConfiguracionProvider } from '@/contextos/ConfiguracionContext';
@@ -17,8 +22,24 @@ import { TurnosProvider } from '@/contextos/TurnosContext';
 // Cambio de sección del menú: un fundido corto (ms), para que no se sienta lento.
 const OPCIONES_MENU: { animation: 'fade'; animationDuration: number } = { animation: 'fade', animationDuration: 120 };
 
+// El splash (el logo) queda en pantalla hasta que se cargue la fuente de los títulos.
+SplashScreen.preventAutoHideAsync();
+
 // El consultorio va primero: todos los contextos de abajo toman sus datos iniciales de él.
 export default function RootLayout() {
+  const [fuenteCargada, errorFuente] = useFonts({ Montserrat_700Bold });
+
+  // Cuando termina de cargar (o si falla, y los títulos usan la fuente del sistema) se saca el splash.
+  useEffect(() => {
+    if (fuenteCargada || errorFuente) {
+      SplashScreen.hideAsync();
+    }
+  }, [fuenteCargada, errorFuente]);
+
+  if (!fuenteCargada && !errorFuente) {
+    return null;
+  }
+
   return (
     <ConsultorioProvider>
       <SesionProvider>

@@ -6,6 +6,7 @@ import { MenuSecretaria } from '@/components/menu-secretaria';
 import { NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { TablaPacientes } from '@/components/tabla-pacientes';
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#FFFFFF',
     marginTop: 2,
   },

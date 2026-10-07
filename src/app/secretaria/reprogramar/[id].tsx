@@ -10,6 +10,7 @@ import {
   SelectorHorario,
 } from '@/components/selector-horario';
 import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   },
   volver: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
     marginBottom: 16,
   },

@@ -6,6 +6,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { BarraPerfil } from '@/components/barra-perfil';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
 import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     marginBottom: 20,
   },
   bloqueFoto: {

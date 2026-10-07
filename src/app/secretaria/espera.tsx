@@ -11,6 +11,7 @@ import {
   COLOR_SECRETARIA,
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { EstadoOferta, useAdelantos, Oferta } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   },
   titulo: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: COLOR_SECRETARIA,
   },
   subtitulo: {

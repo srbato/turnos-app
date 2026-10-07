@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { DetalleConsulta } from '@/components/detalle-consulta';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -293,7 +294,7 @@ const styles = StyleSheet.create({
   },
   nombre: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#FFFFFF',
   },
   email: {

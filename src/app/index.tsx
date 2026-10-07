@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   COLOR_MEDICO_GRIS,
   COLOR_PACIENTE,
@@ -8,6 +8,7 @@ import {
   FONDO_PACIENTE,
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 
 type PropsOpcionRol = {
   letra: string;
@@ -47,7 +48,7 @@ function OpcionRol(props: PropsOpcionRol) {
 export default function SeleccionRol (){
   return (
     <View style={styles.container}>
-      <View style={styles.logo}><Text style={styles.logoTexto}>C</Text></View>
+      <Image source={require('@/assets/images/imagotipo.png')} style={styles.logo} resizeMode="contain" />
 
       <Text style={styles.titulo}>¿Cómo querés ingresar?</Text>
       <Text style={styles.subTitulo}>Elegí tu perfil para continuar.</Text>
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   titulo: {
     color: 'black',
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: FUENTE_TITULOS,
     marginTop: 22,
   },
   subTitulo: {
@@ -110,18 +111,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 8,
   },
+  // El imagotipo mide 888 x 202: con este alto y ancho se ve entero, sin deformarse.
   logo: {
-    backgroundColor: 'black',
-    width: 46,
-    height: 46,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 14,
-  },
-  logoTexto: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    width: 220,
+    height: 50,
   },
   lista: {
     marginTop: 26,

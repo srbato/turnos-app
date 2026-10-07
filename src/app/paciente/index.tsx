@@ -14,6 +14,7 @@ import {
   COLOR_PENDIENTE,
   FONDO_PACIENTE,
 } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { listaDeEspera, puestoEnLista } from '@/datos/adelantos';
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
   },
   nombre: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: FUENTE_TITULOS,
     color: '#1A1A1A',
   },
   tarjetaProximo: {

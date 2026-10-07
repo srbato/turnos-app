@@ -7,6 +7,7 @@ import { DetalleTurnoSecretaria } from '@/components/detalle-turno-secretaria';
 import { MenuSecretaria } from '@/components/menu-secretaria';
 import { apellidoDelMedico, NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { COLOR_CANCELADO, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useAdelantos } from '@/contextos/AdelantosContext';
@@ -299,9 +300,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 6,
   },
+  // 22 y no 24 como los otros títulos: comparte la fila con el botón de médicos y en celulares angostos se pisaban.
   titulo: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: FUENTE_TITULOS,
     color: COLOR_SECRETARIA,
   },
   chip: {
