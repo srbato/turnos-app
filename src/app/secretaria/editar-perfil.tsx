@@ -236,7 +236,7 @@ export default function EditarPerfilSecretaria() {
           <View style={[styles.campo, styles.campoBloqueado, { borderColor: tema.borde }]}>
             <Text style={[styles.dniValor, { color: tema.textoSecundario }]}>{DNI_SECRETARIA}</Text>
           </View>
-          <Text style={[styles.nota, { color: tema.textoTenue }]}>{textos.dniNota}</Text>
+          <Text style={[styles.nota, { color: tema.textoTenue }]}>{textos.dniNotaStaff}</Text>
         </View>
 
         {mensaje && (

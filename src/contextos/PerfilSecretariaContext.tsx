@@ -3,7 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 
-// El DNI no se guarda ni se edita: es único y, con backend, se validaría contra el RENAPER.
+// El DNI no se guarda ni se edita desde la app.
 export const DNI_SECRETARIA = '28.774.310';
 
 export type PerfilSecretaria = {

@@ -21,7 +21,8 @@ type TextosEditar = {
   alergiasEjemplo: string;
   numeroAfiliado: string;
   dni: string;
-  dniNota: string;
+  dniNota: string; // en el editor del paciente
+  dniNotaStaff: string; // en el editor de la secretaria
   matricula: string;
   especialidad: string;
   datosFijosNota: string;
@@ -67,7 +68,8 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     alergiasEjemplo: 'Ej: penicilina (escribí "ninguna" si no tenés)',
     numeroAfiliado: 'N° de afiliado',
     dni: 'DNI',
-    dniNota: 'Verificado con RENAPER. No se puede modificar.',
+    dniNota: 'Validado por la secretaría del consultorio. Para modificarlo, pedilo en recepción.',
+    dniNotaStaff: 'Tu DNI no se puede modificar desde la app.',
     matricula: 'Matrícula',
     especialidad: 'Especialidad',
     datosFijosNota: 'Estos datos los modifica Secretaría, porque figuran en los turnos y en tu ingreso.',
@@ -111,7 +113,8 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     alergiasEjemplo: 'E.g. penicillin (write "none" if you have none)',
     numeroAfiliado: 'Member number',
     dni: 'ID number',
-    dniNota: 'Verified with RENAPER. It cannot be changed.',
+    dniNota: "Validated by the clinic's front desk. To change it, ask at reception.",
+    dniNotaStaff: 'Your ID number cannot be changed from the app.',
     matricula: 'License number',
     especialidad: 'Specialty',
     datosFijosNota: 'The front desk changes these details, because they appear on appointments and in your sign-in.',

@@ -3,7 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 
 export type PerfilPaciente = {
   nombre: string;
-  dni: string; // se carga al registrarse y después no se edita: con backend se validaría contra el RENAPER
+  dni: string; // se carga al registrarse y después no se edita: lo carga y lo corrige la secretaría del consultorio
   contrasena: string; // de prueba: todavía no hay backend que la guarde de forma segura
   email: string;
   telefono: string;
