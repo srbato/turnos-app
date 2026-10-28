@@ -3,7 +3,8 @@ import { Turno } from '@/contextos/TurnosContext';
 import { HOY } from '@/datos/consultorio';
 
 // Lista de espera = adelantos. Todos los pacientes sacan un turno; al sacarlo pueden pedir que se les ofrezca un
-// horario antes si se libera uno (el turno queda con "adelantoDesde"). Reglas:
+// horario antes si se libera uno (el turno queda con "adelantoDesde"). Las ofertas las crea la API con estas reglas;
+// acá quedan las funciones que usan las pantallas para mostrar la lista y los horarios reservados. Reglas:
 //   - Solo se ofrecen horarios libres a 3 días o más de hoy (así el paciente tiene tiempo de responder).
 //   - Se ofrece a quien ya tiene un turno más tarde con el mismo médico y hace más tiempo que espera.
 //   - Cada paciente tiene como máximo UNA oferta pendiente, y cada horario se ofrece a UN solo paciente a la vez.
@@ -35,24 +36,10 @@ function horarioOcupado(horario: Turno, turnos: Turno[]) {
   );
 }
 
-// Turnos cancelados de hoy en adelante cuyo horario nadie volvió a ocupar. Los que el sistema canceló porque el médico
-// no atendía ese día no cuentan: ese horario no existe, así que no se le ofrece a nadie.
-export function turnosLiberados(turnos: Turno[]) {
-  return turnos
-    .filter(
-      (turno) =>
-        turno.estado === 'cancelado' &&
-        turno.motivoCancelacion === undefined &&
-        turno.fecha >= HOY &&
-        !horarioOcupado(turno, turnos)
-    )
-    .sort((a, b) => (momento(a) < momento(b) ? -1 : 1));
-}
-
 // Un horario libre de la agenda de un médico, con forma de turno cancelado (así toda la lógica de ofertas lo trata igual
 // que un turno liberado). No tiene paciente.
 export function crearHorarioLibre(
-  medico: { nombre: string; especialidad: string; sala: string },
+  medico: { id: string; nombre: string; especialidad: string; sala: string },
   fecha: string,
   hora: string,
   sede: string // nombre del consultorio al que pertenece el horario
@@ -60,6 +47,7 @@ export function crearHorarioLibre(
   return {
     id: `horario-${medico.nombre}-${fecha}-${hora}`,
     idPaciente: '',
+    idMedico: medico.id,
     medico: medico.nombre,
     especialidad: medico.especialidad,
     sala: medico.sala,
@@ -70,19 +58,6 @@ export function crearHorarioLibre(
     instrucciones: [],
     cobertura: '',
   };
-}
-
-// Los horarios libres que se pueden ofrecer: los liberados por cancelaciones y los que Secretaría publicó desde la
-// agenda del médico, siempre que nadie los haya ocupado, cumplan los 3 días y no se hayan retirado de la oferta.
-export function horariosParaOfrecer(turnos: Turno[], publicados: Turno[], retirados: string[] = []) {
-  const libres = publicados.filter((slot) => !horarioOcupado(slot, turnos));
-  return [...turnosLiberados(turnos), ...libres]
-    .filter((horario) => permiteAdelanto(horario) && !retirados.includes(claveHorario(horario)))
-    .sort((a, b) => (momento(a) < momento(b) ? -1 : 1));
-}
-
-export function permiteAdelanto(horario: Turno) {
-  return diasDesdeHoy(horario.fecha) >= DIAS_MINIMOS_ADELANTO;
 }
 
 // Los que esperan: turnos activos con la opción de adelanto, el que hace más tiempo que espera primero.
@@ -138,29 +113,6 @@ export function candidatosDisponibles(horario: Turno, turnos: Turno[], ofertas: 
       !ocupados.includes(turno.id) &&
       !ofertas.some((o) => o.idTurno === turno.id && claveHorario(o.horario) === clave && o.estado !== 'enviada')
   );
-}
-
-// Las ofertas que hay que crear ahora: cada horario libre sin oferta vigente se le ofrece al primer candidato disponible.
-export function proximasOfertas(
-  turnos: Turno[],
-  publicados: Turno[],
-  ofertas: Oferta[],
-  retirados: string[] = []
-): Oferta[] {
-  const nuevas: Oferta[] = [];
-  const vigentes = ofertasVigentes(ofertas, turnos);
-  horariosParaOfrecer(turnos, publicados, retirados).forEach((horario) => {
-    if (vigentes.some((o) => claveHorario(o.horario) === claveHorario(horario))) return;
-    const candidato = candidatosDisponibles(horario, turnos, [...ofertas, ...nuevas])[0];
-    if (!candidato) return;
-    nuevas.push({
-      id: `${candidato.id}|${claveHorario(horario)}`,
-      idTurno: candidato.id,
-      horario,
-      estado: 'enviada',
-    });
-  });
-  return nuevas;
 }
 
 // Puesto de un turno en la lista de espera de su médico (1 = el que hace más tiempo espera).

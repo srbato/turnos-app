@@ -1,11 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext } from 'react';
 
-import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { usePersonal, useSecretariaLogueada } from '@/contextos/PersonalContext';
+import { pedir } from '@/servicios/api';
 
-// El DNI no se guarda ni se edita desde la app.
-export const DNI_SECRETARIA = '28.774.310';
-
+// El perfil de la secretaria que inició sesión. Sus datos ya vienen en el personal del consultorio (PersonalContext).
+// El DNI no se edita desde la app.
 export type PerfilSecretaria = {
   nombre: string;
   email: string;
@@ -15,12 +14,12 @@ export type PerfilSecretaria = {
   fotoUri: string | null; // foto elegida (data URI), o null para mostrar las iniciales
 };
 
-// Lo que se comparte: los datos del perfil y la función para cambiarlos.
+// Lo que se comparte: los datos del perfil y las funciones para cambiarlos. Devuelven el error, o '' si salió bien.
 type PerfilSecretariaContextType = PerfilSecretaria & {
-  actualizarPerfil: (perfilNuevo: PerfilSecretaria) => void;
+  dni: string;
+  actualizarPerfil: (perfilNuevo: PerfilSecretaria) => Promise<string>;
+  cambiarContrasena: (actual: string, nueva: string) => Promise<string>;
 };
-
-const CLAVE_STORAGE = 'perfil-secretaria';
 
 // Valor que se usa solo si una pantalla queda fuera del Provider.
 const VALOR_POR_DEFECTO: PerfilSecretariaContextType = {
@@ -30,53 +29,50 @@ const VALOR_POR_DEFECTO: PerfilSecretariaContextType = {
   domicilio: '',
   turnoTrabajo: '',
   fotoUri: null,
-  actualizarPerfil: () => {},
+  dni: '',
+  actualizarPerfil: async () => '',
+  cambiarContrasena: async () => '',
 };
 
 const PerfilSecretariaContext = createContext(VALOR_POR_DEFECTO);
 
 export function PerfilSecretariaProvider({ children }: { children: ReactNode }) {
-  // La secretaria que usa la app es la primera de su consultorio.
-  const { consultorio } = useConsultorio();
-  const secretaria = consultorio.secretarias[0];
-  const perfilInicial: PerfilSecretaria = {
-    nombre: secretaria.nombre,
-    email: secretaria.email,
-    telefono: '',
-    domicilio: '',
-    turnoTrabajo: secretaria.horario,
-    fotoUri: null,
-  };
-  const claveStorage = `${CLAVE_STORAGE}-${consultorio.id}`;
-  const [perfil, setPerfil] = useState(perfilInicial);
+  const secretaria = useSecretariaLogueada();
+  const { recargarPersonal } = usePersonal();
 
-  // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
-  useEffect(() => {
-    async function cargarPerfil() {
-      try {
-        const guardado = await AsyncStorage.getItem(claveStorage);
-        if (guardado !== null) {
-          setPerfil({ ...perfilInicial, ...JSON.parse(guardado) });
-        }
-      } catch {
-        // Si falla la lectura, se queda con el perfil inicial.
-      }
-    }
-    cargarPerfil();
-  }, []);
+  // Mientras no inició sesión una secretaria, se muestra el perfil vacío.
+  if (!secretaria) {
+    return <PerfilSecretariaContext.Provider value={VALOR_POR_DEFECTO}>{children}</PerfilSecretariaContext.Provider>;
+  }
+  const id = secretaria.id;
 
-  // Reemplaza el perfil por el nuevo y lo guarda en el dispositivo.
   async function actualizarPerfil(perfilNuevo: PerfilSecretaria) {
-    setPerfil(perfilNuevo);
-    try {
-      await AsyncStorage.setItem(claveStorage, JSON.stringify(perfilNuevo));
-    } catch {
-      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
+    const respuesta = await pedir('PATCH', `/api/secretarias/${id}`, perfilNuevo);
+    if (respuesta.ok) {
+      await recargarPersonal();
     }
+    return respuesta.error;
+  }
+
+  // La API revisa que la contraseña actual sea la correcta.
+  async function cambiarContrasena(actual: string, nueva: string) {
+    const respuesta = await pedir('PATCH', `/api/secretarias/${id}/contrasena`, { actual: actual, nueva: nueva });
+    return respuesta.error;
   }
 
   return (
-    <PerfilSecretariaContext.Provider value={{ ...perfil, actualizarPerfil }}>
+    <PerfilSecretariaContext.Provider
+      value={{
+        nombre: secretaria.nombre,
+        email: secretaria.email,
+        telefono: secretaria.telefono,
+        domicilio: secretaria.domicilio,
+        turnoTrabajo: secretaria.horario,
+        fotoUri: secretaria.fotoUri,
+        dni: secretaria.dni,
+        actualizarPerfil,
+        cambiarContrasena,
+      }}>
       {children}
     </PerfilSecretariaContext.Provider>
   );

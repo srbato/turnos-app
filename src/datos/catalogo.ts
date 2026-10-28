@@ -1,4 +1,4 @@
-// Catálogo que ve el paciente al sacar un turno. Las coberturas son las que existen en la app; las especialidades y los
+// Catálogo que ve el paciente al sacar un turno. Las coberturas vienen de la API (ver ConsultorioContext); las especialidades y los
 // médicos NO son una lista aparte: salen del personal del consultorio (altas, bajas y licencias incluidas), así lo que
 // ve el paciente coincide siempre con lo que ven Secretaría y los médicos.
 import { MiembroMedico } from '@/contextos/PersonalContext';
@@ -16,7 +16,7 @@ export type Especialidad = {
 };
 
 export type Medico = {
-  id: string; // la matrícula
+  id: string; // el id del médico en la base
   nombre: string;
   iniciales: string;
   especialidadId: string;
@@ -24,14 +24,9 @@ export type Medico = {
   coberturaIds: string[]; // coberturas que acepta
 };
 
-export const COBERTURAS: Cobertura[] = [
-  { id: 'swiss-smg20', nombre: 'Swiss Medical SMG20' },
-  { id: 'osde-210', nombre: 'OSDE 210' },
-  { id: 'galeno-220', nombre: 'Galeno 220' },
-];
-
-export function nombreCobertura(id: string) {
-  return COBERTURAS.find((cobertura) => cobertura.id === id)?.nombre ?? id;
+// El nombre de una obra social a partir de su id ("osde-210" -> "OSDE 210").
+export function nombreCobertura(coberturas: Cobertura[], id: string) {
+  return coberturas.find((cobertura) => cobertura.id === id)?.nombre ?? id;
 }
 
 // "Clínica médica" -> "clinica-medica"
@@ -54,7 +49,7 @@ export function especialidadesDe(medicos: MiembroMedico[]): Especialidad[] {
 // Los médicos del personal con la forma que usa el flujo de Sacar turno.
 export function medicosDelCatalogo(medicos: MiembroMedico[]): Medico[] {
   return medicos.map((medico) => ({
-    id: medico.matricula,
+    id: medico.id,
     nombre: medico.nombre,
     iniciales: medico.iniciales,
     especialidadId: idDeEspecialidad(medico.especialidad),
@@ -73,7 +68,7 @@ export function medicosParaPaciente(medicos: Medico[], especialidadId: string, c
 }
 
 // Primera cobertura del paciente que el médico acepta (la que se muestra en "Atiende ...").
-export function coberturaQueAtiende(medico: Medico, coberturasPaciente: string[]) {
+export function coberturaQueAtiende(medico: Medico, coberturasPaciente: string[], coberturas: Cobertura[]) {
   const id = medico.coberturaIds.find((cobertura) => coberturasPaciente.includes(cobertura));
-  return id ? nombreCobertura(id) : '';
+  return id ? nombreCobertura(coberturas, id) : '';
 }

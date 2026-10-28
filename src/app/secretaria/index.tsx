@@ -13,14 +13,12 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { Oferta, useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { usePersonal } from '@/contextos/PersonalContext';
 import { Turno, useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 const COLOR_AUSENTE = '#B03A3A';
@@ -50,7 +48,7 @@ export default function TurnosDelDia() {
   const { consultorio } = useConsultorio();
   const { reglasRiesgo } = useConfiguracion();
   const perfilSecretaria = usePerfilSecretaria();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
 
   const [diaElegido, setDiaElegido] = useState(HOY);
   const [medicoFiltro, setMedicoFiltro] = useState(''); // '' = todos

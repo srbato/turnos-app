@@ -10,10 +10,8 @@ import {
 } from "@/constantes/colores";
 import { useAdelantos } from "@/contextos/AdelantosContext";
 import { useConsultorio } from "@/contextos/ConsultorioContext";
-import { usePerfilPaciente } from "@/contextos/PerfilPacienteContext";
 import { useTurnos } from "@/contextos/TurnosContext";
 import { ofertasVigentes } from "@/datos/adelantos";
-import { pacientesConPerfil } from "@/utilidades/datos-medico";
 import { detalleFecha, formatearFecha } from "@/utilidades/turnos";
 
 type Props = {
@@ -31,7 +29,7 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
   const { turnos } = useTurnos();
   const { ofertas, retirarOferta } = useAdelantos();
   const { consultorio } = useConsultorio();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
   const [confirmando, setConfirmando] = useState(false);
   // Eligiendo otro horario para esta misma oferta.
   const [reprogramando, setReprogramando] = useState(false);

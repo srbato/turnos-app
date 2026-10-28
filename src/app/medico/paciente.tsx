@@ -6,10 +6,9 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { DetalleConsulta } from '@/components/detalle-consulta';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
-import { useSesion } from '@/contextos/SesionContext';
 import { historiaClinica, useTurnos } from '@/contextos/TurnosContext';
 import { EstadoTurno } from '@/datos/consultorio';
 import { filasPreconsulta } from '@/datos/preconsulta';
@@ -44,22 +43,20 @@ const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
 export default function FichaPaciente() {
   const { id } = useLocalSearchParams();
   const { turnos } = useTurnos();
-  const { medicoLogueado } = useSesion();
+  const medicoLogueado = useMedicoLogueado();
   const { buscarPorTurno } = usePreconsultas();
-  const perfilPaciente = usePerfilPaciente();
   const { medicamentos: medicamentosPropios } = useMedicamentos();
   const { recetas } = useRecetas();
   const { consultorio } = useConsultorio();
-  const { pacientes, paciente, medicamentos, interacciones } = datosParaMedico(
-    perfilPaciente,
+  // El paciente de la ficha, su medicación (recetada y propia) y las interacciones entre sus medicamentos.
+  const { paciente: pacienteDeLaFicha, medicamentos, interacciones } = datosParaMedico(
+    String(id),
     consultorio.pacientes,
     medicamentosPropios,
     recetas
   );
   // id del turno que tiene la preconsulta desplegada ('' si ninguno).
   const [idTurnoAbierto, setIdTurnoAbierto] = useState('');
-
-  const pacienteDeLaFicha = pacientes.find((pacienteDeLaLista) => pacienteDeLaLista.id === id);
 
   if (!pacienteDeLaFicha) {
     return (
@@ -71,10 +68,6 @@ export default function FichaPaciente() {
       </SafeAreaView>
     );
   }
-
-  // El paciente de la app es el único que carga sus medicamentos.
-  const esPacienteDeLaApp = pacienteDeLaFicha.id === paciente.id;
-  const medicamentosRiesgo = medicamentos.filter((medicamento) => medicamento.riesgo);
 
   // Recetas que este médico le hizo a este paciente, de la más nueva a la más vieja.
   const recetasDelPaciente = recetas
@@ -119,14 +112,13 @@ export default function FichaPaciente() {
           </View>
         )}
 
-        {esPacienteDeLaApp &&
-          interacciones.map((interaccion) => (
-            <View key={interaccion.medicamentos.join('+')} style={styles.aviso}>
-              <Text style={styles.avisoTexto}>
-                ⚠ Interacción detectada: {interaccion.medicamentos.join(' + ')}. {interaccion.descripcion}
-              </Text>
-            </View>
-          ))}
+        {interacciones.map((interaccion) => (
+          <View key={interaccion.medicamentos.join('+')} style={styles.aviso}>
+            <Text style={styles.avisoTexto}>
+              ⚠ Interacción detectada: {interaccion.medicamentos.join(' + ')}. {interaccion.descripcion}
+            </Text>
+          </View>
+        ))}
 
         <Text style={styles.seccion}>Datos</Text>
         <View style={styles.tarjeta}>
@@ -142,22 +134,16 @@ export default function FichaPaciente() {
 
         <Text style={styles.seccion}>Medicación</Text>
         <View style={styles.tarjeta}>
-          {!esPacienteDeLaApp && (
-            <Text style={styles.valor}>No cargó su medicación en la app.</Text>
-          )}
-          {esPacienteDeLaApp && medicamentos.length === 0 && (
-            <Text style={styles.valor}>No tiene medicamentos cargados.</Text>
-          )}
-          {esPacienteDeLaApp &&
-            medicamentos.map((medicamento) => (
-              <View key={medicamento.id} style={styles.filaMedicamento}>
-                <Text style={styles.valor}>
-                  {medicamento.nombre}
-                  {medicamento.riesgo ? '  ⚠' : ''}
-                </Text>
-                <Text style={styles.detalleMedicamento}>{medicamento.detalle}</Text>
-              </View>
-            ))}
+          {medicamentos.length === 0 && <Text style={styles.valor}>No tiene medicamentos cargados.</Text>}
+          {medicamentos.map((medicamento) => (
+            <View key={medicamento.id} style={styles.filaMedicamento}>
+              <Text style={styles.valor}>
+                {medicamento.nombre}
+                {medicamento.riesgo ? '  ⚠' : ''}
+              </Text>
+              <Text style={styles.detalleMedicamento}>{medicamento.detalle}</Text>
+            </View>
+          ))}
         </View>
 
         <Text style={styles.seccion}>Recetas que le hiciste</Text>

@@ -7,11 +7,13 @@ import { BarraPerfil } from '@/components/barra-perfil';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO, Tema } from '@/constantes/tema';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
-import { useSesion } from '@/contextos/SesionContext';
+import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { usePreferencias, Idioma } from '@/contextos/PreferenciasContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { nombreCobertura } from '@/datos/catalogo';
 import { TEXTOS_PERFIL } from '@/datos/textos-perfil';
 
@@ -21,24 +23,6 @@ type InfoPerfil = {
   nombre: string;
   iniciales: string;
   email: string;
-};
-
-const PERFILES: Record<Rol, InfoPerfil> = {
-  paciente: {
-    nombre: 'Valentín',
-    iniciales: 'VM',
-    email: 'valentin@test.com',
-  },
-  medico: {
-    nombre: 'Dra. Lucía Fernández',
-    iniciales: 'LF',
-    email: 'lucia.fernandez@consultoriosrivadavia.com',
-  },
-  secretaria: {
-    nombre: 'Norma Aguilar',
-    iniciales: 'NA',
-    email: 'norma.aguilar@consultoriosrivadavia.com',
-  },
 };
 
 const IDIOMAS: { id: Idioma; etiqueta: string }[] = [
@@ -61,14 +45,17 @@ export default function Perfil() {
   const perfilPaciente = usePerfilPaciente();
   const perfilSecretaria = usePerfilSecretaria();
   const perfilMedico = usePerfilMedico();
-  const { medicoLogueado } = useSesion();
-  // El paciente edita su perfil: sus datos vienen del contexto. Los demás roles usan datos fijos.
-  // El médico muestra los datos del médico que inició sesión.
-  let info: InfoPerfil = PERFILES[rol];
-  if (rol === 'paciente') {
-    info = { ...PERFILES.paciente, ...perfilPaciente };
-  } else if (rol === 'secretaria') {
-    info = { ...PERFILES.secretaria, ...perfilSecretaria };
+  const medicoLogueado = useMedicoLogueado();
+  const { coberturas } = useConsultorio();
+  const sesion = useSesion();
+  // Los datos de quien inició sesión, según su rol (vienen de la API a través de los contextos).
+  let info: InfoPerfil = {
+    nombre: `${perfilPaciente.nombre} ${perfilPaciente.apellido}`,
+    iniciales: `${perfilPaciente.nombre.slice(0, 1)}${perfilPaciente.apellido.slice(0, 1)}`.toUpperCase(),
+    email: perfilPaciente.email,
+  };
+  if (rol === 'secretaria') {
+    info = { nombre: perfilSecretaria.nombre, iniciales: '', email: perfilSecretaria.email };
   } else if (rol === 'medico') {
     info = {
       nombre: medicoLogueado.nombre,
@@ -87,7 +74,7 @@ export default function Perfil() {
   // Cada obra social va con su N° de afiliado, si lo cargó.
   const obrasSociales = perfilPaciente.coberturaIds.map((id) => {
     const numero = perfilPaciente.numerosAfiliado[id];
-    return numero ? `${nombreCobertura(id)} · ${numero}` : nombreCobertura(id);
+    return numero ? `${nombreCobertura(coberturas, id)} · ${numero}` : nombreCobertura(coberturas, id);
   });
   // Chip (debajo del nombre) y subtítulo de la fila de datos, según el rol.
   let chip = textos.chips[rol];
@@ -95,7 +82,7 @@ export default function Perfil() {
   if (rol === 'paciente') {
     chip = textos.roles.paciente;
     if (obrasSociales.length > 0) {
-      chip = chip + ' · ' + nombreCobertura(perfilPaciente.coberturaIds[0]);
+      chip = chip + ' · ' + nombreCobertura(coberturas, perfilPaciente.coberturaIds[0]);
     }
     filaSubtitulo = obrasSociales.join('\n') || '—';
   } else if (rol === 'medico') {
@@ -111,6 +98,8 @@ export default function Perfil() {
   // no devuelve a una pantalla de la sesión que ya se cerró.
   // Si no quedaron pantallas atrás (por ejemplo, se llegó con replace), no hay nada que cerrar.
   function cerrarSesion() {
+    // Se borra la sesión guardada en el dispositivo: la próxima vez hay que ingresar de nuevo.
+    sesion.cerrarSesion();
     if (router.canDismiss()) {
       router.dismissAll();
     }

@@ -6,17 +6,19 @@ import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { COBERTURAS } from '@/datos/catalogo';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { formatearDni, palabras, soloNumeros } from '@/utilidades/texto';
 
 // Registro de un paciente nuevo. Pide los mismos datos que después se ven y se editan en el perfil.
 // Solo las alergias son opcionales.
-// Todavía no hay backend: la cuenta queda guardada en el dispositivo y después se ingresa desde el login.
+// La cuenta se crea en la API (que controla que el DNI y el email no estén repetidos) y después se ingresa desde el login.
 export default function Registro() {
-  const { actualizarPerfil } = usePerfilPaciente();
+  const { registrarPaciente } = useSesion();
+  const { coberturas } = useConsultorio();
 
   const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [dni, setDni] = useState('');
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -28,14 +30,15 @@ export default function Registro() {
   const [repetida, setRepetida] = useState('');
   const [verContrasena, setVerContrasena] = useState(false);
   const [error, setError] = useState('');
+  const [creando, setCreando] = useState(false);
 
   function alternarCobertura(id: string) {
     setCoberturaIds(coberturaIds.includes(id) ? coberturaIds.filter((c) => c !== id) : [...coberturaIds, id]);
   }
 
-  function crearCuenta() {
-    if (palabras(nombre).length < 2) {
-      setError('Ingresá tu nombre y apellido.');
+  async function crearCuenta() {
+    if (palabras(nombre).length === 0 || palabras(apellido).length === 0) {
+      setError('Ingresá tu nombre y tu apellido.');
       return;
     }
     if (soloNumeros(dni).length < 7) {
@@ -66,23 +69,25 @@ export default function Registro() {
       setError('Las contraseñas no coinciden.');
       return;
     }
-    // Solo se guardan los N° de afiliado de las obras sociales que quedaron marcadas.
-    const afiliados: Record<string, string> = {};
-    coberturaIds.forEach((id) => {
-      afiliados[id] = (numerosAfiliado[id] ?? '').trim();
-    });
-    actualizarPerfil({
+    setError('');
+    setCreando(true);
+    const errorApi = await registrarPaciente({
       nombre: nombre.trim(),
+      apellido: apellido.trim(),
       dni: formatearDni(dni),
       email: email.trim(),
       telefono: telefono.trim(),
       domicilio: domicilio.trim(),
       alergias: alergias.trim(),
-      coberturaIds,
-      numerosAfiliado: afiliados,
-      contrasena,
-      fotoUri: null,
+      contrasena: contrasena,
+      // Solo van los N° de afiliado de las obras sociales que quedaron marcadas.
+      coberturas: coberturaIds.map((id) => ({ id: id, numeroAfiliado: (numerosAfiliado[id] ?? '').trim() })),
     });
+    setCreando(false);
+    if (errorApi !== '') {
+      setError(errorApi);
+      return;
+    }
     // Con la cuenta creada, se pasa al login de paciente para ingresar.
     router.replace('/login?rol=paciente&registrado=1');
   }
@@ -99,8 +104,11 @@ export default function Registro() {
 
         <Text style={styles.seccion}>TUS DATOS</Text>
         <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Nombre y apellido</Text>
-          <TextInput style={styles.campo} value={nombre} onChangeText={setNombre} maxLength={60} />
+          <Text style={styles.etiqueta}>Nombre</Text>
+          <TextInput style={styles.campo} value={nombre} onChangeText={setNombre} maxLength={40} />
+
+          <Text style={styles.etiqueta}>Apellido</Text>
+          <TextInput style={styles.campo} value={apellido} onChangeText={setApellido} maxLength={40} />
 
           <Text style={styles.etiqueta}>DNI</Text>
           <TextInput
@@ -143,7 +151,7 @@ export default function Registro() {
         <Text style={styles.seccion}>OBRA SOCIAL</Text>
         <View style={styles.tarjeta}>
           <Text style={styles.ayuda}>Marcá las que tengas. Te mostramos solo los médicos que las atienden.</Text>
-          {COBERTURAS.map((cobertura) => {
+          {coberturas.map((cobertura) => {
             const marcada = coberturaIds.includes(cobertura.id);
             return (
               <View key={cobertura.id}>
@@ -185,8 +193,8 @@ export default function Registro() {
 
         {error !== '' && <Text style={styles.error}>{error}</Text>}
 
-        <Pressable style={styles.botonCrear} onPress={crearCuenta}>
-          <Text style={styles.botonCrearTexto}>Crear cuenta</Text>
+        <Pressable style={styles.botonCrear} onPress={crearCuenta} disabled={creando}>
+          <Text style={styles.botonCrearTexto}>{creando ? 'Creando cuenta…' : 'Crear cuenta'}</Text>
         </Pressable>
 
         <View style={styles.pie}>

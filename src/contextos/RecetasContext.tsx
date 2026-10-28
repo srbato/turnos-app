@@ -1,12 +1,15 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-import { HOY, ID_PACIENTE_APP } from '@/datos/consultorio';
-import { RECETAS, Receta } from '@/datos/recetas';
+import { useSesion } from '@/contextos/SesionContext';
+import { Receta } from '@/datos/recetas';
+import { ID_CONSULTORIO, pedir } from '@/servicios/api';
 
-// Lo que el médico completa al emitir una receta; el resto de los datos los completa el contexto.
+// Las recetas de los pacientes del consultorio. Vienen de la API: la fecha de emisión y el código los pone el servidor.
+
+// Lo que el médico completa al emitir una receta.
 export type RecetaNueva = {
   idPaciente: string;
-  medico: string;
+  idMedico: string;
   medicamento: string;
   indicacion: string;
   riesgo: boolean;
@@ -19,60 +22,100 @@ export type CambiosReceta = {
   riesgo: boolean;
 };
 
+// Las funciones devuelven el mensaje de error de la API, o '' si salió bien.
 type RecetasContextType = {
   recetas: Receta[]; // las recetas de todos los pacientes
-  misRecetas: Receta[]; // solo las del paciente que usa la app
-  emitirReceta: (receta: RecetaNueva) => void;
-  editarReceta: (id: string, cambios: CambiosReceta) => void; // el médico corrige una receta vigente
-  eliminarReceta: (id: string) => void; // el médico la elimina si no correspondía
+  misRecetas: Receta[]; // solo las del paciente que inició sesión
+  emitirReceta: (receta: RecetaNueva) => Promise<string>;
+  editarReceta: (id: string, cambios: CambiosReceta) => Promise<string>; // el médico corrige una receta vigente
+  eliminarReceta: (id: string) => Promise<string>; // el médico la elimina si no correspondía
 };
 
 // Valor que se usa solo si una pantalla queda fuera del Provider.
 const VALOR_POR_DEFECTO: RecetasContextType = {
   recetas: [],
   misRecetas: [],
-  emitirReceta: () => {},
-  editarReceta: () => {},
-  eliminarReceta: () => {},
+  emitirReceta: async () => '',
+  editarReceta: async () => '',
+  eliminarReceta: async () => '',
 };
-
-const VIGENCIA_POR_DEFECTO_DIAS = 30;
 
 const RecetasContext = createContext(VALOR_POR_DEFECTO);
 
-export function RecetasProvider({ children }: { children: ReactNode }) {
-  const [recetas, setRecetas] = useState(RECETAS);
+// Una receta tal como la devuelve la API (GET /api/recetas).
+type RecetaApi = {
+  id: number;
+  pacienteId: number;
+  medicoId: number;
+  medicamento: string;
+  indicacion: string;
+  fechaEmision: string;
+  vigenciaDias: number;
+  codigo: string;
+  riesgo: boolean;
+  medico: { nombre: string };
+};
 
-  // La receta emitida por un médico le aparece enseguida al paciente en Mis medicamentos > Recetados.
+function recetaDesdeApi(receta: RecetaApi): Receta {
+  return {
+    id: String(receta.id),
+    idPaciente: String(receta.pacienteId),
+    idMedico: String(receta.medicoId),
+    medicamento: receta.medicamento,
+    abreviatura: receta.medicamento.slice(0, 3).toUpperCase(),
+    indicacion: receta.indicacion,
+    medico: receta.medico.nombre,
+    fechaEmision: receta.fechaEmision,
+    vigenciaDias: receta.vigenciaDias,
+    codigo: receta.codigo,
+    riesgo: receta.riesgo,
+  };
+}
+
+export function RecetasProvider({ children }: { children: ReactNode }) {
+  const { idPaciente } = useSesion();
+  const [recetas, setRecetas] = useState<Receta[]>([]);
+
+  async function recargarRecetas() {
+    const respuesta = await pedir('GET', `/api/recetas?consultorioId=${ID_CONSULTORIO}`);
+    if (respuesta.ok) {
+      setRecetas(respuesta.datos.map(recetaDesdeApi));
+    }
+  }
+
+  useEffect(() => {
+    recargarRecetas();
+  }, [idPaciente]);
+
+  // Manda el cambio a la API y, si salió bien, vuelve a pedir las recetas.
+  async function enviar(metodo: string, ruta: string, cuerpo?: object) {
+    const respuesta = await pedir(metodo, ruta, cuerpo);
+    if (respuesta.ok) {
+      await recargarRecetas();
+    }
+    return respuesta.error;
+  }
+
+  // La receta emitida por un médico le aparece al paciente en Mis medicamentos > Recetados.
   function emitirReceta(nueva: RecetaNueva) {
-    const numero = String(recetas.length + 1).padStart(4, '0');
-    const receta: Receta = {
-      ...nueva,
-      id: `r-${Date.now()}`,
-      abreviatura: nueva.medicamento.slice(0, 3).toUpperCase(),
-      fechaEmision: HOY,
-      vigenciaDias: VIGENCIA_POR_DEFECTO_DIAS,
-      codigo: `RX-${HOY.slice(0, 4)}-${numero}`,
-    };
-    setRecetas((anteriores) => [...anteriores, receta]);
+    return enviar('POST', '/api/recetas', {
+      pacienteId: Number(nueva.idPaciente),
+      medicoId: Number(nueva.idMedico),
+      medicamento: nueva.medicamento,
+      indicacion: nueva.indicacion,
+      riesgo: nueva.riesgo,
+    });
   }
 
   function editarReceta(id: string, cambios: CambiosReceta) {
-    setRecetas((anteriores) =>
-      anteriores.map((receta) => {
-        if (receta.id === id) {
-          return { ...receta, ...cambios, abreviatura: cambios.medicamento.slice(0, 3).toUpperCase() };
-        }
-        return receta;
-      })
-    );
+    return enviar('PATCH', `/api/recetas/${id}`, cambios);
   }
 
   function eliminarReceta(id: string) {
-    setRecetas((anteriores) => anteriores.filter((receta) => receta.id !== id));
+    return enviar('DELETE', `/api/recetas/${id}`);
   }
 
-  const misRecetas = recetas.filter((receta) => receta.idPaciente === ID_PACIENTE_APP);
+  const misRecetas = recetas.filter((receta) => receta.idPaciente === idPaciente);
 
   return (
     <RecetasContext.Provider value={{ recetas, misRecetas, emitirReceta, editarReceta, eliminarReceta }}>

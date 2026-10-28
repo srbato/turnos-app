@@ -10,8 +10,8 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
 import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
+import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
-import { useSesion } from '@/contextos/SesionContext';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
 
 const COLOR_PERFIL = '#C9A24C';
@@ -28,7 +28,7 @@ function esperar(milisegundos: number) {
 // turnos y en el ingreso, así que se muestran sin poder editarse (los cambia Secretaría).
 export default function EditarPerfilMedico() {
   const perfil = usePerfilMedico();
-  const { medicoLogueado } = useSesion();
+  const medicoLogueado = useMedicoLogueado();
   const { idioma, modoOscuro } = usePreferencias();
   const tema = modoOscuro ? TEMA_OSCURO : TEMA_CLARO;
   const textos = TEXTOS_EDITAR[idioma];
@@ -91,8 +91,12 @@ export default function EditarPerfilMedico() {
     );
   }
 
-  function guardar() {
-    perfil.actualizarPerfil({ telefono: telefono.trim(), domicilio: domicilio.trim(), fotoUri });
+  async function guardar() {
+    const error = await perfil.actualizarPerfil({ telefono: telefono.trim(), domicilio: domicilio.trim(), fotoUri });
+    if (error !== '') {
+      setErrorFoto(error);
+      return;
+    }
     // Al guardar se vuelve a Mi perfil, donde ya se ven los datos nuevos.
     router.navigate('/perfil?rol=medico');
   }

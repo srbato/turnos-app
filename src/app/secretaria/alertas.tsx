@@ -14,12 +14,10 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
 import { colorNivelRiesgo, evaluarRiesgo, nombreNivelRiesgo, PUNTOS_POR_ASISTENCIA, PUNTOS_POR_CONFIRMACION, PUNTOS_POR_FALTA, textoPuntaje } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 // Cómo suman y restan los puntos de riesgo (ver datos/ausentismo.ts).
@@ -53,7 +51,7 @@ export default function AlertasSecretaria() {
   const { turnos, cambiarEstadoTurno, cancelarConMotivo, enviarAviso } = useTurnos();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo, avisosAntesDeActuar } = useConfiguracion();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
   const { ofertas } = useAdelantos();
 
   const hoy = new Date();
@@ -69,12 +67,10 @@ export default function AlertasSecretaria() {
 
   // Cancelación por riesgo: queda con motivo, así el horario no se ofrece solo y Secretaría elige a quién dárselo.
   function cancelarPorRiesgo(id: string) {
-    cancelarConMotivo([
-      {
-        id,
-        motivo: `Cancelado por riesgo de inasistencia: no confirmó tras ${avisosAntesDeActuar} avisos. El horario quedó libre para la lista de espera.`,
-      },
-    ]);
+    cancelarConMotivo(
+      id,
+      `Cancelado por riesgo de inasistencia: no confirmó tras ${avisosAntesDeActuar} avisos. El horario quedó libre para la lista de espera.`
+    );
   }
 
   function cuando(fecha: string, hora: string) {
@@ -152,7 +148,7 @@ export default function AlertasSecretaria() {
                   <Text style={styles.botonPrimarioTexto}>Ya confirmó</Text>
                 </Pressable>
                 {avisos < avisosAntesDeActuar ? (
-                  <Pressable style={styles.botonSuave} onPress={() => enviarAviso(turno.id, avisosAntesDeActuar)}>
+                  <Pressable style={styles.botonSuave} onPress={() => enviarAviso(turno.id)}>
                     <Text style={styles.botonSuaveTexto}>
                       Enviar aviso ({avisos}/{avisosAntesDeActuar})
                     </Text>

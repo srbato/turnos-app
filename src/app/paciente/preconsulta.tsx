@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
@@ -140,26 +140,19 @@ export default function PantallaPreconsulta() {
     );
   }
 
-  function enviarAlMedico() {
+  async function enviarAlMedico() {
     if (!turno) return;
-    const ahora = new Date();
-    const dos = (n: number) => String(n).padStart(2, '0');
-    enviarPreconsulta({
-      turnoId: turno.id,
-      paciente: nombre,
-      medico: turno.medico,
-      especialidad: turno.especialidad,
-      fecha: turno.fecha,
-      hora: turno.hora,
-      respuestas: {
-        ...respuestas,
-        sintomas: sintomasTexto
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s !== ''),
-      },
-      enviadaEl: `${ahora.getFullYear()}-${dos(ahora.getMonth() + 1)}-${dos(ahora.getDate())} ${dos(ahora.getHours())}:${dos(ahora.getMinutes())}`,
+    const error = await enviarPreconsulta(turno.id, {
+      ...respuestas,
+      sintomas: sintomasTexto
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s !== ''),
     });
+    if (error !== '') {
+      Alert.alert('No se pudo enviar', error);
+      return;
+    }
     setFase('enviada');
   }
 

@@ -27,7 +27,8 @@ function iniciales(nombre: string) {
 // Foto de perfil en círculo (del paciente, o de quien se pase en datos); si no eligió una, muestra sus iniciales.
 export function AvatarPaciente({ tamano, colorFondo, colorTexto, colorBorde, datos }: Props) {
   const paciente = usePerfilPaciente();
-  const { nombre, fotoUri } = datos ?? paciente;
+  const delPaciente: DatosAvatar = { nombre: `${paciente.nombre} ${paciente.apellido}`, fotoUri: paciente.fotoUri };
+  const { nombre, fotoUri } = datos ?? delPaciente;
   const letras = datos?.iniciales ?? iniciales(nombre);
 
   const caja = {

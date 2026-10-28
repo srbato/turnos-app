@@ -6,14 +6,10 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MenuMedico } from '@/components/menu-medico';
 import { NuevoTurnoSecretaria } from '@/components/nuevo-turno-secretaria';
 import { TablaPacientes } from '@/components/tabla-pacientes';
-import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { useRecetas } from '@/contextos/RecetasContext';
-import { useSesion } from '@/contextos/SesionContext';
+import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { HOY } from '@/datos/consultorio';
-import { datosParaMedico } from '@/utilidades/datos-medico';
 import { buscarProximoTurno, detalleFecha, fechaHoraComoDate } from '@/utilidades/turnos';
 
 const COLOR_MEDICO = '#1B4B8F';
@@ -23,12 +19,9 @@ const FONDO_RIESGO_ALTO = '#FBDCDC';
 
 export default function PacientesDelMedico() {
   const { turnos } = useTurnos();
-  const { medicoLogueado } = useSesion();
-  const perfilPaciente = usePerfilPaciente();
-  const { medicamentos: medicamentosPropios } = useMedicamentos();
-  const { recetas } = useRecetas();
+  const medicoLogueado = useMedicoLogueado();
   const { consultorio } = useConsultorio();
-  const { pacientes } = datosParaMedico(perfilPaciente, consultorio.pacientes, medicamentosPropios, recetas);
+  const pacientes = consultorio.pacientes;
   const [busqueda, setBusqueda] = useState('');
   const [vista, setVista] = useState<'mios' | 'todos'>('mios'); // mis pacientes (tarjetas) o todos los del consultorio (tabla)
   const [idPacienteElegido, setIdPacienteElegido] = useState('');

@@ -6,10 +6,8 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { colorNivelRiesgo, evaluarRiesgo, nombreNivelRiesgo, PUNTOS_POR_ASISTENCIA, PUNTOS_POR_CONFIRMACION, PUNTOS_POR_FALTA, textoPuntaje } from '@/datos/ausentismo';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import {
   COLORES_ESTADO,
   detalleFecha,
@@ -31,10 +29,9 @@ function volver() {
 export default function FichaPacienteSecretaria() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { turnos } = useTurnos();
-  const perfilPaciente = usePerfilPaciente();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo } = useConfiguracion();
-  const paciente = pacientesConPerfil(perfilPaciente, consultorio.pacientes).find((p) => p.id === id);
+  const paciente = consultorio.pacientes.find((p) => p.id === id);
 
   if (!paciente) {
     return (

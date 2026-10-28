@@ -14,7 +14,7 @@ import {
 } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { enLicencia, estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
+import { CambiosMedico, enLicencia, estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
 import { FranjaHoraria } from '@/datos/atencion';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { fechaDentroDe, HOY } from '@/datos/consultorio';
@@ -30,13 +30,10 @@ function medicoCorto(nombre: string) {
 
 // Ficha de un médico para Secretaría: datos editables, estado (activo / licencia) y baja.
 export default function FichaMedico() {
-  const { matricula: parametro } = useLocalSearchParams<{ matricula: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { medicos, editarMedico } = usePersonal();
   const { turnos } = useTurnos();
-
-  // La matrícula puede cambiarse acá: se guarda la actual para seguir encontrándolo.
-  const [matriculaActual, setMatriculaActual] = useState(parametro ?? '');
-  const medico = medicos.find((m) => m.matricula === matriculaActual);
+  const medico = medicos.find((m) => m.id === id);
 
   const [especialidad, setEspecialidad] = useState(medico?.especialidad ?? '');
   const [matricula, setMatricula] = useState(medico?.matricula ?? '');
@@ -93,46 +90,52 @@ export default function FichaMedico() {
     diasParaVolver.push(fechaDentroDe(i));
   }
 
+  // Cada cambio se manda a la API. Si no lo acepta (por ejemplo, la matrícula ya la tiene otro médico), se muestra el
+  // motivo. Si el médico deja de atender días en que tenía turnos, la API los cancela sola.
+  async function guardarCambios(cambios: CambiosMedico, textoListo: string) {
+    if (!medico) return false;
+    const error = await editarMedico(medico.id, cambios);
+    if (error !== '') {
+      setMensaje({ texto: error, esError: true });
+      return false;
+    }
+    setMensaje(textoListo === '' ? null : { texto: textoListo, esError: false });
+    return true;
+  }
+
   function guardar() {
     if (especialidad.trim() === '' || matricula.trim() === '' || sala.trim() === '') {
       setMensaje({ texto: 'Completá todos los campos.', esError: true });
       return;
     }
-    if (medicos.some((m) => m.matricula === matricula.trim() && m.matricula !== matriculaActual)) {
-      setMensaje({ texto: 'Ya hay un médico con esa matrícula.', esError: true });
-      return;
-    }
-    editarMedico(matriculaActual, {
-      especialidad: especialidad.trim(),
-      matricula: matricula.trim(),
-      sala: sala.trim(),
-    });
-    setMatriculaActual(matricula.trim());
-    setMensaje({ texto: 'Cambios guardados ✓', esError: false });
+    guardarCambios(
+      { especialidad: especialidad.trim(), matricula: matricula.trim(), sala: sala.trim() },
+      'Cambios guardados ✓'
+    );
   }
 
   // Los horarios se guardan apenas se agrega o se quita uno.
   function cambiarHorarios(franjas: FranjaHoraria[]) {
-    editarMedico(matriculaActual, { franjas: franjas });
+    guardarCambios({ franjas: franjas }, '');
   }
 
   function cambiarEstado(estado: 'activo' | 'licencia') {
-    // Al volver a activo se borra la fecha de vuelta de la licencia.
-    editarMedico(matriculaActual, { estado, licenciaHasta: undefined });
+    // Al volver a activo, la API borra la fecha de vuelta de la licencia.
+    guardarCambios({ estado: estado }, '');
     setEligiendoLicencia(false);
-    setMensaje(null);
   }
 
-  function confirmarLicencia() {
+  async function confirmarLicencia() {
     if (fechaVuelta === '') return;
-    editarMedico(matriculaActual, { estado: 'licencia', licenciaHasta: fechaVuelta });
-    setEligiendoLicencia(false);
-    setFechaVuelta('');
-    setMensaje(null);
+    const listo = await guardarCambios({ estado: 'licencia', licenciaHasta: fechaVuelta }, '');
+    if (listo) {
+      setEligiendoLicencia(false);
+      setFechaVuelta('');
+    }
   }
 
   function darDeBaja() {
-    editarMedico(matriculaActual, { estado: 'baja' });
+    guardarCambios({ estado: 'baja' }, '');
     setConfirmandoBaja(false);
   }
 

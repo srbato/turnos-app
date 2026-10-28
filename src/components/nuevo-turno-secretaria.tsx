@@ -5,13 +5,10 @@ import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { enLicencia, horariosDelMedico, MiembroMedico, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { atiendeEseDia } from '@/datos/atencion';
-import { HOY } from '@/datos/consultorio';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 // "Dra. Lucía Fernández" -> "Fernández"
@@ -48,14 +45,15 @@ export function NuevoTurnoSecretaria({
   const { ofertas } = useAdelantos();
   const { medicos } = usePersonal();
   const { consultorio } = useConsultorio();
-  const { duracionTurno, nombre: nombreConsultorio } = useConfiguracion();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const { duracionTurno } = useConfiguracion();
+  const pacientes = consultorio.pacientes;
 
   const [fecha, setFecha] = useState(fechaInicial);
   const [medico, setMedico] = useState(medicoFijo ?? medicoInicial);
   const [hora, setHora] = useState(horaInicial);
   const [idPaciente, setIdPaciente] = useState(idPacienteInicial);
   const [busqueda, setBusqueda] = useState('');
+  const [error, setError] = useState('');
   const elegirDia = idPacienteInicial !== '';
   const pacienteElegido = pacientes.find((p) => p.id === idPacienteInicial);
   const hoy = new Date();
@@ -95,25 +93,24 @@ export function NuevoTurnoSecretaria({
   );
   const puedeGuardar = medico !== '' && hora !== '' && idPaciente !== '';
 
-  function guardar() {
-    // Se busca en el personal (incluye a los médicos dados de alta desde la app), no en la lista fija de ejemplo.
+  async function guardar() {
     const datosMedico = medicos.find((m) => m.nombre === medico);
     const datosPaciente = pacientes.find((p) => p.id === idPaciente);
     if (!datosMedico || !datosPaciente || hora === '') return;
-    agregarTurno({
-      id: String(Date.now()),
+    // Lo carga Secretaría (o un médico): queda pendiente hasta que el paciente confirme (se le avisa unos días antes).
+    // Se usa la primera obra social del paciente que el médico acepta (null = particular).
+    const errorApi = await agregarTurno({
       idPaciente: datosPaciente.id,
-      medico: datosMedico.nombre,
-      especialidad: datosMedico.especialidad,
-      sala: datosMedico.sala,
-      fecha,
-      hora,
-      sede: nombreConsultorio,
-      cobertura: `${datosPaciente.cobertura} ${datosPaciente.plan}`.trim(),
-      estado: 'pendiente', // lo carga Secretaría (o un médico): queda pendiente hasta que el paciente confirme (se le avisa unos días antes)
-      instrucciones: [],
-      reservadoEl: HOY,
+      idMedico: datosMedico.id,
+      fecha: fecha,
+      hora: hora,
+      coberturaId: datosMedico.coberturaIds.find((id) => datosPaciente.coberturaIds.includes(id)) ?? null,
+      adelanto: false,
     });
+    if (errorApi !== '') {
+      setError(errorApi);
+      return;
+    }
     onCerrar();
   }
 
@@ -210,6 +207,8 @@ export function NuevoTurnoSecretaria({
               </ScrollView>
             </>
           )}
+
+          {error !== '' && <Text style={styles.error}>{error}</Text>}
 
           <View style={styles.filaBotones}>
             <Pressable style={[styles.botonSecundario, { borderColor: color }]} onPress={onCerrar}>
@@ -318,6 +317,12 @@ const styles = StyleSheet.create({
   filaPacienteDetalle: {
     fontSize: 12,
     color: '#5A5A5A',
+  },
+  error: {
+    color: '#C0392B',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 12,
   },
   filaBotones: {
     flexDirection: 'row',

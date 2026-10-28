@@ -1,10 +1,7 @@
 import { MedicamentoPropio } from '@/contextos/MedicamentosContext';
-import { PerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { nombreCobertura } from '@/datos/catalogo';
-import { ID_PACIENTE_APP, Paciente } from '@/datos/consultorio';
+import { Paciente } from '@/datos/consultorio';
 import { detectarInteracciones } from '@/datos/interacciones';
 import { Receta } from '@/datos/recetas';
-import { palabras } from '@/utilidades/texto';
 
 // Un medicamento del paciente tal como lo ve el médico.
 export type MedicamentoParaMedico = {
@@ -15,54 +12,22 @@ export type MedicamentoParaMedico = {
   riesgo: boolean; // participa de una interacción detectada
 };
 
-// Arma los datos del paciente que usa la app para las pantallas del médico: su perfil actualizado,
-// sus medicamentos (recetados y propios) y las interacciones que se detectan entre ellos.
-// Es una función común: cada pantalla le pasa lo que ya leyó de los contextos.
-// Lista de pacientes del consultorio activo (se la pasa cada pantalla, leída de useConsultorio): el que usa la app
-// muestra los datos que editó en su perfil.
-// No incluye nada clínico del paciente de la app (medicación, recetas, interacciones): eso es solo para el médico.
-export function pacientesConPerfil(perfil: PerfilPaciente, pacientesDelConsultorio: Paciente[]) {
-  const [primerNombre, ...resto] = palabras(perfil.nombre);
-  const pacientes: Paciente[] = pacientesDelConsultorio.map((paciente) => {
-    if (paciente.id !== ID_PACIENTE_APP) return paciente;
-    const coberturas = perfil.coberturaIds.map(nombreCobertura);
-    return {
-      ...paciente,
-      nombre: primerNombre,
-      apellido: resto.join(' '),
-      iniciales: [primerNombre, ...resto]
-        .slice(0, 2)
-        .map((palabra) => palabra[0].toUpperCase())
-        .join(''),
-      email: perfil.email,
-      cobertura: coberturas.length > 0 ? coberturas.join(' / ') : 'Sin cobertura cargada',
-      plan: '',
-      // Un N° de afiliado por cada obra social que lo tenga cargado.
-      numeroAfiliado:
-        perfil.coberturaIds
-          .filter((id) => perfil.numerosAfiliado[id])
-          .map((id) => `${nombreCobertura(id)}: ${perfil.numerosAfiliado[id]}`)
-          .join(' · ') || 'No cargado',
-      alergias: perfil.alergias.trim() || 'No informó',
-    };
-  });
-  return pacientes;
-}
-
+// Arma los datos de un paciente para las pantallas del médico: el paciente, sus medicamentos (recetados y propios) y
+// las interacciones que se detectan entre ellos. Es una función común: cada pantalla le pasa lo que ya leyó de los
+// contextos. Si el paciente no está en la lista, paciente queda undefined.
 export function datosParaMedico(
-  perfil: PerfilPaciente,
-  pacientesDelConsultorio: Paciente[],
+  idPaciente: string,
+  pacientes: Paciente[],
   medicamentosPropios: MedicamentoPropio[],
   recetas: Receta[]
 ) {
-  const pacientes = pacientesConPerfil(perfil, pacientesDelConsultorio);
-  // El paciente de la app siempre está en la lista (pacientesConPerfil lo agrega).
-  const paciente = pacientes.filter((p) => p.id === ID_PACIENTE_APP)[0];
+  const paciente = pacientes.find((p) => p.id === idPaciente);
+  const propios = medicamentosPropios.filter((medicamento) => medicamento.idPaciente === idPaciente);
 
-  const recetasDelPaciente = recetas.filter((receta) => receta.idPaciente === ID_PACIENTE_APP);
+  const recetasDelPaciente = recetas.filter((receta) => receta.idPaciente === idPaciente);
   const nombres = [
     ...recetasDelPaciente.map((receta) => receta.medicamento),
-    ...medicamentosPropios.map((medicamento) => medicamento.nombre),
+    ...propios.map((medicamento) => medicamento.nombre),
   ];
   const interacciones = detectarInteracciones(nombres);
   // Todos los medicamentos que aparecen en alguna interacción.
@@ -79,7 +44,7 @@ export function datosParaMedico(
       indicadoPor: receta.medico,
       riesgo: enRiesgo.includes(receta.medicamento),
     })),
-    ...medicamentosPropios.map((medicamento) => ({
+    ...propios.map((medicamento) => ({
       id: `propio-${medicamento.id}`,
       nombre: medicamento.nombre,
       detalle: [medicamento.dosis, medicamento.motivo ? `Para: ${medicamento.motivo}` : '']
@@ -90,5 +55,5 @@ export function datosParaMedico(
     })),
   ];
 
-  return { pacientes, paciente, medicamentos, interacciones };
+  return { paciente, medicamentos, interacciones };
 }

@@ -1,10 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { REGLAS_RIESGO_POR_DEFECTO, ReglasRiesgo } from '@/datos/ausentismo';
+import { ID_CONSULTORIO, pedir } from '@/servicios/api';
 
-// Configuración del consultorio que edita Secretaría. Se guarda en el dispositivo, aparte para cada consultorio.
+// Configuración del consultorio que edita Secretaría (Ajustes). Se guarda en la API, en los datos del consultorio.
 // De acá salen la duración de los turnos y las reglas de riesgo que usan los tres roles, para que todos coincidan.
 export type Configuracion = {
   nombre: string;
@@ -23,18 +23,16 @@ export type Configuracion = {
 // Lo que se comparte: la configuración, las reglas de riesgo que salen de ella y la función para guardarla.
 type ConfiguracionContextType = Configuracion & {
   reglasRiesgo: ReglasRiesgo; // para evaluar el riesgo de un paciente (datos/ausentismo.ts)
-  guardarConfiguracion: (configuracionNueva: Configuracion) => void;
+  guardarConfiguracion: (configuracionNueva: Configuracion) => Promise<string>; // devuelve el error, o '' si se guardó
 };
-
-const CLAVE_STORAGE = 'configuracion-consultorio';
 
 const CONFIGURACION_POR_DEFECTO: Configuracion = {
   nombre: '',
   direccion: '',
-  ciudad: 'CABA',
-  telefono: '11 4903-7712',
+  ciudad: '',
+  telefono: '',
   duracionTurno: 20,
-  atencion: 'Lun a vie 8–20 · sáb 9–13',
+  atencion: '',
   sobreturnos: 2,
   recordatorioAutomatico: true,
   puntosRiesgoMedio: REGLAS_RIESGO_POR_DEFECTO.medio,
@@ -46,45 +44,34 @@ const CONFIGURACION_POR_DEFECTO: Configuracion = {
 const VALOR_POR_DEFECTO: ConfiguracionContextType = {
   ...CONFIGURACION_POR_DEFECTO,
   reglasRiesgo: REGLAS_RIESGO_POR_DEFECTO,
-  guardarConfiguracion: () => {},
+  guardarConfiguracion: async () => '',
 };
 
 const ConfiguracionContext = createContext(VALOR_POR_DEFECTO);
 
 export function ConfiguracionProvider({ children }: { children: ReactNode }) {
-  const { consultorio } = useConsultorio();
-  // La configuración arranca con el nombre y la dirección del consultorio activo.
-  const configuracionInicial: Configuracion = {
-    ...CONFIGURACION_POR_DEFECTO,
+  const { consultorio, recargarConsultorio } = useConsultorio();
+  const configuracion: Configuracion = {
     nombre: consultorio.nombre,
     direccion: consultorio.direccion,
+    ciudad: consultorio.ciudad,
+    telefono: consultorio.telefono,
+    duracionTurno: consultorio.duracionTurno,
+    atencion: consultorio.atencion,
+    sobreturnos: consultorio.sobreturnos,
+    recordatorioAutomatico: consultorio.recordatorioAutomatico,
+    puntosRiesgoMedio: consultorio.puntosRiesgoMedio,
+    puntosRiesgoAlto: consultorio.puntosRiesgoAlto,
+    avisosAntesDeActuar: consultorio.avisosAntesDeActuar,
   };
-  const claveStorage = `${CLAVE_STORAGE}-${consultorio.id}`;
-  const [configuracion, setConfiguracion] = useState(configuracionInicial);
 
-  // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
-  useEffect(() => {
-    async function cargarConfiguracion() {
-      try {
-        const guardado = await AsyncStorage.getItem(claveStorage);
-        if (guardado !== null) {
-          setConfiguracion({ ...configuracionInicial, ...JSON.parse(guardado) });
-        }
-      } catch {
-        // Si falla la lectura, se queda con la configuración inicial.
-      }
-    }
-    cargarConfiguracion();
-  }, []);
-
-  // Reemplaza la configuración por la nueva y la guarda en el dispositivo.
+  // Manda la configuración nueva a la API y, si se guardó, vuelve a pedir los datos del consultorio.
   async function guardarConfiguracion(configuracionNueva: Configuracion) {
-    setConfiguracion(configuracionNueva);
-    try {
-      await AsyncStorage.setItem(claveStorage, JSON.stringify(configuracionNueva));
-    } catch {
-      // Si falla el guardado, el cambio igual queda en memoria hasta cerrar la app.
+    const respuesta = await pedir('PATCH', `/api/consultorios/${ID_CONSULTORIO}`, configuracionNueva);
+    if (respuesta.ok) {
+      await recargarConsultorio();
     }
+    return respuesta.error;
   }
 
   const reglasRiesgo: ReglasRiesgo = {

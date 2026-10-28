@@ -15,15 +15,14 @@ import {
   FONDO_PACIENTE,
 } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
+import { useEstudios } from '@/contextos/EstudiosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { listaDeEspera, puestoEnLista } from '@/datos/adelantos';
-import { ESTUDIOS, Estudio } from '@/datos/estudios';
+import { Estudio } from '@/datos/estudios';
 import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-
-const ESTUDIOS_PENDIENTES = ESTUDIOS.filter((estudio) => estudio.estado === 'pendiente');
 
 const FONDO_PENDIENTE = '#FCF1DC'; // tinte claro del ámbar, para chips y fondos suaves
 
@@ -37,6 +36,8 @@ function saludoSegunHora() {
 export default function HubPaciente() {
   const { turnos, misTurnos } = useTurnos();
   const { nombre } = usePerfilPaciente();
+  const { estudios } = useEstudios();
+  const estudiosPendientes = estudios.filter((estudio) => estudio.estado === 'pendiente');
   // Sus turnos anotados en la lista de espera para adelantarlos, con su puesto (1 = el que hace más tiempo espera).
   const esperas = listaDeEspera(misTurnos).map((turno) => ({ turno, ...puestoEnLista(turno, turnos) }));
   const { buscarPorTurno } = usePreconsultas();
@@ -149,7 +150,7 @@ export default function HubPaciente() {
           <Text style={styles.botonMisTurnosTexto}>Mis turnos</Text>
         </Pressable>
 
-        {ESTUDIOS_PENDIENTES.length > 0 && (
+        {estudiosPendientes.length > 0 && (
           <View style={styles.tarjeta}>
             <View style={styles.tarjetaEncabezado}>
               <Text style={styles.tarjetaTitulo}>Mis estudios</Text>
@@ -157,13 +158,13 @@ export default function HubPaciente() {
                 <Text style={styles.verTodos}>Ver todos</Text>
               </Pressable>
             </View>
-            {ESTUDIOS_PENDIENTES.map((estudio, indice) => (
+            {estudiosPendientes.map((estudio, indice) => (
               <Pressable
                 key={estudio.id}
                 onPress={() => setEstudioSeleccionado(estudio)}
                 style={[
                   styles.filaEstudio,
-                  indice < ESTUDIOS_PENDIENTES.length - 1 && styles.filaEstudioConBorde,
+                  indice < estudiosPendientes.length - 1 && styles.filaEstudioConBorde,
                 ]}>
                 <View style={styles.tipoEstudio}>
                   <Text style={styles.tipoEstudioTexto}>{estudio.tipo}</Text>

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_MEDICO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { coberturaQueAtiende, Especialidad, Medico } from '@/datos/catalogo';
 
@@ -37,6 +38,7 @@ export function ResumenEspecialidad({ especialidad, onCambiar }: PropsEspecialid
 
 export function ResumenMedico({ medico, onCambiar }: PropsMedico) {
   const { coberturaIds } = usePerfilPaciente();
+  const { coberturas } = useConsultorio();
 
   return (
     <View style={[styles.tarjeta, styles.tarjetaSeleccionada]}>
@@ -46,7 +48,7 @@ export function ResumenMedico({ medico, onCambiar }: PropsMedico) {
       <View style={styles.textos}>
         <Text style={styles.etiqueta}>Profesional</Text>
         <Text style={styles.valor}>{medico.nombre}</Text>
-        <Text style={styles.subvalor}>Atiende {coberturaQueAtiende(medico, coberturaIds)}</Text>
+        <Text style={styles.subvalor}>Atiende {coberturaQueAtiende(medico, coberturaIds, coberturas)}</Text>
       </View>
       {onCambiar && (
         <Pressable onPress={onCambiar}>

@@ -11,9 +11,7 @@ import {
 } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
-import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
-import { useSesion } from '@/contextos/SesionContext';
+import { Rol, useSesion } from '@/contextos/SesionContext';
 
 
 const TEMAS = {
@@ -40,25 +38,18 @@ const TEMAS = {
   },
 };
 
-// Credenciales de prueba: todavía no hay backend, se validan a mano.
-// Los médicos tienen un usuario cada uno, en los médicos de cada consultorio (datos/consultorio.ts).
-const CREDENCIALES = {
-  paciente: { email: 'p@t.com', password: 'p' },
-  secretaria: { email: 's@t.com', password: 's' },
-};
-
 export default function Login() {
     const { rol, registrado } = useLocalSearchParams();
-    const perfilPaciente = usePerfilPaciente();
 
     let tema = TEMAS.paciente;
-    let credenciales = CREDENCIALES.paciente;
+    let rolElegido: Rol = 'paciente';
 
     if (rol === 'medico') {
         tema = TEMAS.medico;
+        rolElegido = 'medico';
     } else if (rol === 'secretaria') {
         tema = TEMAS.secretaria;
-        credenciales = CREDENCIALES.secretaria;
+        rolElegido = 'secretaria';
     }
 
     const [email, setEmail] = useState('');
@@ -72,8 +63,8 @@ export default function Login() {
     const [mensajeExito, setMensajeExito] = useState(
       registrado === '1' ? 'Cuenta creada. Ingresá con tu email y contraseña.' : ''
     );
-    const { setMedicoLogueado } = useSesion();
-    const { consultorio } = useConsultorio();
+    const [ingresando, setIngresando] = useState(false);
+    const { iniciarSesion } = useSesion();
 
     // Opciones que todavía no funcionan (necesitan backend).
     const proximamente = () => {
@@ -96,7 +87,7 @@ export default function Login() {
         setMensajeExito('Ingreso correcto. Esta pantalla todavía no está armada.');
     }
 
-    const handleIngresar = () => {
+    const handleIngresar = async () => {
       let hayError = false;
       setMensajeError('');
       setMensajeExito('');
@@ -122,26 +113,12 @@ export default function Login() {
           return;
         }
 
-        // Médicos: se busca en la lista cuál médico es, y se guarda en la sesión.
-        if (rol === 'medico') {
-          const medico = consultorio.medicos.find((m) => m.email === email.trim() && m.password === password);
-          if (!medico) {
-            setMensajeError('Email o contraseña incorrectos.');
-            return;
-          }
-          setMedicoLogueado(medico);
-          irAlInicio();
-          return;
-        }
-
-        // Paciente: sirve la cuenta de prueba o la que se creó en Registro.
-        const esCuentaRegistrada =
-          rol === 'paciente' &&
-          email.trim().toLowerCase() === perfilPaciente.email.toLowerCase() &&
-          password === perfilPaciente.contrasena;
-
-        if (!esCuentaRegistrada && (email.trim() !== credenciales.email || password !== credenciales.password)) {
-          setMensajeError('Email o contraseña incorrectos.');
+        // La API revisa el email y la contraseña. Si están bien, la sesión queda guardada en el dispositivo.
+        setIngresando(true);
+        const error = await iniciarSesion(rolElegido, email.trim(), password);
+        setIngresando(false);
+        if (error !== '') {
+          setMensajeError(error);
           return;
         }
 
@@ -230,8 +207,9 @@ export default function Login() {
                     pressed && styles.presionado,
                   ]}
                   onPress={handleIngresar}
+                  disabled={ingresando}
                 >
-                  <Text style={styles.textoBoton}>Ingresar</Text>
+                  <Text style={styles.textoBoton}>{ingresando ? 'Ingresando…' : 'Ingresar'}</Text>
                 </Pressable>
 
                 {mensajeError !== '' && <Text style={styles.mensajeError}>{mensajeError}</Text>}
@@ -445,4 +423,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-});
+});

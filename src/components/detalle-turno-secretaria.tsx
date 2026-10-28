@@ -4,9 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_SECRETARIA } from '@/constantes/colores';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, formatearFecha } from '@/utilidades/turnos';
 
 type Props = {
@@ -19,7 +17,7 @@ type Props = {
 export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
   const { turnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
   const { consultorio } = useConsultorio();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
   const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
 
   const turno = turnos.find((t) => t.id === idTurno);

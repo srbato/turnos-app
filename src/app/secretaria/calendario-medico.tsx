@@ -11,11 +11,9 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { enLicencia, horariosDelMedico, usePersonal } from '@/contextos/PersonalContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { atiendeEseDia, textoDeDias } from '@/datos/atencion';
 import { HOY } from '@/datos/consultorio';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 const MESES = [
@@ -53,7 +51,7 @@ export default function CalendarioMedico() {
   const { turnos } = useTurnos();
   const { consultorio } = useConsultorio();
   const { duracionTurno } = useConfiguracion();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
   const medico = medicos.find((m) => m.matricula === matricula);
 
   const hoy = new Date();

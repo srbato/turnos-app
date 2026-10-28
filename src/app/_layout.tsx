@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { AdelantosProvider } from '@/contextos/AdelantosContext';
 import { ConfiguracionProvider } from '@/contextos/ConfiguracionContext';
 import { ConsultorioProvider } from '@/contextos/ConsultorioContext';
+import { EstudiosProvider } from '@/contextos/EstudiosContext';
 import { MedicamentosProvider } from '@/contextos/MedicamentosContext';
 import { PerfilMedicoProvider } from '@/contextos/PerfilMedicoContext';
 import { PerfilPacienteProvider } from '@/contextos/PerfilPacienteContext';
@@ -25,7 +26,8 @@ const OPCIONES_MENU: { animation: 'fade'; animationDuration: number } = { animat
 // El splash (el logo) queda en pantalla hasta que se cargue la fuente de los títulos.
 SplashScreen.preventAutoHideAsync();
 
-// El consultorio va primero: todos los contextos de abajo toman sus datos iniciales de él.
+// El consultorio va primero (hasta que llega de la API se muestra una espera); después la sesión, porque varios
+// contextos cargan los datos de quien inició sesión. Cada uno va adentro de los que usa: Personal usa Turnos, etc.
 export default function RootLayout() {
   const [fuenteCargada, errorFuente] = useFonts({ Montserrat_700Bold });
 
@@ -44,38 +46,40 @@ export default function RootLayout() {
     <ConsultorioProvider>
       <SesionProvider>
         <PreferenciasProvider>
-          <PerfilPacienteProvider>
-            <TurnosProvider>
+          <TurnosProvider>
+            <PersonalProvider>
               <AdelantosProvider>
-                <PersonalProvider>
-                  <ConfiguracionProvider>
+                <ConfiguracionProvider>
+                  <PerfilPacienteProvider>
                     <PerfilSecretariaProvider>
                       <PerfilMedicoProvider>
                         <RecetasProvider>
                           <MedicamentosProvider>
                             <PreconsultasProvider>
-                              <Stack screenOptions={{ headerShown: false }}>
-                                {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
-                                <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
-                                <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
-                                <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
-                                <Stack.Screen name="perfil" options={OPCIONES_MENU} />
-                                <Stack.Screen name="secretaria/index" options={OPCIONES_MENU} />
-                                <Stack.Screen name="secretaria/espera" options={OPCIONES_MENU} />
-                                <Stack.Screen name="secretaria/alertas" options={OPCIONES_MENU} />
-                                <Stack.Screen name="secretaria/personal" options={OPCIONES_MENU} />
-                                <Stack.Screen name="secretaria/ajustes" options={OPCIONES_MENU} />
-                              </Stack>
+                              <EstudiosProvider>
+                                <Stack screenOptions={{ headerShown: false }}>
+                                  {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
+                                  <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="perfil" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="secretaria/index" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="secretaria/espera" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="secretaria/alertas" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="secretaria/personal" options={OPCIONES_MENU} />
+                                  <Stack.Screen name="secretaria/ajustes" options={OPCIONES_MENU} />
+                                </Stack>
+                              </EstudiosProvider>
                             </PreconsultasProvider>
                           </MedicamentosProvider>
                         </RecetasProvider>
                       </PerfilMedicoProvider>
                     </PerfilSecretariaProvider>
-                  </ConfiguracionProvider>
-                </PersonalProvider>
+                  </PerfilPacienteProvider>
+                </ConfiguracionProvider>
               </AdelantosProvider>
-            </TurnosProvider>
-          </PerfilPacienteProvider>
+            </PersonalProvider>
+          </TurnosProvider>
         </PreferenciasProvider>
       </SesionProvider>
     </ConsultorioProvider>

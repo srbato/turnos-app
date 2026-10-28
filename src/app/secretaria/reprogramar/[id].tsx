@@ -14,12 +14,10 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { atiendeEn, usePersonal } from '@/contextos/PersonalContext';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 
 function volver() {
@@ -35,7 +33,6 @@ export default function ReprogramarSecretaria() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { turnos, reprogramarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
-  const perfilPaciente = usePerfilPaciente();
   const { medicos: personal } = usePersonal();
   const [fecha, setFecha] = useState<string | null>(null);
   const [hora, setHora] = useState<string | null>(null);
@@ -43,7 +40,7 @@ export default function ReprogramarSecretaria() {
 
   const turno = turnos.find((t) => t.id === id);
   const { consultorio } = useConsultorio();
-  const paciente = turno ? pacientesConPerfil(perfilPaciente, consultorio.pacientes).find((p) => p.id === turno.idPaciente) : undefined;
+  const paciente = turno ? consultorio.pacientes.find((p) => p.id === turno.idPaciente) : undefined;
 
   // Si el id no existe (por ejemplo, URL escrita a mano), se vuelve a la agenda.
   if (!turno || !paciente) {

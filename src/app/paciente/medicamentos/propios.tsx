@@ -44,7 +44,7 @@ export default function MedicamentosPropios() {
     setErrorDosis('');
   }
 
-  function guardar() {
+  async function guardar() {
     // El nombre y la dosis son obligatorios; el motivo es opcional.
     const faltaNombre = nombre.trim() === '';
     const faltaDosis = dosis.trim() === '';
@@ -54,10 +54,15 @@ export default function MedicamentosPropios() {
       return;
     }
     const datos = { nombre: nombre.trim(), dosis: dosis.trim(), motivo: motivo.trim() };
+    let error = '';
     if (medicamentoEditando) {
-      editarMedicamento({ ...datos, id: medicamentoEditando.id });
+      error = await editarMedicamento(medicamentoEditando.id, datos);
     } else {
-      agregarMedicamento({ ...datos, id: String(Date.now()) });
+      error = await agregarMedicamento(datos);
+    }
+    if (error !== '') {
+      setErrorNombre(error);
+      return;
     }
     cerrarFormulario();
   }

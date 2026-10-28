@@ -16,11 +16,10 @@ import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { aceptaTurnos, atiendeEn, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
-import { coberturaQueAtiende } from '@/datos/catalogo';
 import { horasReservadas } from '@/datos/adelantos';
-import { HOY, ID_PACIENTE_APP } from '@/datos/consultorio';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
 
 export default function ElegirHorario() {
@@ -28,9 +27,11 @@ export default function ElegirHorario() {
   const { turnos, agregarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
   const { medicos: personal } = usePersonal();
+  const { idPaciente } = useSesion();
   const { nombre: nombreConsultorio } = useConfiguracion();
   const { coberturaIds } = usePerfilPaciente();
   const [confirmado, setConfirmado] = useState(false);
+  const [error, setError] = useState('');
   // Si quiere que le ofrezcan adelantar el turno cuando se libere un horario (lista de espera).
   const [quiereAdelanto, setQuiereAdelanto] = useState(false);
 
@@ -52,22 +53,24 @@ export default function ElegirHorario() {
   const fechaSeleccionada =
     fecha && diasConAtencion.some((dia) => dia.fecha === fecha) ? fecha : (diasConAtencion[0] ?? dias[0]).fecha;
 
-  function confirmar() {
+  async function confirmar() {
     if (!especialidad || !medico || !hora) return;
-    agregarTurno({
-      id: String(Date.now()),
-      idPaciente: ID_PACIENTE_APP,
-      medico: medico.nombre,
-      especialidad: especialidad.nombre,
-      sala: medico.sala,
+    // El turno se saca con la primera obra social del paciente que el médico acepta (null = particular).
+    const coberturaId = medico.coberturaIds.find((id) => coberturaIds.includes(id)) ?? null;
+    const errorApi = await agregarTurno({
+      idPaciente: idPaciente,
+      idMedico: medico.id,
       fecha: fechaSeleccionada,
-      hora,
-      sede: nombreConsultorio,
-      cobertura: coberturaQueAtiende(medico, coberturaIds),
-      estado: 'pendiente',
-      instrucciones: [],
-      adelantoDesde: quiereAdelanto ? HOY : undefined,
+      hora: hora,
+      coberturaId: coberturaId,
+      adelanto: quiereAdelanto,
     });
+    // Por ejemplo, si otro paciente sacó ese horario mientras tanto.
+    if (errorApi !== '') {
+      setError(errorApi);
+      return;
+    }
+    setError('');
     setConfirmado(true);
   }
 
@@ -113,6 +116,8 @@ export default function ElegirHorario() {
         />
 
         <OpcionAdelanto activo={quiereAdelanto} onCambiar={setQuiereAdelanto} />
+
+        {error !== '' && <Text style={styles.error}>{error}</Text>}
       </ScrollView>
 
       <Pressable
@@ -149,6 +154,13 @@ export default function ElegirHorario() {
 }
 
 const styles = StyleSheet.create({
+  error: {
+    color: '#C0392B',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
+  },
   avisoLicencia: {
     backgroundColor: '#FCF1DC',
     borderRadius: 12,

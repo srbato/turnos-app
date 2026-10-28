@@ -15,14 +15,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MenuMedico } from '@/components/menu-medico';
-import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { useRecetas } from '@/contextos/RecetasContext';
-import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { recetaVigente, vencimientoReceta, Receta } from '@/datos/recetas';
-import { datosParaMedico } from '@/utilidades/datos-medico';
 import { formatearFecha } from '@/utilidades/turnos';
 
 const COLOR_MEDICO = '#1B4B8F';
@@ -31,12 +28,10 @@ const COLOR_ERROR = '#D64545';
 
 export default function RecetasDelMedico() {
   const { turnos } = useTurnos();
-  const { medicoLogueado } = useSesion();
-  const perfilPaciente = usePerfilPaciente();
-  const { medicamentos: medicamentosPropios } = useMedicamentos();
+  const medicoLogueado = useMedicoLogueado();
   const { recetas, emitirReceta, editarReceta, eliminarReceta } = useRecetas();
   const { consultorio } = useConsultorio();
-  const { pacientes } = datosParaMedico(perfilPaciente, consultorio.pacientes, medicamentosPropios, recetas);
+  const pacientes = consultorio.pacientes;
 
   // Formulario de nueva receta (se muestra en un Modal).
   const [formularioVisible, setFormularioVisible] = useState(false);
@@ -61,7 +56,7 @@ export default function RecetasDelMedico() {
 
   // Recetas de este médico, de la más nueva a la más vieja. Las vencidas pasan al historial y ya no se editan.
   const recetasDelMedico = recetas
-    .filter((receta) => receta.medico === medicoLogueado.nombre)
+    .filter((receta) => receta.idMedico === medicoLogueado.id)
     .sort((a, b) => (a.fechaEmision < b.fechaEmision ? 1 : -1));
   const recetasVigentes = recetasDelMedico.filter((receta) => recetaVigente(receta));
   const recetasPasadas = recetasDelMedico.filter((receta) => !recetaVigente(receta));
@@ -94,7 +89,7 @@ export default function RecetasDelMedico() {
     setConfirmandoEliminar(false);
   }
 
-  function guardarReceta() {
+  async function guardarReceta() {
     let hayError = false;
 
     if (idPaciente === '') {
@@ -122,20 +117,26 @@ export default function RecetasDelMedico() {
       return;
     }
 
+    let error = '';
     if (idEditando !== '') {
-      editarReceta(idEditando, {
+      error = await editarReceta(idEditando, {
         medicamento: medicamento.trim(),
         indicacion: indicacion.trim(),
         riesgo: esRiesgoso,
       });
     } else {
-      emitirReceta({
+      error = await emitirReceta({
         idPaciente: idPaciente,
-        medico: medicoLogueado.nombre,
+        idMedico: medicoLogueado.id,
         medicamento: medicamento.trim(),
         indicacion: indicacion.trim(),
         riesgo: esRiesgoso,
       });
+    }
+    // Si la API no la aceptó, el formulario queda abierto con el motivo.
+    if (error !== '') {
+      setErrorMedicamento(error);
+      return;
     }
     cerrarFormulario();
   }

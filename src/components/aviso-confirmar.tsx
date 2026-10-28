@@ -4,9 +4,10 @@ import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/co
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { evaluarRiesgo } from '@/datos/ausentismo';
-import { HOY, ID_PACIENTE_APP } from '@/datos/consultorio';
+import { HOY } from '@/datos/consultorio';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
 // "Hoy 10:00 h", "Mañana 10:00 h" o "Jue 15/10 · 10:00 h".
@@ -25,8 +26,9 @@ export function AvisoConfirmar() {
   const { turnos, misTurnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo, avisosAntesDeActuar } = useConfiguracion();
+  const { idPaciente } = useSesion();
 
-  const paciente = consultorio.pacientes.find((p) => p.id === ID_PACIENTE_APP);
+  const paciente = consultorio.pacientes.find((p) => p.id === idPaciente);
   const riesgoAlto = paciente !== undefined && evaluarRiesgo(paciente, turnos, reglasRiesgo).nivel === 'alto';
 
   const conAviso = misTurnos.filter(

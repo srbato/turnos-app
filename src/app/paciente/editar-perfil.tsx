@@ -9,9 +9,9 @@ import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
-import { COBERTURAS } from '@/datos/catalogo';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
 import { confirmarIdentidad } from '@/utilidades/biometria';
 import { palabras } from '@/utilidades/texto';
@@ -28,12 +28,14 @@ function esperar(milisegundos: number) {
 
 export default function EditarPerfil() {
   const perfil = usePerfilPaciente();
+  const { coberturas } = useConsultorio();
   const { idioma, modoOscuro } = usePreferencias();
   const tema = modoOscuro ? TEMA_OSCURO : TEMA_CLARO;
   const textos = TEXTOS_EDITAR[idioma];
 
   // Borrador: los cambios se aplican recién al tocar "Guardar cambios".
   const [nombre, setNombre] = useState(perfil.nombre);
+  const [apellido, setApellido] = useState(perfil.apellido);
   const [email, setEmail] = useState(perfil.email);
   const [telefono, setTelefono] = useState(perfil.telefono);
   const [domicilio, setDomicilio] = useState(perfil.domicilio);
@@ -62,12 +64,12 @@ export default function EditarPerfil() {
 
   // La foto se guarda apenas se elige o se quita, como en cualquier app (el resto de los datos, con "Guardar cambios").
   // Por eso se guardan los demás datos tal como estaban, no lo que se esté escribiendo en el formulario.
-  function cambiarFoto(nueva: string | null) {
+  async function cambiarFoto(nueva: string | null) {
     setFotoUri(nueva);
-    perfil.actualizarPerfil({
+    const error = await perfil.actualizarPerfil({
       nombre: perfil.nombre,
+      apellido: perfil.apellido,
       dni: perfil.dni,
-      contrasena: perfil.contrasena,
       email: perfil.email,
       telefono: perfil.telefono,
       domicilio: perfil.domicilio,
@@ -76,6 +78,9 @@ export default function EditarPerfil() {
       coberturaIds: perfil.coberturaIds,
       fotoUri: nueva,
     });
+    if (error !== '') {
+      setErrorFoto(error);
+    }
   }
 
   function usarResultado(resultado: ImagePicker.ImagePickerResult) {
@@ -120,9 +125,9 @@ export default function EditarPerfil() {
     );
   }
 
-  function guardar() {
-    // Se pide nombre y apellido (al menos dos palabras), un email válido y alguna obra social.
-    if (palabras(nombre).length < 2) {
+  async function guardar() {
+    // Se pide nombre y apellido, un email válido y alguna obra social.
+    if (palabras(nombre).length === 0 || palabras(apellido).length === 0) {
       setMensaje({ texto: textos.errorNombre, esError: true });
       return;
     }
@@ -139,11 +144,11 @@ export default function EditarPerfil() {
     coberturaIds.forEach((id) => {
       numerosDeMarcadas[id] = (numerosAfiliado[id] ?? '').trim();
     });
-    perfil.actualizarPerfil({
-      // El DNI y la contraseña no se editan acá: se mantienen los que ya tenía.
+    const error = await perfil.actualizarPerfil({
+      // El DNI no se edita acá: se mantiene el que ya tenía.
       dni: perfil.dni,
-      contrasena: perfil.contrasena,
       nombre: nombre.trim(),
+      apellido: apellido.trim(),
       email: email.trim(),
       telefono: telefono.trim(),
       domicilio: domicilio.trim(),
@@ -152,6 +157,11 @@ export default function EditarPerfil() {
       fotoUri,
       coberturaIds,
     });
+    // Si la API no lo aceptó (por ejemplo, el email ya lo usa otro paciente), se muestra el motivo.
+    if (error !== '') {
+      setMensaje({ texto: error, esError: true });
+      return;
+    }
     // Al guardar se vuelve a Mi perfil, donde ya se ven los datos nuevos.
     router.navigate('/perfil?rol=paciente');
   }
@@ -165,11 +175,6 @@ export default function EditarPerfil() {
   }
 
   async function confirmarContrasena() {
-    // Contraseña de prueba guardada en el perfil. Con backend se verificaría en el servidor.
-    if (actual !== perfil.contrasena) {
-      setErrorContrasena(textos.errorActual);
-      return;
-    }
     if (nueva.length < 6) {
       setErrorContrasena(textos.errorLargo);
       return;
@@ -184,7 +189,12 @@ export default function EditarPerfil() {
       setErrorContrasena(textos.errorBiometria);
       return;
     }
-    perfil.cambiarContrasena(nueva);
+    // La API revisa que la contraseña actual sea la correcta.
+    const error = await perfil.cambiarContrasena(actual, nueva);
+    if (error !== '') {
+      setErrorContrasena(error);
+      return;
+    }
     cerrarContrasena();
     setMensaje({ texto: textos.contrasenaCambiada, esError: false });
   }
@@ -210,7 +220,7 @@ export default function EditarPerfil() {
               tamano={88}
               colorTexto={COLOR_PERFIL}
               colorBorde={COLOR_PERFIL}
-              datos={{ nombre, fotoUri }}
+              datos={{ nombre: `${nombre} ${apellido}`, fotoUri }}
             />
           </View>
           <Pressable style={styles.botonFoto} onPress={() => setOpcionesFotoAbiertas(true)}>
@@ -226,7 +236,10 @@ export default function EditarPerfil() {
         <Text style={[styles.seccionTitulo, { color: tema.textoSecundario }]}>{textos.datos}</Text>
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.nombre}</Text>
-          <TextInput style={estiloCampo} value={nombre} onChangeText={setNombre} maxLength={60} />
+          <TextInput style={estiloCampo} value={nombre} onChangeText={setNombre} maxLength={40} />
+
+          <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.apellido}</Text>
+          <TextInput style={estiloCampo} value={apellido} onChangeText={setApellido} maxLength={40} />
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.email}</Text>
           <TextInput
@@ -269,7 +282,7 @@ export default function EditarPerfil() {
           {textos.obrasSociales}
         </Text>
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
-          {COBERTURAS.map((cobertura, indice) => {
+          {coberturas.map((cobertura, indice) => {
             const marcada = coberturaIds.includes(cobertura.id);
             return (
               <View key={cobertura.id}>

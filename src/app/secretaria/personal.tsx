@@ -25,12 +25,22 @@ export default function PersonalSecretaria() {
   const [nombre, setNombre] = useState('');
   const [matricula, setMatricula] = useState('');
   const [especialidad, setEspecialidad] = useState('');
+  const [email, setEmail] = useState('');
+  const [contrasena, setContrasena] = useState('');
   const [franjas, setFranjas] = useState<FranjaHoraria[]>([]);
   const [error, setError] = useState('');
 
-  function darDeAlta() {
-    if (nombre.trim() === '' || matricula.trim() === '' || especialidad.trim() === '') {
+  async function darDeAlta() {
+    if (nombre.trim() === '' || matricula.trim() === '' || especialidad.trim() === '' || email.trim() === '') {
       setError('Completá todos los campos.');
+      return;
+    }
+    if (!email.includes('@') || !email.includes('.')) {
+      setError('Ingresá un email válido.');
+      return;
+    }
+    if (contrasena.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
     if (franjas.length === 0) {
@@ -41,10 +51,24 @@ export default function PersonalSecretaria() {
       setError('Ya hay un médico con esa matrícula.');
       return;
     }
-    altaMedico({ nombre, matricula, especialidad, franjas });
+    // El médico ingresa a la app con este email y esta contraseña.
+    const errorApi = await altaMedico({
+      nombre: nombre.trim(),
+      matricula: matricula.trim(),
+      especialidad: especialidad.trim(),
+      email: email.trim(),
+      contrasena: contrasena,
+      franjas: franjas,
+    });
+    if (errorApi !== '') {
+      setError(errorApi);
+      return;
+    }
     setNombre('');
     setMatricula('');
     setEspecialidad('');
+    setEmail('');
+    setContrasena('');
     setFranjas([]);
     setError('');
     setFormularioAbierto(false);
@@ -74,9 +98,9 @@ export default function PersonalSecretaria() {
         {pestana === 'medicos' &&
           [...medicos].sort((a, b) => Number(a.estado === 'baja') - Number(b.estado === 'baja')).map((medico) => (
             <Pressable
-              key={medico.matricula}
+              key={medico.id}
               style={[styles.tarjeta, medico.estado === 'baja' && styles.tarjetaBaja]}
-              onPress={() => router.push({ pathname: '/secretaria/medico', params: { matricula: medico.matricula } })}>
+              onPress={() => router.push({ pathname: '/secretaria/medico', params: { id: medico.id } })}>
               <View style={[styles.avatar, medico.estado === 'baja' && styles.avatarBaja]}>
                 <Text style={styles.avatarTexto}>{medico.iniciales}</Text>
               </View>
@@ -101,7 +125,7 @@ export default function PersonalSecretaria() {
 
         {pestana === 'secretarias' &&
           secretarias.map((secretaria) => (
-            <View key={secretaria.nombre} style={styles.tarjeta}>
+            <View key={secretaria.id} style={styles.tarjeta}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarTexto}>{secretaria.iniciales}</Text>
               </View>
@@ -147,6 +171,27 @@ export default function PersonalSecretaria() {
               value={especialidad}
               onChangeText={setEspecialidad}
               placeholder="Pediatría"
+              placeholderTextColor="#8FB9B5"
+            />
+
+            <Text style={styles.etiqueta}>Email (para ingresar a la app)</Text>
+            <TextInput
+              style={styles.campo}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              placeholder="laura.gomez@consultorio.com"
+              placeholderTextColor="#8FB9B5"
+            />
+
+            <Text style={styles.etiqueta}>Contraseña inicial</Text>
+            <TextInput
+              style={styles.campo}
+              value={contrasena}
+              onChangeText={setContrasena}
+              secureTextEntry
+              placeholder="Al menos 6 caracteres"
               placeholderTextColor="#8FB9B5"
             />
 

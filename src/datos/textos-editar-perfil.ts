@@ -12,6 +12,8 @@ type TextosEditar = {
   quitarFoto: string;
   datos: string;
   nombre: string;
+  apellido: string;
+  nombreCompleto: string; // Secretaría tiene un solo campo para el nombre
   email: string;
   telefono: string;
   domicilio: string;
@@ -58,7 +60,9 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     errorGaleria: 'Necesitamos permiso para acceder a tus fotos. Podés activarlo en los ajustes del teléfono.',
     quitarFoto: 'Quitar foto',
     datos: 'Datos personales',
-    nombre: 'Nombre y apellido',
+    nombre: 'Nombre',
+    apellido: 'Apellido',
+    nombreCompleto: 'Nombre y apellido',
     email: 'Email',
     telefono: 'Teléfono',
     domicilio: 'Domicilio',
@@ -103,7 +107,9 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     errorGaleria: 'We need permission to access your photos. You can turn it on in your phone settings.',
     quitarFoto: 'Remove photo',
     datos: 'Personal details',
-    nombre: 'Full name',
+    nombre: 'First name',
+    apellido: 'Last name',
+    nombreCompleto: 'Full name',
     email: 'Email',
     telefono: 'Phone',
     domicilio: 'Address',

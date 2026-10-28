@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ResumenEspecialidad } from '@/components/resumen-turno';
 import { COLOR_MEDICO, FONDO_PACIENTE } from '@/constantes/colores';
+import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
@@ -12,6 +13,7 @@ import { coberturaQueAtiende, medicosDelCatalogo, medicosParaPaciente, Medico } 
 export default function ElegirMedico() {
   const { especialidad, elegirMedico } = useSacarTurno();
   const { coberturaIds } = usePerfilPaciente();
+  const { coberturas } = useConsultorio();
   const { medicos: personal } = usePersonal();
 
   // Si se entra a esta URL directo (sin haber elegido especialidad), se vuelve al paso 1.
@@ -60,7 +62,7 @@ export default function ElegirMedico() {
           </View>
           <View style={styles.textos}>
             <Text style={styles.nombre}>{item.nombre}</Text>
-            <Text style={styles.cobertura}>Atiende {coberturaQueAtiende(item, coberturaIds)}</Text>
+            <Text style={styles.cobertura}>Atiende {coberturaQueAtiende(item, coberturaIds, coberturas)}</Text>
             {fechaDeVuelta(personal, item.nombre) && (
               <Text style={styles.licencia}>
                 De licencia · vuelve el {formatearFecha(fechaDeVuelta(personal, item.nombre) ?? '').slice(0, 5)}

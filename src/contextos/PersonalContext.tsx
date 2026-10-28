@@ -1,31 +1,30 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
-import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
-import {
-  atiendeEnEseHorario,
-  atiendeEseDia,
-  FranjaHoraria,
-  franjasDe,
-  FRANJAS_POR_DEFECTO,
-  horasDelDia,
-} from '@/datos/atencion';
-import { COBERTURAS } from '@/datos/catalogo';
-import { fechaDentroDe, HOY, Medico } from '@/datos/consultorio';
+import { atiendeEseDia, FranjaHoraria, FRANJAS_POR_DEFECTO, horasDelDia, ordenarFranjas } from '@/datos/atencion';
+import { HOY } from '@/datos/consultorio';
 import { palabras } from '@/utilidades/texto';
+import { ID_CONSULTORIO, pedir } from '@/servicios/api';
 
-// Personal del consultorio activo: médicos y secretarias. Secretaría da de alta médicos.
-// Todavía no hay backend: un médico nuevo aparece en la agenda, pero no tiene usuario para iniciar sesión.
+// Personal del consultorio: médicos y secretarias. Vienen de la API. Secretaría da de alta médicos y edita sus fichas.
+// Si un médico deja de atender un día en que tenía turnos (licencia, baja, cambio de horario), la API cancela esos
+// turnos sola y guarda el motivo: por eso, después de editar un médico, se vuelven a pedir también los turnos.
 
 // 'baja': ya no atiende (se conserva su historial).
 export type EstadoMedico = 'activo' | 'licencia' | 'baja';
 
 export type MiembroMedico = {
+  id: string;
   nombre: string;
   iniciales: string;
   especialidad: string;
   matricula: string;
   sala: string;
+  email: string;
+  telefono: string;
+  domicilio: string;
+  fotoUri: string | null; // foto de perfil (data URI), o null para mostrar las iniciales
   franjas: FranjaHoraria[]; // cuándo atiende: días y horarios (los carga Secretaría en su ficha)
   coberturaIds: string[]; // obras sociales que acepta
   estado: EstadoMedico;
@@ -33,9 +32,15 @@ export type MiembroMedico = {
 };
 
 export type MiembroSecretaria = {
+  id: string;
   nombre: string;
   iniciales: string;
-  horario: string;
+  dni: string;
+  email: string;
+  telefono: string;
+  domicilio: string;
+  fotoUri: string | null;
+  horario: string; // días y horario en que trabaja
   estado: 'activo' | 'licencia';
 };
 
@@ -54,40 +59,81 @@ export type MedicoNuevo = {
   nombre: string;
   matricula: string;
   especialidad: string;
+  email: string; // con este email y esta contraseña el médico inicia sesión
+  contrasena: string;
   franjas: FranjaHoraria[];
 };
 
-type DatosDeEjemplo = { franjas: FranjaHoraria[]; estado: 'activo' | 'licencia'; licenciaHasta?: string };
-
-// Horarios de atención de los médicos de ejemplo (1 = lunes … 5 = viernes).
-const DATOS_DE_EJEMPLO: Record<string, DatosDeEjemplo> = {
-  // Paz y Fernández atienden toda la semana porque tienen turnos de ejemplo para cualquier día en que se abra la app.
-  'Dr. Ricardo Paz': { franjas: FRANJAS_POR_DEFECTO, estado: 'activo' },
-  'Dra. Ana Torres': {
-    franjas: [...franjasDe([3], '14:00', '20:00'), ...franjasDe([5], '09:00', '13:00')], // mié a la tarde, vie a la mañana
-    estado: 'activo',
-  },
-  'Dra. Lucía Fernández': { franjas: FRANJAS_POR_DEFECTO, estado: 'activo' },
-  'Dra. Mariela Sosa': {
-    franjas: franjasDe([1, 3, 5], '08:00', '12:00'),
-    estado: 'licencia',
-    licenciaHasta: fechaDentroDe(14),
-  },
-  'Dr. Gustavo Ibáñez': { franjas: franjasDe([1, 2, 3, 4, 5], '10:00', '14:00'), estado: 'activo' },
+// Un médico tal como lo devuelve la API (GET /api/medicos).
+type MedicoApi = {
+  id: number;
+  nombre: string;
+  iniciales: string;
+  especialidad: string;
+  matricula: string;
+  sala: string;
+  email: string;
+  telefono: string;
+  domicilio: string;
+  fotoUri: string | null;
+  estado: EstadoMedico;
+  licenciaHasta: string | null;
+  franjas: FranjaHoraria[];
+  coberturas: { id: string }[];
 };
 
-function miembrosMedicos(medicos: Medico[]): MiembroMedico[] {
-  return medicos.map((medico) => ({
+// Una secretaria tal como la devuelve la API (GET /api/secretarias).
+type SecretariaApi = {
+  id: number;
+  nombre: string;
+  dni: string;
+  email: string;
+  telefono: string;
+  domicilio: string;
+  turnoTrabajo: string;
+  fotoUri: string | null;
+  estado: 'activo' | 'licencia';
+};
+
+function medicoDesdeApi(medico: MedicoApi): MiembroMedico {
+  return {
+    id: String(medico.id),
     nombre: medico.nombre,
     iniciales: medico.iniciales,
     especialidad: medico.especialidad,
     matricula: medico.matricula,
     sala: medico.sala,
-    coberturaIds: medico.coberturaIds,
-    franjas: DATOS_DE_EJEMPLO[medico.nombre]?.franjas ?? FRANJAS_POR_DEFECTO,
-    estado: DATOS_DE_EJEMPLO[medico.nombre]?.estado ?? 'activo',
-    licenciaHasta: DATOS_DE_EJEMPLO[medico.nombre]?.licenciaHasta,
-  }));
+    email: medico.email,
+    telefono: medico.telefono,
+    domicilio: medico.domicilio,
+    fotoUri: medico.fotoUri,
+    // La API no las devuelve ordenadas: se ordenan por día y por hora.
+    franjas: ordenarFranjas(
+      medico.franjas.map((franja) => ({ dia: franja.dia, desde: franja.desde, hasta: franja.hasta }))
+    ),
+    coberturaIds: medico.coberturas.map((cobertura) => cobertura.id),
+    estado: medico.estado,
+    licenciaHasta: medico.licenciaHasta ?? undefined,
+  };
+}
+
+function secretariaDesdeApi(secretaria: SecretariaApi): MiembroSecretaria {
+  const partes = palabras(secretaria.nombre);
+  return {
+    id: String(secretaria.id),
+    nombre: secretaria.nombre,
+    iniciales: partes
+      .slice(0, 2)
+      .map((palabra) => palabra[0].toUpperCase())
+      .join(''),
+    dni: secretaria.dni,
+    email: secretaria.email,
+    telefono: secretaria.telefono,
+    domicilio: secretaria.domicilio,
+    fotoUri: secretaria.fotoUri,
+    horario: secretaria.turnoTrabajo,
+    estado: secretaria.estado,
+  };
 }
 
 // ¿El médico está de licencia en esa fecha? La licencia dura hasta el día anterior a "licenciaHasta" (ese día ya vuelve).
@@ -145,82 +191,84 @@ export function fechaDeVuelta(medicos: MiembroMedico[], nombre: string) {
 type PersonalContextType = {
   medicos: MiembroMedico[];
   secretarias: MiembroSecretaria[];
-  altaMedico: (nuevo: MedicoNuevo) => void;
-  editarMedico: (matricula: string, cambios: CambiosMedico) => void; // matricula = la actual, para encontrarlo
+  recargarPersonal: () => Promise<void>; // después de que un médico o una secretaria cambian su perfil
+  altaMedico: (nuevo: MedicoNuevo) => Promise<string>; // devuelve el error, o '' si salió bien
+  editarMedico: (id: string, cambios: CambiosMedico) => Promise<string>;
 };
 
 // Valor que se usa solo si una pantalla queda fuera del Provider.
 const VALOR_POR_DEFECTO: PersonalContextType = {
   medicos: [],
   secretarias: [],
-  altaMedico: () => {},
-  editarMedico: () => {},
+  recargarPersonal: async () => {},
+  altaMedico: async () => '',
+  editarMedico: async () => '',
 };
 
 const PersonalContext = createContext(VALOR_POR_DEFECTO);
 
 export function PersonalProvider({ children }: { children: ReactNode }) {
-  const { consultorio } = useConsultorio();
-  const [medicos, setMedicos] = useState<MiembroMedico[]>(miembrosMedicos(consultorio.medicos));
-  const secretarias: MiembroSecretaria[] = consultorio.secretarias.map((secretaria) => ({
-    nombre: secretaria.nombre,
-    iniciales: secretaria.iniciales,
-    horario: secretaria.horario,
-    estado: 'activo',
-  }));
-  const { turnos, cancelarConMotivo } = useTurnos();
+  const { recargarTurnos } = useTurnos();
+  const [medicos, setMedicos] = useState<MiembroMedico[]>([]);
+  const [secretarias, setSecretarias] = useState<MiembroSecretaria[]>([]);
 
-  // Si un turno futuro quedó en un día u horario en que el médico no atiende (cambiaron sus horarios, se tomó licencia o
-  // lo dieron de baja, o se cargó mal), el sistema lo cancela solo y guarda el motivo para que Secretaría avise al paciente.
-  // Una vez cancelado ya no cumple la condición, así que el efecto no se repite.
-  useEffect(() => {
-    const cancelaciones: { id: string; motivo: string }[] = [];
-    turnos.forEach((turno) => {
-      if (turno.fecha < HOY || (turno.estado !== 'pendiente' && turno.estado !== 'confirmado')) return;
-      const medico = medicos.find((m) => m.nombre === turno.medico);
-      if (!medico) return;
-      const motivo = motivoSinAtencion(medico, turno.fecha);
-      if (motivo) {
-        cancelaciones.push({ id: turno.id, motivo: motivo });
-      } else if (!atiendeEnEseHorario(medico.franjas, turno.fecha, turno.hora)) {
-        cancelaciones.push({ id: turno.id, motivo: 'El médico no atiende en ese horario.' });
-      }
-    });
-    if (cancelaciones.length > 0) {
-      cancelarConMotivo(cancelaciones);
+  async function recargarPersonal() {
+    const respuestaMedicos = await pedir('GET', `/api/medicos?consultorioId=${ID_CONSULTORIO}`);
+    if (respuestaMedicos.ok) {
+      setMedicos(respuestaMedicos.datos.map(medicoDesdeApi));
     }
-  }, [turnos, medicos]);
-
-  function altaMedico(nuevo: MedicoNuevo) {
-    const miembro: MiembroMedico = {
-      nombre: nuevo.nombre.trim(),
-      iniciales: palabras(nuevo.nombre)
-        .slice(-2)
-        .map((palabra) => palabra[0].toUpperCase())
-        .join(''),
-      especialidad: nuevo.especialidad.trim(),
-      matricula: nuevo.matricula.trim(),
-      sala: `Consultorio ${medicos.length + 1}`,
-      franjas: nuevo.franjas,
-      coberturaIds: COBERTURAS.map((cobertura) => cobertura.id), // un médico nuevo acepta todas hasta que se cargue lo contrario
-      estado: 'activo',
-    };
-    setMedicos((anteriores) => [...anteriores, miembro]);
+    const respuestaSecretarias = await pedir('GET', `/api/secretarias?consultorioId=${ID_CONSULTORIO}`);
+    if (respuestaSecretarias.ok) {
+      setSecretarias(respuestaSecretarias.datos.map(secretariaDesdeApi));
+    }
   }
 
-  function editarMedico(matricula: string, cambios: CambiosMedico) {
-    setMedicos((anteriores) =>
-      anteriores.map((medico) => {
-        if (medico.matricula === matricula) {
-          return { ...medico, ...cambios };
-        }
-        return medico;
-      })
-    );
+  useEffect(() => {
+    recargarPersonal();
+  }, []);
+
+  async function altaMedico(nuevo: MedicoNuevo) {
+    const respuesta = await pedir('POST', '/api/medicos', { ...nuevo, consultorioId: ID_CONSULTORIO });
+    if (respuesta.ok) {
+      await recargarPersonal();
+    }
+    return respuesta.error;
+  }
+
+  // Los horarios se mandan aparte (PUT, porque se reemplazan todos); el resto de los cambios, con PATCH.
+  async function editarMedico(id: string, cambios: CambiosMedico) {
+    if (cambios.franjas !== undefined) {
+      const respuesta = await pedir('PUT', `/api/medicos/${id}/franjas`, { franjas: cambios.franjas });
+      if (!respuesta.ok) {
+        return respuesta.error;
+      }
+    }
+    const resto = {
+      especialidad: cambios.especialidad,
+      matricula: cambios.matricula,
+      sala: cambios.sala,
+      estado: cambios.estado,
+      licenciaHasta: cambios.licenciaHasta,
+    };
+    const hayOtrosCambios =
+      resto.especialidad !== undefined ||
+      resto.matricula !== undefined ||
+      resto.sala !== undefined ||
+      resto.estado !== undefined;
+    if (hayOtrosCambios) {
+      const respuesta = await pedir('PATCH', `/api/medicos/${id}`, resto);
+      if (!respuesta.ok) {
+        return respuesta.error;
+      }
+    }
+    // La API pudo haber cancelado turnos que quedaron fuera de su horario: se recargan los dos.
+    await recargarPersonal();
+    await recargarTurnos();
+    return '';
   }
 
   return (
-    <PersonalContext.Provider value={{ medicos, secretarias, altaMedico, editarMedico }}>
+    <PersonalContext.Provider value={{ medicos, secretarias, recargarPersonal, altaMedico, editarMedico }}>
       {children}
     </PersonalContext.Provider>
   );
@@ -228,4 +276,36 @@ export function PersonalProvider({ children }: { children: ReactNode }) {
 
 export function usePersonal() {
   return useContext(PersonalContext);
+}
+
+// Médico vacío: se usa mientras se cargan los datos o si quien inició sesión no es un médico.
+const MEDICO_VACIO: MiembroMedico = {
+  id: '',
+  nombre: '',
+  iniciales: '',
+  especialidad: '',
+  matricula: '',
+  sala: '',
+  email: '',
+  telefono: '',
+  domicilio: '',
+  fotoUri: null,
+  franjas: [],
+  coberturaIds: [],
+  estado: 'activo',
+};
+
+// El médico que inició sesión, con todos sus datos.
+export function useMedicoLogueado() {
+  const { usuario } = useSesion();
+  const { medicos } = usePersonal();
+  const medico = medicos.find((m) => usuario !== null && usuario.rol === 'medico' && m.id === usuario.id);
+  return medico ?? MEDICO_VACIO;
+}
+
+// La secretaria que inició sesión, o undefined si quien inició sesión no es una secretaria.
+export function useSecretariaLogueada() {
+  const { usuario } = useSesion();
+  const { secretarias } = usePersonal();
+  return secretarias.find((s) => usuario !== null && usuario.rol === 'secretaria' && s.id === usuario.id);
 }

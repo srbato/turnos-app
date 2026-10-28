@@ -19,10 +19,9 @@ import { MenuMedico } from '@/components/menu-medico';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
+import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useRecetas } from '@/contextos/RecetasContext';
-import { useSesion } from '@/contextos/SesionContext';
 import { historiaClinica, useTurnos, Turno } from '@/contextos/TurnosContext';
 import { EstadoTurno, HOY, Paciente } from '@/datos/consultorio';
 import { filasPreconsulta } from '@/datos/preconsulta';
@@ -146,19 +145,12 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
 export default function AgendaMedico() {
   const { turnos, cancelarTurno, cambiarEstadoTurno, registrarConsulta } = useTurnos();
   const perfilMedico = usePerfilMedico();
-  const { medicoLogueado } = useSesion();
+  const medicoLogueado = useMedicoLogueado();
   const { buscarPorTurno } = usePreconsultas();
-  const perfilPaciente = usePerfilPaciente();
   const { medicamentos: medicamentosPropios } = useMedicamentos();
   const { recetas } = useRecetas();
   const { consultorio } = useConsultorio();
-  const { pacientes, paciente, medicamentos, interacciones } = datosParaMedico(
-    perfilPaciente,
-    consultorio.pacientes,
-    medicamentosPropios,
-    recetas
-  );
-  const medicamentosRiesgo = medicamentos.filter((medicamento) => medicamento.riesgo);
+  const pacientes = consultorio.pacientes;
 
   const [diaElegido, setDiaElegido] = useState(HOY);
   const [filtro, setFiltro] = useState('');
@@ -177,14 +169,19 @@ export default function AgendaMedico() {
     return pacientes.find((pacienteDeLaLista) => pacienteDeLaLista.id === idPaciente);
   }
 
-  // Un paciente es de riesgo si tiene una alerta cargada, o si es el paciente de la app y
-  // el verificador detecta una interacción entre sus medicamentos.
+  // Medicación del paciente (recetada y propia) y las interacciones que se detectan entre sus medicamentos.
+  function datosDelPaciente(idPaciente: string) {
+    return datosParaMedico(idPaciente, pacientes, medicamentosPropios, recetas);
+  }
+
+  // Un paciente es de riesgo si tiene una alerta cargada, o si el verificador detecta una interacción entre sus
+  // medicamentos.
   function tieneRiesgo(idPaciente: string) {
     const pacienteDelTurno = buscarPaciente(idPaciente);
     if (pacienteDelTurno && pacienteDelTurno.alerta !== '') {
       return true;
     }
-    return idPaciente === paciente.id && interacciones.length > 0;
+    return datosDelPaciente(idPaciente).interacciones.length > 0;
   }
 
   function cerrarDetalle() {
@@ -212,17 +209,21 @@ export default function AgendaMedico() {
   }
 
   // Guarda la consulta y el turno queda como atendido.
-  function guardarConsulta(id: string) {
+  async function guardarConsulta(id: string) {
     if (diagnostico.trim() === '') {
       setErrorConsulta('Escribí el diagnóstico.');
       return;
     }
-    registrarConsulta(id, {
+    const error = await registrarConsulta(id, {
       motivo: motivo.trim(),
       diagnostico: diagnostico.trim(),
       indicaciones: indicaciones.trim(),
       notas: notas.trim(),
     });
+    if (error !== '') {
+      setErrorConsulta(error);
+      return;
+    }
     setRegistrandoConsulta(false);
   }
 
@@ -248,7 +249,7 @@ export default function AgendaMedico() {
   // Datos del turno que se está mirando en el Modal.
   const turnoSeleccionado = turnos.find((turno) => turno.id === idTurnoSeleccionado);
   const pacienteSeleccionado = turnoSeleccionado ? buscarPaciente(turnoSeleccionado.idPaciente) : undefined;
-  const esPacienteDeLaApp = turnoSeleccionado !== undefined && turnoSeleccionado.idPaciente === paciente.id;
+  const datosSeleccionado = datosDelPaciente(turnoSeleccionado ? turnoSeleccionado.idPaciente : '');
   const preconsultaSeleccionada = turnoSeleccionado ? buscarPorTurno(turnoSeleccionado.id) : undefined;
   const sePuedeModificar =
     turnoSeleccionado !== undefined &&
@@ -402,15 +403,14 @@ export default function AgendaMedico() {
                   </View>
                 )}
 
-                {esPacienteDeLaApp &&
-                  interacciones.map((interaccion) => (
-                    <View key={interaccion.medicamentos.join('+')} style={styles.modalAviso}>
-                      <Text style={styles.modalAvisoTexto}>
-                        ⚠ Interacción detectada: {interaccion.medicamentos.join(' + ')}.{' '}
-                        {interaccion.descripcion}
-                      </Text>
-                    </View>
-                  ))}
+                {datosSeleccionado.interacciones.map((interaccion) => (
+                  <View key={interaccion.medicamentos.join('+')} style={styles.modalAviso}>
+                    <Text style={styles.modalAvisoTexto}>
+                      ⚠ Interacción detectada: {interaccion.medicamentos.join(' + ')}.{' '}
+                      {interaccion.descripcion}
+                    </Text>
+                  </View>
+                ))}
 
                 <Text style={styles.modalSeccion}>Preconsulta</Text>
                 {!preconsultaSeleccionada && (
@@ -428,9 +428,9 @@ export default function AgendaMedico() {
                 <View style={styles.modalFila}>
                   <Text style={styles.modalEtiqueta}>Medicación habitual</Text>
                   <Text style={styles.modalTexto}>
-                    {esPacienteDeLaApp
-                      ? medicamentos.map((medicamento) => medicamento.nombre).join(', ')
-                      : 'No cargó su medicación en la app.'}
+                    {datosSeleccionado.medicamentos.length > 0
+                      ? datosSeleccionado.medicamentos.map((medicamento) => medicamento.nombre).join(', ')
+                      : 'No tiene medicación cargada.'}
                   </Text>
                 </View>
                 <View style={styles.modalFila}>

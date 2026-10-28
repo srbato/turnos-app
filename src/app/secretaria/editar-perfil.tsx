@@ -9,7 +9,7 @@ import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
-import { DNI_SECRETARIA, usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
+import { usePerfilSecretaria } from '@/contextos/PerfilSecretariaContext';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
 import { confirmarIdentidad } from '@/utilidades/biometria';
@@ -24,9 +24,6 @@ const ESPERA_CIERRE_MODAL_MS = 600;
 function esperar(milisegundos: number) {
   return new Promise((resolver) => setTimeout(resolver, milisegundos));
 }
-
-// Contraseña de prueba de Secretaría (la misma del login). Con backend se verificaría en el servidor.
-const CONTRASENA_ACTUAL_MOCK = 's';
 
 export default function EditarPerfilSecretaria() {
   const perfil = usePerfilSecretaria();
@@ -62,9 +59,9 @@ export default function EditarPerfilSecretaria() {
 
   // La foto se guarda apenas se elige o se quita, como en cualquier app (el resto de los datos, con "Guardar cambios").
   // Por eso se guardan los demás datos tal como estaban, no lo que se esté escribiendo en el formulario.
-  function cambiarFoto(nueva: string | null) {
+  async function cambiarFoto(nueva: string | null) {
     setFotoUri(nueva);
-    perfil.actualizarPerfil({
+    const error = await perfil.actualizarPerfil({
       nombre: perfil.nombre,
       email: perfil.email,
       telefono: perfil.telefono,
@@ -72,6 +69,9 @@ export default function EditarPerfilSecretaria() {
       turnoTrabajo: perfil.turnoTrabajo,
       fotoUri: nueva,
     });
+    if (error !== '') {
+      setErrorFoto(error);
+    }
   }
 
   function usarResultado(resultado: ImagePicker.ImagePickerResult) {
@@ -110,7 +110,7 @@ export default function EditarPerfilSecretaria() {
     );
   }
 
-  function guardar() {
+  async function guardar() {
     // Se pide nombre y apellido (al menos dos palabras) y un email válido.
     if (palabras(nombre).length < 2) {
       setMensaje({ texto: textos.errorNombre, esError: true });
@@ -120,7 +120,7 @@ export default function EditarPerfilSecretaria() {
       setMensaje({ texto: textos.errorEmail, esError: true });
       return;
     }
-    perfil.actualizarPerfil({
+    const error = await perfil.actualizarPerfil({
       nombre: nombre.trim(),
       email: email.trim(),
       telefono: telefono.trim(),
@@ -128,6 +128,10 @@ export default function EditarPerfilSecretaria() {
       turnoTrabajo: turnoTrabajo.trim(),
       fotoUri,
     });
+    if (error !== '') {
+      setMensaje({ texto: error, esError: true });
+      return;
+    }
     // Al guardar se vuelve a Mi perfil, donde ya se ven los datos nuevos.
     router.navigate('/perfil?rol=secretaria');
   }
@@ -141,10 +145,6 @@ export default function EditarPerfilSecretaria() {
   }
 
   async function confirmarContrasena() {
-    if (actual !== CONTRASENA_ACTUAL_MOCK) {
-      setErrorContrasena(textos.errorActual);
-      return;
-    }
     if (nueva.length < 6) {
       setErrorContrasena(textos.errorLargo);
       return;
@@ -157,6 +157,12 @@ export default function EditarPerfilSecretaria() {
     const verificado = await confirmarIdentidad();
     if (!verificado) {
       setErrorContrasena(textos.errorBiometria);
+      return;
+    }
+    // La API revisa que la contraseña actual sea la correcta.
+    const error = await perfil.cambiarContrasena(actual, nueva);
+    if (error !== '') {
+      setErrorContrasena(error);
       return;
     }
     cerrarContrasena();
@@ -198,7 +204,7 @@ export default function EditarPerfilSecretaria() {
         </View>
         <Text style={[styles.seccionTitulo, { color: tema.textoSecundario }]}>{textos.datos}</Text>
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
-          <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.nombre}</Text>
+          <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.nombreCompleto}</Text>
           <TextInput style={estiloCampo} value={nombre} onChangeText={setNombre} maxLength={60} />
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.email}</Text>
@@ -234,7 +240,7 @@ export default function EditarPerfilSecretaria() {
 
           <Text style={[styles.etiqueta, { color: tema.textoSecundario }]}>{textos.dni}</Text>
           <View style={[styles.campo, styles.campoBloqueado, { borderColor: tema.borde }]}>
-            <Text style={[styles.dniValor, { color: tema.textoSecundario }]}>{DNI_SECRETARIA}</Text>
+            <Text style={[styles.dniValor, { color: tema.textoSecundario }]}>{perfil.dni}</Text>
           </View>
           <Text style={[styles.nota, { color: tema.textoTenue }]}>{textos.dniNotaStaff}</Text>
         </View>

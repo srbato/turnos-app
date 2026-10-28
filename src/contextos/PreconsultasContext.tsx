@@ -1,56 +1,41 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useContext } from 'react';
 
-import { Preconsulta } from '@/datos/preconsulta';
+import { useTurnos } from '@/contextos/TurnosContext';
+import { Preconsulta, RespuestasPreconsulta } from '@/datos/preconsulta';
+import { pedir } from '@/servicios/api';
+
+// Las preconsultas que mandan los pacientes antes de su turno. Vienen de la API junto con cada turno (TurnosContext):
+// acá están las funciones para buscarlas y enviarlas.
 
 type PreconsultasContextType = {
   preconsultas: Preconsulta[];
   buscarPorTurno: (turnoId: string) => Preconsulta | undefined;
-  enviarPreconsulta: (preconsulta: Preconsulta) => void;
+  enviarPreconsulta: (turnoId: string, respuestas: RespuestasPreconsulta) => Promise<string>; // error, o ''
 };
-
-const CLAVE_STORAGE = 'preconsultas';
 
 // Valor que se usa solo si una pantalla queda fuera del Provider.
 const VALOR_POR_DEFECTO: PreconsultasContextType = {
   preconsultas: [],
   buscarPorTurno: () => undefined,
-  enviarPreconsulta: () => {},
+  enviarPreconsulta: async () => '',
 };
 
 const PreconsultasContext = createContext(VALOR_POR_DEFECTO);
 
 export function PreconsultasProvider({ children }: { children: ReactNode }) {
-  const [preconsultas, setPreconsultas] = useState<Preconsulta[]>([]);
-
-  // Al abrir la app se recupera lo guardado en el dispositivo, si hay algo.
-  useEffect(() => {
-    async function cargarPreconsultas() {
-      try {
-        const guardado = await AsyncStorage.getItem(CLAVE_STORAGE);
-        if (guardado !== null) {
-          setPreconsultas(JSON.parse(guardado));
-        }
-      } catch {
-        // Si falla la lectura, se empieza sin preconsultas.
-      }
-    }
-    cargarPreconsultas();
-  }, []);
+  const { preconsultas, recargarTurnos } = useTurnos();
 
   function buscarPorTurno(turnoId: string) {
     return preconsultas.find((preconsulta) => preconsulta.turnoId === turnoId);
   }
 
-  // Una preconsulta por turno: si ya había una, se reemplaza.
-  async function enviarPreconsulta(preconsulta: Preconsulta) {
-    const nuevas = [...preconsultas.filter((p) => p.turnoId !== preconsulta.turnoId), preconsulta];
-    setPreconsultas(nuevas);
-    try {
-      await AsyncStorage.setItem(CLAVE_STORAGE, JSON.stringify(nuevas));
-    } catch {
-      // Si falla el guardado, queda en memoria hasta cerrar la app.
+  // Una preconsulta por turno: si ya había una, la API la reemplaza (por eso es PUT).
+  async function enviarPreconsulta(turnoId: string, respuestas: RespuestasPreconsulta) {
+    const respuesta = await pedir('PUT', `/api/turnos/${turnoId}/preconsulta`, respuestas);
+    if (respuesta.ok) {
+      await recargarTurnos();
     }
+    return respuesta.error;
   }
 
   return (

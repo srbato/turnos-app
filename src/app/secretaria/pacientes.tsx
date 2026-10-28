@@ -11,15 +11,13 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { HOY } from '@/datos/consultorio';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 
 // Tabla de todos los pacientes del consultorio. Tocar una fila abre el alta de turno con ese paciente ya elegido.
 export default function PacientesSecretaria() {
   const { consultorio } = useConsultorio();
   const { nombre: nombreConsultorio } = useConfiguracion();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
   const [idPacienteElegido, setIdPacienteElegido] = useState('');
 
   return (

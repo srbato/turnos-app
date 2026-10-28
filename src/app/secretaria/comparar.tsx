@@ -13,13 +13,11 @@ import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { enLicencia, horariosDelMedico, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertaDelHorario } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
-import { pacientesConPerfil } from '@/utilidades/datos-medico';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto } from '@/utilidades/turnos';
 import { sinRepetidos } from '@/utilidades/listas';
 
@@ -50,7 +48,7 @@ export default function CompararHorarios() {
   const medicos = usePersonal().medicos.filter((medico) => medico.estado !== 'baja');
   const { consultorio } = useConsultorio();
   const { reglasRiesgo, duracionTurno } = useConfiguracion();
-  const pacientes = pacientesConPerfil(usePerfilPaciente(), consultorio.pacientes);
+  const pacientes = consultorio.pacientes;
 
   const [diaElegido, setDiaElegido] = useState(HOY);
   // Columnas: por defecto, los 3 médicos activos con más turnos hoy.
