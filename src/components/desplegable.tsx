@@ -7,11 +7,8 @@ export type OpcionDesplegable = {
   detalle?: string; // línea más chica debajo del texto (por ejemplo, la cobertura de un paciente)
 };
 
-type Props = {
+type PropsComunes = {
   opciones: OpcionDesplegable[];
-  // La opción elegida va aparte de "opciones": si hay un buscador, puede quedar fuera de la lista filtrada y igual tiene que verse.
-  elegida?: OpcionDesplegable;
-  onElegir: (id: string) => void;
   placeholder: string;
   // 'modal': la lista se abre en un Modal.
   // 'expandido': la lista se despliega en el lugar, debajo del botón (para usarlo adentro de otro Modal).
@@ -20,38 +17,80 @@ type Props = {
   textoVacio?: string;
 };
 
-// Lista desplegable: muestra la opción elegida (o un placeholder) y al tocarla abre la lista de opciones.
+// Selección simple: se elige una sola opción y la lista se cierra.
+type PropsSimple = PropsComunes & {
+  // La opción elegida va aparte de "opciones": si hay un buscador, puede quedar fuera de la lista filtrada y igual tiene que verse.
+  elegida?: OpcionDesplegable;
+  onElegir: (id: string) => void;
+  elegidas?: undefined;
+  onAlternar?: undefined;
+};
+
+// Selección múltiple: cada toque marca o desmarca una opción y la lista queda abierta para marcar más.
+type PropsMultiple = PropsComunes & {
+  elegidas: string[]; // ids de las opciones marcadas
+  onAlternar: (id: string) => void;
+  elegida?: undefined;
+  onElegir?: undefined;
+};
+
+// Se pasa onElegir (simple) o onAlternar (múltiple), nunca los dos: así TypeScript avisa si se mezclan.
+type Props = PropsSimple | PropsMultiple;
+
+// Lista desplegable: muestra lo elegido (o un placeholder) y al tocarla abre la lista de opciones.
 export function Desplegable({
   opciones,
   elegida,
   onElegir,
+  elegidas,
+  onAlternar,
   placeholder,
   modo,
   color,
   textoVacio = 'No hay opciones para elegir.',
 }: Props) {
   const [abierto, setAbierto] = useState(false);
+  const esMultiple = onAlternar !== undefined;
 
-  function elegir(id: string) {
-    onElegir(id);
-    setAbierto(false);
+  function tocarOpcion(id: string) {
+    if (onAlternar !== undefined) {
+      onAlternar(id);
+    } else if (onElegir !== undefined) {
+      onElegir(id);
+      setAbierto(false);
+    }
   }
+
+  function estaElegida(id: string) {
+    return esMultiple ? (elegidas ?? []).includes(id) : id === elegida?.id;
+  }
+
+  // Lo que muestra el botón cerrado: en múltiple, los textos de las marcadas separados por coma (en el orden en que se marcaron).
+  const hayElegidas = esMultiple ? (elegidas ?? []).length > 0 : elegida !== undefined;
+  const textoBoton = esMultiple
+    ? (elegidas ?? []).map((id) => opciones.find((opcion) => opcion.id === id)?.texto ?? id).join(', ')
+    : elegida?.texto;
 
   // La lista es la misma en los dos modos; solo cambia el alto máximo.
   const lista = (
     <FlatList
       style={modo === 'modal' ? styles.listaModal : styles.listaExpandida}
       data={opciones}
+      // La FlatList solo vuelve a dibujar las filas si cambia "data": hay que avisarle cuando cambian las marcadas.
+      extraData={esMultiple ? elegidas : elegida}
       keyExtractor={(opcion) => opcion.id}
       ListEmptyComponent={<Text style={styles.vacio}>{textoVacio}</Text>}
       renderItem={({ item }) => {
-        const esElegida = item.id === elegida?.id;
+        const esElegida = estaElegida(item.id);
         return (
-          <Pressable style={[styles.fila, esElegida && { backgroundColor: color }]} onPress={() => elegir(item.id)}>
-            <Text style={[styles.filaTexto, esElegida && styles.filaTextoElegida]}>{item.texto}</Text>
-            {item.detalle !== undefined && (
-              <Text style={[styles.filaDetalle, esElegida && styles.filaTextoElegida]}>{item.detalle}</Text>
-            )}
+          <Pressable style={[styles.fila, esElegida && { backgroundColor: color }]} onPress={() => tocarOpcion(item.id)}>
+            <View style={styles.filaTextos}>
+              <Text style={[styles.filaTexto, esElegida && styles.filaTextoElegida]}>{item.texto}</Text>
+              {item.detalle !== undefined && (
+                <Text style={[styles.filaDetalle, esElegida && styles.filaTextoElegida]}>{item.detalle}</Text>
+              )}
+            </View>
+            {esMultiple && esElegida && <Text style={styles.filaTilde}>✓</Text>}
           </Pressable>
         );
       }}
@@ -61,8 +100,8 @@ export function Desplegable({
   return (
     <View>
       <Pressable style={[styles.boton, { borderColor: color }]} onPress={() => setAbierto(!abierto)}>
-        <Text style={[styles.botonTexto, !elegida && styles.botonPlaceholder]} numberOfLines={1}>
-          {elegida ? elegida.texto : placeholder}
+        <Text style={[styles.botonTexto, !hayElegidas && styles.botonPlaceholder]} numberOfLines={esMultiple ? 2 : 1}>
+          {hayElegidas ? textoBoton : placeholder}
         </Text>
         <Text style={[styles.flecha, { color }]}>{abierto ? '▴' : '▾'}</Text>
       </Pressable>
@@ -125,9 +164,20 @@ const styles = StyleSheet.create({
     maxHeight: 320,
   },
   fila: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
+  },
+  filaTextos: {
+    flex: 1,
+  },
+  filaTilde: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 10,
   },
   filaTexto: {
     fontSize: 14,
