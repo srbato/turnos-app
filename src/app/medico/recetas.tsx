@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
+import { Desplegable } from '@/components/desplegable';
 import { MenuMedico } from '@/components/menu-medico';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -58,6 +59,10 @@ export default function RecetasDelMedico() {
   const pacientesDelMedico = pacientes.filter((paciente) =>
     turnosDelMedico.some((turno) => turno.idPaciente === paciente.id)
   );
+  const opcionesPacientes = pacientesDelMedico.map((paciente) => ({
+    id: paciente.id,
+    texto: `${paciente.nombre} ${paciente.apellido}`,
+  }));
 
   // Recetas de este médico, de la más nueva a la más vieja. Las vencidas pasan al historial y ya no se editan.
   const recetasDelMedico = recetas
@@ -230,20 +235,16 @@ export default function RecetasDelMedico() {
               {idEditando !== '' ? (
                 <Text style={styles.pacienteFijo}>{nombreDelPaciente(idPaciente)}</Text>
               ) : (
-                <View style={styles.filaPacientes}>
-                  {pacientesDelMedico.map((paciente) => {
-                    const elegido = paciente.id === idPaciente;
-                    return (
-                      <Pressable
-                        key={paciente.id}
-                        style={[styles.chipPaciente, elegido && styles.chipPacienteElegido]}
-                        onPress={() => setIdPaciente(paciente.id)}>
-                        <Text style={[styles.chipPacienteTexto, elegido && styles.chipPacienteTextoElegido]}>
-                          {paciente.nombre} {paciente.apellido}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <View style={styles.selectorPaciente}>
+                  <Desplegable
+                    opciones={opcionesPacientes}
+                    elegida={opcionesPacientes.find((opcion) => opcion.id === idPaciente)}
+                    onElegir={setIdPaciente}
+                    placeholder="Elegí un paciente"
+                    modo="modal"
+                    color={COLOR_MEDICO}
+                    textoVacio="Todavía no tenés pacientes con turnos."
+                  />
                 </View>
               )}
               {errorPaciente !== '' && <Text style={styles.errorTexto}>{errorPaciente}</Text>}
@@ -503,30 +504,8 @@ const styles = StyleSheet.create({
     color: '#5A5A5A',
     marginBottom: 6,
   },
-  filaPacientes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  selectorPaciente: {
     marginBottom: 12,
-  },
-  chipPaciente: {
-    borderWidth: 1,
-    borderColor: '#D5D8DD',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  chipPacienteElegido: {
-    backgroundColor: COLOR_MEDICO,
-    borderColor: COLOR_MEDICO,
-  },
-  chipPacienteTexto: {
-    fontSize: 13,
-    color: '#1A1A1A',
-  },
-  chipPacienteTextoElegido: {
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
   input: {
     borderWidth: 1,
