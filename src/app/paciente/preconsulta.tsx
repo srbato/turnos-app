@@ -2,6 +2,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Desplegable } from '@/components/desplegable';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
@@ -215,21 +216,15 @@ export default function PantallaPreconsulta() {
 
           {paso < PASOS.length && PASOS[paso].tipo === 'sintomas' && (
             <View style={styles.zonaRespuesta}>
-              <View style={styles.chipsFila}>
-                {SINTOMAS.map((sintoma) => {
-                  const marcado = sintomasMarcados.includes(sintoma);
-                  return (
-                    <Pressable
-                      key={sintoma}
-                      style={[styles.sintomaChip, marcado && styles.sintomaChipMarcado]}
-                      onPress={() => alternarSintoma(sintoma)}>
-                      <Text style={[styles.sintomaChipTexto, marcado && styles.sintomaChipTextoMarcado]}>
-                        {marcado ? '✓ ' : ''}
-                        {sintoma}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+              <View style={styles.selectorSintomas}>
+                <Desplegable
+                  opciones={SINTOMAS.map((sintoma) => ({ id: sintoma, texto: sintoma }))}
+                  elegidas={sintomasMarcados}
+                  onAlternar={alternarSintoma}
+                  placeholder="Elegí tus síntomas"
+                  modo="modal"
+                  color={COLOR_PACIENTE}
+                />
               </View>
               <Pressable style={styles.botonPrimario} onPress={enviarSintomas}>
                 <Text style={styles.botonPrimarioTexto}>
@@ -433,30 +428,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
   },
-  chipsFila: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  selectorSintomas: {
     marginBottom: 12,
-  },
-  sintomaChip: {
-    borderWidth: 1,
-    borderColor: '#CFDAF2',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  sintomaChipMarcado: {
-    backgroundColor: COLOR_PACIENTE,
-    borderColor: COLOR_PACIENTE,
-  },
-  sintomaChipTexto: {
-    fontSize: 13,
-    color: '#1A1A1A',
-  },
-  sintomaChipTextoMarcado: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   filaInput: {
     flexDirection: 'row',

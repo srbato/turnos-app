@@ -4,9 +4,12 @@
 import { MiembroMedico } from '@/contextos/PersonalContext';
 import { palabrasDeLetras, sinTildes } from '@/utilidades/texto';
 
+// Una cobertura es un plan de una obra social ("OSDE 210"), o una obra social sin planes ("PAMI").
 export type Cobertura = {
   id: string;
-  nombre: string;
+  nombre: string; // nombre completo: "OSDE 210"
+  obraSocial: string; // "OSDE"
+  plan: string; // "210" ('' si la obra social no tiene planes)
 };
 
 export type Especialidad = {
@@ -24,7 +27,37 @@ export type Medico = {
   coberturaIds: string[]; // coberturas que acepta
 };
 
-// El nombre de una obra social a partir de su id ("osde-210" -> "OSDE 210").
+export type Plan = {
+  id: string; // es lo que se guarda en la base
+  nombre: string;
+};
+
+export type ObraSocial = {
+  id: string; // solo agrupa en pantalla, salvo que no tenga planes (PAMI): ahí es lo que se guarda
+  nombre: string;
+  planes: Plan[]; // vacía si la obra social no tiene planes
+};
+
+// Arma las obras sociales con sus planes (dos niveles) a partir de la lista que manda la API, donde cada plan viene con
+// el nombre de su obra social. Las que no tienen planes (PAMI) quedan con la lista de planes vacía.
+export function obrasSocialesDe(coberturas: Cobertura[]): ObraSocial[] {
+  const obras: ObraSocial[] = [];
+  coberturas.forEach((cobertura) => {
+    if (cobertura.plan === '') {
+      obras.push({ id: cobertura.id, nombre: cobertura.obraSocial, planes: [] });
+      return;
+    }
+    let obra = obras.find((o) => o.nombre === cobertura.obraSocial);
+    if (!obra) {
+      obra = { id: cobertura.obraSocial, nombre: cobertura.obraSocial, planes: [] };
+      obras.push(obra);
+    }
+    obra.planes.push({ id: cobertura.id, nombre: cobertura.plan });
+  });
+  return obras;
+}
+
+// El nombre completo de una cobertura a partir de su id ("osde-210" -> "OSDE 210").
 export function nombreCobertura(coberturas: Cobertura[], id: string) {
   return coberturas.find((cobertura) => cobertura.id === id)?.nombre ?? id;
 }

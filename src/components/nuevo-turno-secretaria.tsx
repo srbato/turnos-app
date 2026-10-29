@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
+import { Desplegable } from '@/components/desplegable';
+import { COLOR_SECRETARIA } from '@/constantes/colores';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -91,6 +92,11 @@ export function NuevoTurnoSecretaria({
   const pacientesFiltrados = pacientes.filter((p) =>
     `${p.nombre} ${p.apellido}`.toLowerCase().includes(busqueda.trim().toLowerCase())
   );
+  // El elegido se busca en la lista completa: si una búsqueda lo deja afuera de la lista filtrada, igual se sigue viendo.
+  const pacienteSeleccionado = pacientes.find((p) => p.id === idPaciente);
+  function aOpcion(p: (typeof pacientes)[number]) {
+    return { id: p.id, texto: `${p.nombre} ${p.apellido}`, detalle: p.cobertura };
+  }
   const puedeGuardar = medico !== '' && hora !== '' && idPaciente !== '';
 
   async function guardar() {
@@ -192,19 +198,18 @@ export function NuevoTurnoSecretaria({
                 placeholder="Buscar por nombre"
                 placeholderTextColor="#8FB9B5"
               />
-              <ScrollView style={styles.listaPacientes}>
-                {pacientesFiltrados.map((p) => (
-                  <Pressable
-                    key={p.id}
-                    style={[styles.filaPaciente, idPaciente === p.id && styles.filaPacienteActiva]}
-                    onPress={() => setIdPaciente(p.id)}>
-                    <Text style={styles.filaPacienteNombre}>
-                      {p.nombre} {p.apellido}
-                    </Text>
-                    <Text style={styles.filaPacienteDetalle}>{p.cobertura}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+              {/* Va en modo "expandido" y no en Modal: este componente ya está dentro de un Modal. */}
+              <View style={styles.selectorPaciente}>
+                <Desplegable
+                  opciones={pacientesFiltrados.map(aOpcion)}
+                  elegida={pacienteSeleccionado ? aOpcion(pacienteSeleccionado) : undefined}
+                  onElegir={setIdPaciente}
+                  placeholder="Elegí un paciente"
+                  modo="expandido"
+                  color={color}
+                  textoVacio="Ningún paciente coincide con la búsqueda."
+                />
+              </View>
             </>
           )}
 
@@ -285,17 +290,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1A1A1A',
   },
-  listaPacientes: {
-    maxHeight: 150,
+  selectorPaciente: {
     marginTop: 8,
-  },
-  filaPaciente: {
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-  },
-  filaPacienteActiva: {
-    backgroundColor: FONDO_SECRETARIA,
   },
   filaPacienteNombre: {
     fontSize: 14,

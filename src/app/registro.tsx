@@ -8,6 +8,7 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { useSesion } from '@/contextos/SesionContext';
+import { obrasSocialesDe } from '@/datos/catalogo';
 import { formatearDni, palabras, soloNumeros } from '@/utilidades/texto';
 
 // Registro de un paciente nuevo. Pide los mismos datos que después se ven y se editan en el perfil.
@@ -16,6 +17,8 @@ import { formatearDni, palabras, soloNumeros } from '@/utilidades/texto';
 export default function Registro() {
   const { registrarPaciente } = useSesion();
   const { coberturas } = useConsultorio();
+  // Las obras sociales con sus planes, armadas con lo que manda la API.
+  const obrasSociales = obrasSocialesDe(coberturas);
 
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -26,6 +29,8 @@ export default function Registro() {
   const [alergias, setAlergias] = useState('');
   const [coberturaIds, setCoberturaIds] = useState<string[]>([]);
   const [numerosAfiliado, setNumerosAfiliado] = useState<Record<string, string>>({});
+  // Ids de las obras sociales que tienen sus planes desplegados.
+  const [obrasAbiertas, setObrasAbiertas] = useState<string[]>([]);
   const [contrasena, setContrasena] = useState('');
   const [repetida, setRepetida] = useState('');
   const [verContrasena, setVerContrasena] = useState(false);
@@ -33,7 +38,46 @@ export default function Registro() {
   const [creando, setCreando] = useState(false);
 
   function alternarCobertura(id: string) {
-    setCoberturaIds(coberturaIds.includes(id) ? coberturaIds.filter((c) => c !== id) : [...coberturaIds, id]);
+    if (coberturaIds.includes(id)) {
+      setCoberturaIds(coberturaIds.filter((c) => c !== id));
+      return;
+    }
+    // Un solo plan por obra social: al marcar uno se sacan los otros planes de la misma obra social.
+    // PAMI no tiene planes, así que no encuentra obra social y se marca sin sacar nada.
+    const obra = obrasSociales.find((o) => o.planes.some((plan) => plan.id === id));
+    const idsDeLaObra = obra ? obra.planes.map((plan) => plan.id) : [];
+    setCoberturaIds([...coberturaIds.filter((c) => !idsDeLaObra.includes(c)), id]);
+  }
+
+  function alternarObra(id: string) {
+    setObrasAbiertas(obrasAbiertas.includes(id) ? obrasAbiertas.filter((o) => o !== id) : [...obrasAbiertas, id]);
+  }
+
+  // Fila con checkbox (y su N° de afiliado cuando está marcada). Sirve para un plan y para PAMI, que no tiene planes.
+  function filaMarcable(id: string, nombreFila: string, esPlan: boolean) {
+    const marcada = coberturaIds.includes(id);
+    return (
+      <View key={id}>
+        <Pressable
+          style={[styles.filaCobertura, esPlan && styles.sangriaPlan, marcada && styles.filaCoberturaMarcada]}
+          onPress={() => alternarCobertura(id)}>
+          <Text style={styles.coberturaNombre}>{nombreFila}</Text>
+          <View style={[styles.checkbox, marcada && styles.checkboxMarcado]}>
+            {marcada && <Text style={styles.checkboxTilde}>✓</Text>}
+          </View>
+        </Pressable>
+        {marcada && (
+          <TextInput
+            style={[styles.campo, styles.campoAfiliado, esPlan && styles.sangriaPlan]}
+            value={numerosAfiliado[id] ?? ''}
+            onChangeText={(valor) => setNumerosAfiliado({ ...numerosAfiliado, [id]: valor })}
+            placeholder="N° de afiliado"
+            placeholderTextColor="#9AA3B2"
+            maxLength={20}
+          />
+        )}
+      </View>
+    );
   }
 
   async function crearCuenta() {
@@ -148,31 +192,31 @@ export default function Registro() {
           />
         </View>
 
-        <Text style={styles.seccion}>OBRA SOCIAL</Text>
+        <Text style={styles.seccion}>OBRA SOCIAL / PREPAGA</Text>
         <View style={styles.tarjeta}>
-          <Text style={styles.ayuda}>Marcá las que tengas. Te mostramos solo los médicos que las atienden.</Text>
-          {coberturas.map((cobertura) => {
-            const marcada = coberturaIds.includes(cobertura.id);
+          <Text style={styles.ayuda}>
+            Tocá una obra social para ver sus planes y marcá el que tengas (uno por obra social). Te mostramos solo los médicos que los atienden.
+          </Text>
+          {obrasSociales.map((obra) => {
+            // Sin planes (PAMI): se marca directamente la obra social.
+            if (obra.planes.length === 0) {
+              return filaMarcable(obra.id, obra.nombre, false);
+            }
+            const abierta = obrasAbiertas.includes(obra.id);
+            // Como mucho hay un plan marcado por obra social.
+            const planElegido = obra.planes.find((plan) => coberturaIds.includes(plan.id));
             return (
-              <View key={cobertura.id}>
+              <View key={obra.id}>
                 <Pressable
-                  style={[styles.filaCobertura, marcada && styles.filaCoberturaMarcada]}
-                  onPress={() => alternarCobertura(cobertura.id)}>
-                  <Text style={styles.coberturaNombre}>{cobertura.nombre}</Text>
-                  <View style={[styles.checkbox, marcada && styles.checkboxMarcado]}>
-                    {marcada && <Text style={styles.checkboxTilde}>✓</Text>}
-                  </View>
+                  style={[styles.filaCobertura, planElegido && styles.filaCoberturaMarcada]}
+                  onPress={() => alternarObra(obra.id)}>
+                  <Text style={styles.coberturaNombre}>{obra.nombre}</Text>
+                  <Text style={styles.obraDetalle}>
+                    {planElegido ? `${planElegido.nombre}   ` : ''}
+                    {abierta ? '▴' : '▾'}
+                  </Text>
                 </Pressable>
-                {marcada && (
-                  <TextInput
-                    style={[styles.campo, styles.campoAfiliado]}
-                    value={numerosAfiliado[cobertura.id] ?? ''}
-                    onChangeText={(valor) => setNumerosAfiliado({ ...numerosAfiliado, [cobertura.id]: valor })}
-                    placeholder="N° de afiliado"
-                    placeholderTextColor="#9AA3B2"
-                    maxLength={20}
-                  />
-                )}
+                {abierta && obra.planes.map((plan) => filaMarcable(plan.id, plan.nombre, true))}
               </View>
             );
           })}
@@ -292,6 +336,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#1A1A1A',
+  },
+  // Los planes van corridos a la derecha, debajo de su obra social.
+  sangriaPlan: {
+    marginLeft: 18,
+  },
+  obraDetalle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLOR_PACIENTE,
   },
   checkbox: {
     width: 22,
