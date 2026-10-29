@@ -32,7 +32,15 @@ export default function Registro() {
   const [error, setError] = useState('');
 
   function alternarCobertura(id: string) {
-    setCoberturaIds(coberturaIds.includes(id) ? coberturaIds.filter((c) => c !== id) : [...coberturaIds, id]);
+    if (coberturaIds.includes(id)) {
+      setCoberturaIds(coberturaIds.filter((c) => c !== id));
+      return;
+    }
+    // Un solo plan por obra social: al marcar uno se sacan los otros planes de la misma obra social.
+    // PAMI no tiene planes, así que no encuentra obra social y se marca sin sacar nada.
+    const obra = OBRAS_SOCIALES.find((o) => o.planes.some((plan) => plan.id === id));
+    const idsDeLaObra = obra ? obra.planes.map((plan) => plan.id) : [];
+    setCoberturaIds([...coberturaIds.filter((c) => !idsDeLaObra.includes(c)), id]);
   }
 
   function alternarObra(id: string) {
@@ -176,7 +184,7 @@ export default function Registro() {
         <Text style={styles.seccion}>OBRA SOCIAL / PREPAGA</Text>
         <View style={styles.tarjeta}>
           <Text style={styles.ayuda}>
-            Tocá una obra social para ver sus planes y marcá los que tengas. Te mostramos solo los médicos que los atienden.
+            Tocá una obra social para ver sus planes y marcá el que tengas (uno por obra social). Te mostramos solo los médicos que los atienden.
           </Text>
           {OBRAS_SOCIALES.map((obra) => {
             // Sin planes (PAMI): se marca directamente la obra social.
@@ -184,15 +192,16 @@ export default function Registro() {
               return filaMarcable(obra.id, obra.nombre, false);
             }
             const abierta = obrasAbiertas.includes(obra.id);
-            const planesMarcados = obra.planes.filter((plan) => coberturaIds.includes(plan.id)).length;
+            // Como mucho hay un plan marcado por obra social.
+            const planElegido = obra.planes.find((plan) => coberturaIds.includes(plan.id));
             return (
               <View key={obra.id}>
                 <Pressable
-                  style={[styles.filaCobertura, planesMarcados > 0 && styles.filaCoberturaMarcada]}
+                  style={[styles.filaCobertura, planElegido && styles.filaCoberturaMarcada]}
                   onPress={() => alternarObra(obra.id)}>
                   <Text style={styles.coberturaNombre}>{obra.nombre}</Text>
                   <Text style={styles.obraDetalle}>
-                    {planesMarcados > 0 ? `${planesMarcados} ${planesMarcados === 1 ? 'plan' : 'planes'}   ` : ''}
+                    {planElegido ? `${planElegido.nombre}   ` : ''}
                     {abierta ? '▴' : '▾'}
                   </Text>
                 </Pressable>
