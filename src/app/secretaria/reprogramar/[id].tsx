@@ -14,6 +14,7 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { atiendeEn, usePersonal } from '@/contextos/PersonalContext';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasReservadas } from '@/datos/adelantos';
@@ -32,6 +33,7 @@ function volver() {
 export default function ReprogramarSecretaria() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { turnos, reprogramarTurno } = useTurnos();
+  const { mostrarError } = useErrores();
   const { ofertas } = useAdelantos();
   const { medicos: personal } = usePersonal();
   const [fecha, setFecha] = useState<string | null>(null);
@@ -59,10 +61,14 @@ export default function ReprogramarSecretaria() {
     setHora(null);
   }
 
-  function confirmar() {
+  async function confirmar() {
     if (!turno || !hora) return;
-    // La secretaría confirma el turno al reprogramarlo.
-    reprogramarTurno(turno.id, fechaSeleccionada, hora, 'pendiente'); // queda pendiente hasta que el paciente confirme
+    // Queda pendiente hasta que el paciente confirme.
+    const error = await reprogramarTurno(turno.id, fechaSeleccionada, hora, 'pendiente');
+    if (error !== '') {
+      mostrarError(error);
+      return;
+    }
     setConfirmado(true);
   }
 

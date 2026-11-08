@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -32,6 +31,7 @@ export type DatosRegistro = {
 
 type SesionContextType = {
   usuario: Usuario | null; // null: nadie inició sesión
+  sesionCargada: boolean; // ya se leyó la sesión guardada en el dispositivo (hasta entonces no se sabe quién es)
   idPaciente: string; // el id del paciente que inició sesión ('' si no es un paciente)
   iniciarSesion: (rol: Rol, email: string, contrasena: string) => Promise<string>; // devuelve el error, o '' si entró
   cerrarSesion: () => void;
@@ -43,6 +43,7 @@ const CLAVE_STORAGE = 'sesion';
 // Valor que se usa solo si una pantalla queda fuera del Provider.
 const VALOR_POR_DEFECTO: SesionContextType = {
   usuario: null,
+  sesionCargada: false,
   idPaciente: '',
   iniciarSesion: async () => '',
   cerrarSesion: () => {},
@@ -54,6 +55,7 @@ const SesionContext = createContext(VALOR_POR_DEFECTO);
 export function SesionProvider({ children }: { children: ReactNode }) {
   const { recargarPacientes, vaciarPacientes } = useConsultorio();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
+  const [sesionCargada, setSesionCargada] = useState(false);
 
   // Al abrir la app se recupera la sesión guardada en el dispositivo, si hay una.
   useEffect(() => {
@@ -71,16 +73,13 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       } catch {
         // Si falla la lectura, hay que volver a ingresar.
       }
+      setSesionCargada(true);
     }
     cargarSesion();
 
-    // Si la API rechaza el token, se cierra la sesión y se vuelve al inicio.
+    // Si la API rechaza el token, se cierra la sesión (ControlDeSesion vuelve al inicio).
     avisarCuandoVenza(() => {
       guardarSesion(null);
-      if (router.canDismiss()) {
-        router.dismissAll();
-      }
-      router.replace('/');
     });
   }, []);
 
@@ -142,7 +141,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <SesionContext.Provider value={{ usuario, idPaciente, iniciarSesion, cerrarSesion, registrarPaciente }}>
+    <SesionContext.Provider value={{ usuario, sesionCargada, idPaciente, iniciarSesion, cerrarSesion, registrarPaciente }}>
       {children}
     </SesionContext.Provider>
   );

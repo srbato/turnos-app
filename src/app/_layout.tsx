@@ -5,9 +5,11 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import { ControlDeSesion } from '@/components/control-de-sesion';
 import { AdelantosProvider } from '@/contextos/AdelantosContext';
 import { ConfiguracionProvider } from '@/contextos/ConfiguracionContext';
 import { ConsultorioProvider } from '@/contextos/ConsultorioContext';
+import { ErroresProvider } from '@/contextos/ErroresContext';
 import { EstudiosProvider } from '@/contextos/EstudiosContext';
 import { MedicamentosProvider } from '@/contextos/MedicamentosContext';
 import { PerfilMedicoProvider } from '@/contextos/PerfilMedicoContext';
@@ -57,18 +59,21 @@ export default function RootLayout() {
                           <MedicamentosProvider>
                             <PreconsultasProvider>
                               <EstudiosProvider>
-                                <Stack screenOptions={{ headerShown: false }}>
-                                  {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
-                                  <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="perfil" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="secretaria/index" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="secretaria/espera" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="secretaria/alertas" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="secretaria/personal" options={OPCIONES_MENU} />
-                                  <Stack.Screen name="secretaria/ajustes" options={OPCIONES_MENU} />
-                                </Stack>
+                                <ErroresProvider>
+                                  <ControlDeSesion />
+                                  <Stack screenOptions={{ headerShown: false }}>
+                                    {/* Las secciones del menú de abajo se funden en lugar de deslizarse, para sentirse como un menú. */}
+                                    <Stack.Screen name="paciente/index" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="paciente/mis-turnos" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="paciente/medicamentos" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="perfil" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="secretaria/index" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="secretaria/espera" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="secretaria/alertas" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="secretaria/personal" options={OPCIONES_MENU} />
+                                    <Stack.Screen name="secretaria/ajustes" options={OPCIONES_MENU} />
+                                  </Stack>
+                                </ErroresProvider>
                               </EstudiosProvider>
                             </PreconsultasProvider>
                           </MedicamentosProvider>

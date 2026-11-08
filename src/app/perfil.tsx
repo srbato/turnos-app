@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -33,21 +33,14 @@ const IDIOMAS: { id: Idioma; etiqueta: string }[] = [
 const COLOR_PERFIL = '#C9A24C';
 
 export default function Perfil() {
-  const { rol: rolParam } = useLocalSearchParams();
-
-  // Si el rol de la URL no es uno conocido, se muestra el perfil del paciente.
-  let rol: Rol = 'paciente';
-  if (rolParam === 'medico') {
-    rol = 'medico';
-  } else if (rolParam === 'secretaria') {
-    rol = 'secretaria';
-  }
+  // El perfil que se muestra es siempre el de quien inició sesión.
+  const sesion = useSesion();
+  const rol: Rol = sesion.usuario ? sesion.usuario.rol : 'paciente';
   const perfilPaciente = usePerfilPaciente();
   const perfilSecretaria = usePerfilSecretaria();
   const perfilMedico = usePerfilMedico();
   const medicoLogueado = useMedicoLogueado();
   const { coberturas } = useConsultorio();
-  const sesion = useSesion();
   // Los datos de quien inició sesión, según su rol (vienen de la API a través de los contextos).
   let info: InfoPerfil = {
     nombre: `${perfilPaciente.nombre} ${perfilPaciente.apellido}`,
@@ -94,16 +87,9 @@ export default function Perfil() {
 
   const [alertasMedicacion, setAlertasMedicacion] = useState(true);
 
-  // Al cerrar sesión se vacía la pila de pantallas y se vuelve al inicio: así deslizar hacia atrás
-  // no devuelve a una pantalla de la sesión que ya se cerró.
-  // Si no quedaron pantallas atrás (por ejemplo, se llegó con replace), no hay nada que cerrar.
+  // ControlDeSesion se encarga de volver al inicio y de vaciar la pila de pantallas.
   function cerrarSesion() {
-    // Se borra la sesión guardada en el dispositivo: la próxima vez hay que ingresar de nuevo.
     sesion.cerrarSesion();
-    if (router.canDismiss()) {
-      router.dismissAll();
-    }
-    router.replace('/');
   }
 
   // Los tres roles tienen su editor de perfil.

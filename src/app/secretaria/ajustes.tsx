@@ -57,7 +57,7 @@ export default function AjustesSecretaria() {
   const [guardado, setGuardado] = useState(false);
 
 
-  function guardar() {
+  async function guardar() {
     // El riesgo alto tiene que empezar más arriba que el medio, si no no habría nivel medio.
     if (riesgoAlto <= riesgoMedio) {
       setError('El riesgo alto tiene que empezar en más puntos que el riesgo medio.');
@@ -66,7 +66,7 @@ export default function AjustesSecretaria() {
     }
     setError('');
     const cantidad = parseInt(sobreturnos, 10);
-    configuracion.guardarConfiguracion({
+    const errorApi = await configuracion.guardarConfiguracion({
       nombre: nombre.trim(),
       direccion: direccion.trim(),
       ciudad: ciudad.trim(),
@@ -79,6 +79,11 @@ export default function AjustesSecretaria() {
       puntosRiesgoAlto: riesgoAlto,
       avisosAntesDeActuar: avisos,
     });
+    if (errorApi !== '') {
+      setError(errorApi);
+      setGuardado(false);
+      return;
+    }
     setGuardado(true);
   }
 

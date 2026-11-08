@@ -42,7 +42,6 @@ type TextosEditar = {
   contrasenaRepetir: string;
   cancelar: string;
   confirmar: string;
-  errorActual: string;
   errorLargo: string;
   errorNoCoincide: string;
   errorBiometria: string;
@@ -91,7 +90,6 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     contrasenaRepetir: 'Repetí la contraseña nueva',
     cancelar: 'Cancelar',
     confirmar: 'Confirmar',
-    errorActual: 'La contraseña actual no es correcta.',
     errorLargo: 'La contraseña nueva debe tener al menos 6 caracteres.',
     errorNoCoincide: 'Las contraseñas nuevas no coinciden.',
     errorBiometria: 'No pudimos verificar tu identidad. No se hicieron cambios.',
@@ -138,7 +136,6 @@ export const TEXTOS_EDITAR: Record<Idioma, TextosEditar> = {
     contrasenaRepetir: 'Repeat the new password',
     cancelar: 'Cancel',
     confirmar: 'Confirm',
-    errorActual: 'The current password is not correct.',
     errorLargo: 'The new password must be at least 6 characters.',
     errorNoCoincide: 'The new passwords do not match.',
     errorBiometria: 'We could not verify your identity. No changes were made.',

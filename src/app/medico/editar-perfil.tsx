@@ -50,9 +50,12 @@ export default function EditarPerfilMedico() {
 
   // La foto se guarda apenas se elige o se quita, como en cualquier app (el resto de los datos, con "Guardar cambios").
   // Por eso se guardan los demás datos tal como estaban, no lo que se esté escribiendo en el formulario.
-  function cambiarFoto(nueva: string | null) {
+  async function cambiarFoto(nueva: string | null) {
     setFotoUri(nueva);
-    perfil.actualizarPerfil({ telefono: perfil.telefono, domicilio: perfil.domicilio, fotoUri: nueva });
+    const error = await perfil.actualizarPerfil({ telefono: perfil.telefono, domicilio: perfil.domicilio, fotoUri: nueva });
+    if (error !== '') {
+      setErrorFoto(error);
+    }
   }
 
   function usarResultado(resultado: ImagePicker.ImagePickerResult) {

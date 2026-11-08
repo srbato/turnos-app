@@ -13,6 +13,7 @@ import {
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { aceptaTurnos, atiendeEn, fechaDeVuelta, usePersonal } from '@/contextos/PersonalContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
@@ -22,6 +23,7 @@ import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
 export default function Reprogramar() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { turnos, reprogramarTurno } = useTurnos();
+  const { mostrarError } = useErrores();
   const { ofertas } = useAdelantos();
   const { medicos: personal } = usePersonal();
   const [fecha, setFecha] = useState<string | null>(null);
@@ -78,9 +80,14 @@ export default function Reprogramar() {
     }
   }
 
-  function confirmar() {
+  async function confirmar() {
     if (!turno || !hora) return;
-    reprogramarTurno(turno.id, fechaSeleccionada, hora);
+    // Por ejemplo, si otro paciente sacó ese horario mientras tanto.
+    const error = await reprogramarTurno(turno.id, fechaSeleccionada, hora);
+    if (error !== '') {
+      mostrarError(error);
+      return;
+    }
     setConfirmado(true);
   }
 

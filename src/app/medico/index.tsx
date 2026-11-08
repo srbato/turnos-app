@@ -16,6 +16,7 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { DetalleConsulta } from '@/components/detalle-consulta';
 import { MenuMedico } from '@/components/menu-medico';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilMedico } from '@/contextos/PerfilMedicoContext';
@@ -147,6 +148,7 @@ export default function AgendaMedico() {
   const perfilMedico = usePerfilMedico();
   const medicoLogueado = useMedicoLogueado();
   const { buscarPorTurno } = usePreconsultas();
+  const { mostrarError } = useErrores();
   const { medicamentos: medicamentosPropios } = useMedicamentos();
   const { recetas } = useRecetas();
   const { consultorio } = useConsultorio();
@@ -227,9 +229,18 @@ export default function AgendaMedico() {
     setRegistrandoConsulta(false);
   }
 
-  function confirmarCancelacion(id: string) {
-    cancelarTurno(id);
+  async function confirmarCancelacion(id: string) {
     cerrarDetalle();
+    mostrarError(await cancelarTurno(id));
+  }
+
+  // Si la API no acepta el cambio, se cierra el detalle para que se vea el aviso.
+  async function cambiarEstado(id: string, estado: EstadoTurno) {
+    const error = await cambiarEstadoTurno(id, estado);
+    if (error !== '') {
+      cerrarDetalle();
+      mostrarError(error);
+    }
   }
 
   // Se calcula en cada render: no hace falta useEffect para esto.
@@ -529,7 +540,7 @@ export default function AgendaMedico() {
                       <View style={styles.filaAcciones}>
                         <Pressable
                           style={styles.botonConfirmar}
-                          onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'confirmado')}>
+                          onPress={() => cambiarEstado(turnoSeleccionado.id, 'confirmado')}>
                           <Text style={styles.botonCerrarTexto}>Confirmar</Text>
                         </Pressable>
                         <Pressable
@@ -549,7 +560,7 @@ export default function AgendaMedico() {
 
                     <Pressable
                       style={styles.botonAtendidoSecundario}
-                      onPress={() => cambiarEstadoTurno(turnoSeleccionado.id, 'ausente')}>
+                      onPress={() => cambiarEstado(turnoSeleccionado.id, 'ausente')}>
                       <Text style={styles.botonAtendidoSecundarioTexto}>El paciente no asistió</Text>
                     </Pressable>
 

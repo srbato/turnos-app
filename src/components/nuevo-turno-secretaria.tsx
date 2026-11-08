@@ -9,6 +9,7 @@ import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { enLicencia, horariosDelMedico, MiembroMedico, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
+import { Paciente } from '@/datos/consultorio';
 import { atiendeEseDia } from '@/datos/atencion';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 
@@ -94,7 +95,7 @@ export function NuevoTurnoSecretaria({
   );
   // El elegido se busca en la lista completa: si una búsqueda lo deja afuera de la lista filtrada, igual se sigue viendo.
   const pacienteSeleccionado = pacientes.find((p) => p.id === idPaciente);
-  function aOpcion(p: (typeof pacientes)[number]) {
+  function aOpcion(p: Paciente) {
     return { id: p.id, texto: `${p.nombre} ${p.apellido}`, detalle: p.cobertura };
   }
   const puedeGuardar = medico !== '' && hora !== '' && idPaciente !== '';

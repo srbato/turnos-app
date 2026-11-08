@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import {
   COLOR_MEDICO_GRIS,
   COLOR_PACIENTE,
@@ -10,7 +10,6 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
-import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { Rol, useSesion } from '@/contextos/SesionContext';
 
 
@@ -20,21 +19,18 @@ const TEMAS = {
     fondo: FONDO_PACIENTE,
     colorCard: '#ffffff',
     etiqueta: 'Ingreso paciente',
-    alternativo: 'Ingresar con DNI y N° de afiliado',
   },
   medico: {
     color: COLOR_MEDICO_GRIS,
     fondo: FONDO_MEDICO,
     colorCard: '#ffffff',
     etiqueta: 'Ingreso médico',
-    alternativo: 'Ingresar con matrícula',
   },
   secretaria: {
     color: COLOR_SECRETARIA,
     fondo: FONDO_SECRETARIA,
     colorCard: '#ffffff',
     etiqueta: 'Ingreso secretaría',
-    alternativo: '',
   },
 };
 
@@ -55,7 +51,6 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [verPassword, setVerPassword] = useState(false);
-    const [recordarme, setRecordarme] = useState(false);
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
     const [mensajeError, setMensajeError] = useState('');
@@ -65,27 +60,6 @@ export default function Login() {
     );
     const [ingresando, setIngresando] = useState(false);
     const { iniciarSesion } = useSesion();
-
-    // Opciones que todavía no funcionan (necesitan backend).
-    const proximamente = () => {
-        Alert.alert('Próximamente', 'Esta opción todavía no está disponible.');
-    }
-
-    const irAlInicio = () => {
-        if (rol === 'paciente') {
-            router.replace('/paciente');
-            return;
-        }
-        if (rol === 'medico') {
-            router.replace('/medico');
-            return;
-        }
-        if (rol === 'secretaria') {
-            router.replace(RUTA_AGENDA_SECRETARIA);
-            return;
-        }
-        setMensajeExito('Ingreso correcto. Esta pantalla todavía no está armada.');
-    }
 
     const handleIngresar = async () => {
       let hayError = false;
@@ -113,16 +87,14 @@ export default function Login() {
           return;
         }
 
-        // La API revisa el email y la contraseña. Si están bien, la sesión queda guardada en el dispositivo.
+        // La API revisa el email y la contraseña. Si están bien, la sesión queda guardada en el dispositivo
+        // y ControlDeSesion lleva al inicio de cada rol.
         setIngresando(true);
         const error = await iniciarSesion(rolElegido, email.trim(), password);
         setIngresando(false);
         if (error !== '') {
           setMensajeError(error);
-          return;
         }
-
-        irAlInicio();
     }
 
     return(
@@ -181,25 +153,6 @@ export default function Login() {
                 </View>
                 {passwordError !== '' && <Text style={styles.errorText}>{passwordError}</Text>}
 
-                <View style={styles.opcionesFila}> 
-                    <Pressable style={styles.checkFila} onPress={() => setRecordarme(!recordarme)}>
-                        <View
-                        style={[
-                            styles.checkbox,
-                            recordarme && { backgroundColor: tema.color, borderColor: tema.color },
-                        ]}
-                        >
-                            {recordarme && <Text style={styles.check}>✓</Text>}
-                        </View>
-                        <Text style={styles.checkTexto}>Recordarme</Text>
-                    </Pressable>
-                    <Pressable onPress={proximamente}>
-                        <Text style={[styles.link, { color: tema.color }]}>
-                            Olvidé mi contraseña
-                        </Text>
-                    </Pressable>
-                </View>
-
                 <Pressable
                   style={({pressed}) => [
                     styles.boton,
@@ -215,24 +168,6 @@ export default function Login() {
                 {mensajeError !== '' && <Text style={styles.mensajeError}>{mensajeError}</Text>}
                 {mensajeExito !== '' && <Text style={styles.mensajeExito}>{mensajeExito}</Text>}
               </View>
-
-              {tema.alternativo !== '' && (
-                <>
-                  <Text style={styles.separador}>____________________    o    ____________________</Text>
-                  <Pressable
-                  style={({pressed}) => [
-                    styles.botonAlternativo,
-                    {borderColor:tema.color},
-                    pressed && styles.presionado,
-                  ]}
-                  onPress={proximamente}
-                  >
-                  <Text style={[styles.textoBotonAlternativo, { color: tema.color }]}>
-                    {tema.alternativo}
-                  </Text>
-                  </Pressable>
-                </>
-              )}
 
               {/* Solo los pacientes se registran solos: el personal lo da de alta el consultorio. */}
               {rol === 'paciente' && (
@@ -330,61 +265,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
   },
-  opcionesFila: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  checkFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  check: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  checkTexto: {
-    color: 'grey',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
   boton: {
     borderRadius:17,
     alignItems:'center',
     justifyContent:'center',
     height:50,
+    marginTop:18,
   },
   textoBoton: {
     color: 'white',
-    fontWeight: 'bold',
-    fontSize:15,
-  },
-  separador: {
-    textAlign:'center',
-    marginVertical:30,
-    color: '#cbd5e1',
-  },
-  botonAlternativo: {
-    backgroundColor:'transparent',
-    borderWidth:1,
-    borderRadius:17,
-    alignItems:'center',
-    justifyContent:'center',
-    height:60,
-  },
-  textoBotonAlternativo: {
     fontWeight: 'bold',
     fontSize:15,
   },

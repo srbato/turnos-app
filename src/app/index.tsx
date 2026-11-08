@@ -9,6 +9,7 @@ import {
   FONDO_SECRETARIA,
 } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
+import { useSesion } from '@/contextos/SesionContext';
 
 type PropsOpcionRol = {
   letra: string;
@@ -46,6 +47,13 @@ function OpcionRol(props: PropsOpcionRol) {
 }
 
 export default function SeleccionRol (){
+  const { usuario, sesionCargada } = useSesion();
+
+  // Con una sesión guardada no se muestra esta pantalla: ControlDeSesion lleva directo al inicio de cada rol.
+  if (!sesionCargada || usuario !== null) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <Image source={require('@/assets/images/imagotipo.png')} style={styles.logo} resizeMode="contain" />
@@ -177,4 +185,4 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
 
-});
+});

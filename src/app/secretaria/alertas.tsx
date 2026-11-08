@@ -14,6 +14,7 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { useAdelantos } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
 import { colorNivelRiesgo, evaluarRiesgo, nombreNivelRiesgo, PUNTOS_POR_ASISTENCIA, PUNTOS_POR_CONFIRMACION, PUNTOS_POR_FALTA, textoPuntaje } from '@/datos/ausentismo';
@@ -49,6 +50,7 @@ function avisoCancelados(cantidad: number) {
 
 export default function AlertasSecretaria() {
   const { turnos, cambiarEstadoTurno, cancelarConMotivo, enviarAviso } = useTurnos();
+  const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo, avisosAntesDeActuar } = useConfiguracion();
   const pacientes = consultorio.pacientes;
@@ -66,11 +68,12 @@ export default function AlertasSecretaria() {
     });
 
   // Cancelación por riesgo: queda con motivo, así el horario no se ofrece solo y Secretaría elige a quién dárselo.
-  function cancelarPorRiesgo(id: string) {
-    cancelarConMotivo(
+  async function cancelarPorRiesgo(id: string) {
+    const error = await cancelarConMotivo(
       id,
       `Cancelado por riesgo de inasistencia: no confirmó tras ${avisosAntesDeActuar} avisos. El horario quedó libre para la lista de espera.`
     );
+    mostrarError(error);
   }
 
   function cuando(fecha: string, hora: string) {
@@ -144,11 +147,11 @@ export default function AlertasSecretaria() {
               )}
 
               <View style={styles.filaBotones}>
-                <Pressable style={styles.botonPrimario} onPress={() => cambiarEstadoTurno(turno.id, 'confirmado')}>
+                <Pressable style={styles.botonPrimario} onPress={async () => mostrarError(await cambiarEstadoTurno(turno.id, 'confirmado'))}>
                   <Text style={styles.botonPrimarioTexto}>Ya confirmó</Text>
                 </Pressable>
                 {avisos < avisosAntesDeActuar ? (
-                  <Pressable style={styles.botonSuave} onPress={() => enviarAviso(turno.id)}>
+                  <Pressable style={styles.botonSuave} onPress={async () => mostrarError(await enviarAviso(turno.id))}>
                     <Text style={styles.botonSuaveTexto}>
                       Enviar aviso ({avisos}/{avisosAntesDeActuar})
                     </Text>

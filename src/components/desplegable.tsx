@@ -7,7 +7,8 @@ export type OpcionDesplegable = {
   detalle?: string; // línea más chica debajo del texto (por ejemplo, la cobertura de un paciente)
 };
 
-type PropsComunes = {
+// Se usa de una de dos formas: selección simple (elegida + onElegir) o selección múltiple (elegidas + onAlternar).
+type Props = {
   opciones: OpcionDesplegable[];
   placeholder: string;
   // 'modal': la lista se abre en un Modal.
@@ -15,27 +16,14 @@ type PropsComunes = {
   modo: 'modal' | 'expandido';
   color: string; // color del rol
   textoVacio?: string;
-};
-
-// Selección simple: se elige una sola opción y la lista se cierra.
-type PropsSimple = PropsComunes & {
+  // Selección simple: se elige una sola opción y la lista se cierra.
   // La opción elegida va aparte de "opciones": si hay un buscador, puede quedar fuera de la lista filtrada y igual tiene que verse.
   elegida?: OpcionDesplegable;
-  onElegir: (id: string) => void;
-  elegidas?: undefined;
-  onAlternar?: undefined;
+  onElegir?: (id: string) => void;
+  // Selección múltiple: cada toque marca o desmarca una opción y la lista queda abierta para marcar más.
+  elegidas?: string[]; // ids de las opciones marcadas
+  onAlternar?: (id: string) => void;
 };
-
-// Selección múltiple: cada toque marca o desmarca una opción y la lista queda abierta para marcar más.
-type PropsMultiple = PropsComunes & {
-  elegidas: string[]; // ids de las opciones marcadas
-  onAlternar: (id: string) => void;
-  elegida?: undefined;
-  onElegir?: undefined;
-};
-
-// Se pasa onElegir (simple) o onAlternar (múltiple), nunca los dos: así TypeScript avisa si se mezclan.
-type Props = PropsSimple | PropsMultiple;
 
 // Lista desplegable: muestra lo elegido (o un placeholder) y al tocarla abre la lista de opciones.
 export function Desplegable({

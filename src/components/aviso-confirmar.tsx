@@ -4,6 +4,7 @@ import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/co
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { evaluarRiesgo } from '@/datos/ausentismo';
@@ -24,6 +25,7 @@ function cuando(fecha: string, hora: string) {
 // reprogramarse (sin hablar de puntos ni de riesgo: dice el hecho, no lo etiqueta).
 export function AvisoConfirmar() {
   const { turnos, misTurnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
+  const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo, avisosAntesDeActuar } = useConfiguracion();
   const { idPaciente } = useSesion();
@@ -60,12 +62,12 @@ export function AvisoConfirmar() {
             </Text>
 
             <View style={styles.filaBotones}>
-              <Pressable style={styles.botonSecundario} onPress={() => cancelarTurno(turno.id)}>
+              <Pressable style={styles.botonSecundario} onPress={async () => mostrarError(await cancelarTurno(turno.id))}>
                 <Text style={[styles.botonSecundarioTexto, { color }]}>{urgente ? 'Cancelar turno' : 'No puedo ir'}</Text>
               </Pressable>
               <Pressable
                 style={[styles.botonPrimario, { backgroundColor: color }]}
-                onPress={() => cambiarEstadoTurno(turno.id, 'confirmado')}>
+                onPress={async () => mostrarError(await cambiarEstadoTurno(turno.id, 'confirmado'))}>
                 <Text style={styles.botonPrimarioTexto}>{urgente ? 'Confirmar ahora' : 'Confirmar turno'}</Text>
               </Pressable>
             </View>

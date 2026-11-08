@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { useAdelantos } from '@/contextos/AdelantosContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
@@ -16,6 +17,7 @@ function textoFecha(fecha: string, hora: string) {
 export function OfertasAdelanto() {
   const { turnos, misTurnos } = useTurnos();
   const { ofertas, aceptarOferta, rechazarOferta } = useAdelantos();
+  const { mostrarError } = useErrores();
 
   // Las ofertas esperando respuesta para turnos de este paciente (como mucho una por turno).
   const mias = ofertasVigentes(ofertas, turnos)
@@ -47,10 +49,10 @@ export function OfertasAdelanto() {
           </View>
 
           <View style={styles.filaBotones}>
-            <Pressable style={styles.botonSecundario} onPress={() => rechazarOferta(oferta)}>
+            <Pressable style={styles.botonSecundario} onPress={async () => mostrarError(await rechazarOferta(oferta))}>
               <Text style={styles.botonSecundarioTexto}>No, gracias</Text>
             </Pressable>
-            <Pressable style={styles.botonPrimario} onPress={() => aceptarOferta(oferta)}>
+            <Pressable style={styles.botonPrimario} onPress={async () => mostrarError(await aceptarOferta(oferta))}>
               <Text style={styles.botonPrimarioTexto}>Sí, adelantar</Text>
             </Pressable>
           </View>

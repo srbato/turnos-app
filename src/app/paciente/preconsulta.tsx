@@ -1,12 +1,13 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Desplegable } from '@/components/desplegable';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_INFERIOR, MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useMedicamentos } from '@/contextos/MedicamentosContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
@@ -50,6 +51,7 @@ export default function PantallaPreconsulta() {
   const { nombre, alergias: alergiasDelPerfil } = usePerfilPaciente();
   const { medicamentos } = useMedicamentos();
   const { buscarPorTurno, enviarPreconsulta } = usePreconsultas();
+  const { mostrarError } = useErrores();
   const { misRecetas } = useRecetas();
 
   const turno = turnos.find((t) => t.id === turnoId);
@@ -151,7 +153,7 @@ export default function PantallaPreconsulta() {
         .filter((s) => s !== ''),
     });
     if (error !== '') {
-      Alert.alert('No se pudo enviar', error);
+      mostrarError(error);
       return;
     }
     setFase('enviada');

@@ -16,6 +16,7 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { EstadoOferta, useAdelantos, Oferta } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import {
   DIAS_MINIMOS_ADELANTO,
@@ -59,6 +60,7 @@ function textoCorto(fecha: string, hora: string) {
 export default function EsperaSecretaria() {
   const { turnos } = useTurnos();
   const { ofertas, noContesta } = useAdelantos();
+  const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
   const { reglasRiesgo } = useConfiguracion();
 
@@ -129,7 +131,7 @@ export default function EsperaSecretaria() {
                   </Text>
                   <Text style={styles.esperando}>Esperando su respuesta</Text>
                 </View>
-                <Pressable onPress={() => noContesta(oferta)}>
+                <Pressable onPress={async () => mostrarError(await noContesta(oferta))}>
                   <Text style={styles.noContesta}>No contesta</Text>
                 </Pressable>
               </View>

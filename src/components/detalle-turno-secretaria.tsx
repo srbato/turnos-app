@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_SECRETARIA } from '@/constantes/colores';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, formatearFecha } from '@/utilidades/turnos';
 
@@ -16,6 +17,7 @@ type Props = {
 // Se guarda el id (y no el turno) para que el Modal muestre siempre el estado actualizado.
 export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
   const { turnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
+  const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
   const pacientes = consultorio.pacientes;
   const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
@@ -71,9 +73,9 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                   {turno.estado === 'pendiente' && (
                     <Pressable
                       style={styles.botonPrimario}
-                      onPress={() => {
-                        cambiarEstadoTurno(turno.id, 'confirmado');
+                      onPress={async () => {
                         cerrar();
+                        mostrarError(await cambiarEstadoTurno(turno.id, 'confirmado'));
                       }}>
                       <Text style={styles.botonPrimarioTexto}>Confirmar turno</Text>
                     </Pressable>
@@ -104,9 +106,9 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                     </Pressable>
                     <Pressable
                       style={styles.botonConfirmarCancelar}
-                      onPress={() => {
-                        cancelarTurno(turno.id);
+                      onPress={async () => {
                         cerrar();
+                        mostrarError(await cancelarTurno(turno.id));
                       }}>
                       <Text style={styles.botonPrimarioTexto}>Sí, cancelar</Text>
                     </Pressable>

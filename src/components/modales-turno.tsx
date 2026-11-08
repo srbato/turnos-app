@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { OpcionAdelanto } from '@/components/opcion-adelanto';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { usePersonal, MiembroMedico } from '@/contextos/PersonalContext';
 import { usePreconsultas } from '@/contextos/PreconsultasContext';
 import { useTurnos, Turno } from '@/contextos/TurnosContext';
@@ -27,6 +28,7 @@ type PropsDetalle = {
 export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle) {
   const { buscarPorTurno } = usePreconsultas();
   const { turnos, activarAdelanto } = useTurnos();
+  const { mostrarError } = useErrores();
   const { direccion } = useConfiguracion();
   const { medicos } = usePersonal();
   // El turno recibido es una foto de cuando se abrió el modal: el estado actual se busca en el contexto.
@@ -102,7 +104,14 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                 <>
                   <OpcionAdelanto
                     activo={turnoActual?.adelantoDesde !== undefined}
-                    onCambiar={(activo) => activarAdelanto(turno.id, activo)}
+                    onCambiar={async (activo) => {
+                      const error = await activarAdelanto(turno.id, activo);
+                      // Se cierra el detalle para que se vea el aviso.
+                      if (error !== '') {
+                        onCerrar();
+                        mostrarError(error);
+                      }
+                    }}
                   />
                   <View style={styles.botones}>
                     <Pressable
@@ -178,6 +187,7 @@ type PropsCancelar = {
 // Confirmación antes de cancelar. Lo usan el home y Mis turnos.
 export function CancelarTurnoModal({ turno, onCerrar }: PropsCancelar) {
   const { cancelarTurno } = useTurnos();
+  const { mostrarError } = useErrores();
 
   return (
     <Modal visible={turno !== null} animationType="fade" transparent onRequestClose={onCerrar}>
@@ -198,9 +208,9 @@ export function CancelarTurnoModal({ turno, onCerrar }: PropsCancelar) {
                 </Pressable>
                 <Pressable
                   style={styles.botonConfirmarCancelar}
-                  onPress={() => {
-                    cancelarTurno(turno.id);
+                  onPress={async () => {
                     onCerrar();
+                    mostrarError(await cancelarTurno(turno.id));
                   }}>
                   <Text style={styles.botonPrimarioTexto}>Sí, cancelar</Text>
                 </Pressable>

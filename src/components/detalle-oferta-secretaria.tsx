@@ -10,6 +10,7 @@ import {
 } from "@/constantes/colores";
 import { useAdelantos } from "@/contextos/AdelantosContext";
 import { useConsultorio } from "@/contextos/ConsultorioContext";
+import { useErrores } from "@/contextos/ErroresContext";
 import { useTurnos } from "@/contextos/TurnosContext";
 import { ofertasVigentes } from "@/datos/adelantos";
 import { detalleFecha, formatearFecha } from "@/utilidades/turnos";
@@ -28,6 +29,7 @@ function textoFecha(fecha: string, hora: string) {
 export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
   const { turnos } = useTurnos();
   const { ofertas, retirarOferta } = useAdelantos();
+  const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
   const pacientes = consultorio.pacientes;
   const [confirmando, setConfirmando] = useState(false);
@@ -131,9 +133,9 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
                       </Pressable>
                       <Pressable
                         style={styles.botonConfirmar}
-                        onPress={() => {
-                          retirarOferta(oferta);
+                        onPress={async () => {
                           cerrar();
+                          mostrarError(await retirarOferta(oferta));
                         }}
                       >
                         <Text style={styles.botonConfirmarTexto}>

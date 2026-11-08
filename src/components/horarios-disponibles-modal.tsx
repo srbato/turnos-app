@@ -5,6 +5,7 @@ import { COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { useAdelantos, Oferta } from '@/contextos/AdelantosContext';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { enLicencia, usePersonal } from '@/contextos/PersonalContext';
 import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import {
@@ -39,6 +40,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
   const { consultorio } = useConsultorio();
   const { reglasRiesgo, duracionTurno, nombre: nombreConsultorio } = useConfiguracion();
   const { ofertas, publicados, ofrecerA, reprogramarOferta } = useAdelantos();
+  const { mostrarError } = useErrores();
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
 
@@ -120,21 +122,23 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
   }
 
   // Cambia el horario de una oferta o se lo propone al paciente que Secretaría eligió.
-  function ofrecer() {
+  async function ofrecer() {
     if (!horario) return;
-    if (oferta) {
-      reprogramarOferta(oferta, horario);
-    } else if (turnoDestino) {
-      ofrecerA(horario, turnoDestino.id);
-    }
     cerrar();
+    let error = '';
+    if (oferta) {
+      error = await reprogramarOferta(oferta, horario);
+    } else if (turnoDestino) {
+      error = await ofrecerA(horario, turnoDestino.id);
+    }
+    mostrarError(error);
   }
 
   // Desde la lista de candidatos: se toca al paciente y se le propone el horario elegido.
-  function proponerA(idTurno: string) {
+  async function proponerA(idTurno: string) {
     if (!horario) return;
-    ofrecerA(horario, idTurno);
     cerrar();
+    mostrarError(await ofrecerA(horario, idTurno));
   }
 
   // Título y ayuda del Modal: cambian si se reprograma una oferta o se busca horario para un paciente.

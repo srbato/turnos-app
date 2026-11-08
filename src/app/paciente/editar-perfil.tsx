@@ -6,10 +6,10 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { AvatarPaciente } from '@/components/avatar-paciente';
 import { BarraPerfil } from '@/components/barra-perfil';
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
+import { SelectorCoberturas } from '@/components/selector-coberturas';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { TEMA_CLARO, TEMA_OSCURO } from '@/constantes/tema';
-import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { TEXTOS_EDITAR } from '@/datos/textos-editar-perfil';
@@ -28,7 +28,6 @@ function esperar(milisegundos: number) {
 
 export default function EditarPerfil() {
   const perfil = usePerfilPaciente();
-  const { coberturas } = useConsultorio();
   const { idioma, modoOscuro } = usePreferencias();
   const tema = modoOscuro ? TEMA_OSCURO : TEMA_CLARO;
   const textos = TEXTOS_EDITAR[idioma];
@@ -116,12 +115,6 @@ export default function EditarPerfil() {
     }
     usarResultado(
       await ImagePicker.launchImageLibraryAsync({ ...opcionesFoto, mediaTypes: ['images'] })
-    );
-  }
-
-  function alternarCobertura(id: string) {
-    setCoberturaIds(
-      coberturaIds.includes(id) ? coberturaIds.filter((c) => c !== id) : [...coberturaIds, id]
     );
   }
 
@@ -282,32 +275,21 @@ export default function EditarPerfil() {
           {textos.obrasSociales}
         </Text>
         <View style={[styles.grupo, { backgroundColor: tema.tarjeta }]}>
-          {coberturas.map((cobertura, indice) => {
-            const marcada = coberturaIds.includes(cobertura.id);
-            return (
-              <View key={cobertura.id}>
-                {indice > 0 && <View style={[styles.divisor, { backgroundColor: tema.borde }]} />}
-                <Pressable style={styles.filaCobertura} onPress={() => alternarCobertura(cobertura.id)}>
-                  <Text style={[styles.coberturaNombre, { color: tema.texto }]}>{cobertura.nombre}</Text>
-                  <View style={[styles.checkbox, { borderColor: COLOR_PERFIL }, marcada && styles.checkboxMarcado]}>
-                    {marcada && <Text style={styles.checkboxTilde}>✓</Text>}
-                  </View>
-                </Pressable>
-                {marcada && (
-                  <TextInput
-                    style={[estiloCampo, styles.campoAfiliado]}
-                    value={numerosAfiliado[cobertura.id] ?? ''}
-                    onChangeText={(valor) =>
-                      setNumerosAfiliado({ ...numerosAfiliado, [cobertura.id]: valor })
-                    }
-                    placeholder={textos.numeroAfiliado}
-                    placeholderTextColor={tema.textoTenue}
-                    maxLength={20}
-                  />
-                )}
-              </View>
-            );
-          })}
+          <SelectorCoberturas
+            coberturaIds={coberturaIds}
+            numerosAfiliado={numerosAfiliado}
+            onCambiarCoberturas={setCoberturaIds}
+            onCambiarNumeros={setNumerosAfiliado}
+            textoNumero={textos.numeroAfiliado}
+            colores={{
+              acento: COLOR_PERFIL,
+              fondoMarcada: tema.fondo,
+              texto: tema.texto,
+              borde: tema.borde,
+              fondoCampo: tema.fondo,
+              textoTenue: tema.textoTenue,
+            }}
+          />
           <Text style={[styles.nota, styles.notaCoberturas, { color: tema.textoTenue }]}>
             {textos.obrasSocialesNota}
           </Text>
@@ -486,10 +468,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 12,
   },
-  campoAfiliado: {
-    marginTop: 0,
-    marginBottom: 12,
-  },
   campoBloqueado: {
     opacity: 0.7,
     marginBottom: 6,
@@ -504,32 +482,7 @@ const styles = StyleSheet.create({
   notaCoberturas: {
     marginTop: 10,
   },
-  divisor: {
-    height: 1,
-  },
-  filaCobertura: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
   coberturaNombre: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxMarcado: {
-    backgroundColor: COLOR_PERFIL,
-  },
-  checkboxTilde: {
-    color: '#1A1815',
     fontSize: 14,
     fontWeight: '700',
   },

@@ -17,6 +17,7 @@ import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { Desplegable } from '@/components/desplegable';
 import { MenuMedico } from '@/components/menu-medico';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useTurnos } from '@/contextos/TurnosContext';
@@ -31,6 +32,7 @@ export default function RecetasDelMedico() {
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
   const { recetas, emitirReceta, editarReceta, eliminarReceta } = useRecetas();
+  const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
   const pacientes = consultorio.pacientes;
 
@@ -146,9 +148,9 @@ export default function RecetasDelMedico() {
     cerrarFormulario();
   }
 
-  function eliminar() {
-    eliminarReceta(idEditando);
+  async function eliminar() {
     cerrarFormulario();
+    mostrarError(await eliminarReceta(idEditando));
   }
 
   return (

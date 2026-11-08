@@ -3,11 +3,13 @@ import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'r
 
 import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { useErrores } from '@/contextos/ErroresContext';
 import { useMedicamentos, MedicamentoPropio } from '@/contextos/MedicamentosContext';
 
 // Tab "Agregados por mí": medicamentos que el paciente carga por su cuenta.
 export default function MedicamentosPropios() {
   const { medicamentos, agregarMedicamento, editarMedicamento, eliminarMedicamento } = useMedicamentos();
+  const { mostrarError } = useErrores();
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   // Si hay un medicamento acá, el formulario edita ese; si es null, agrega uno nuevo.
   const [medicamentoEditando, setMedicamentoEditando] = useState<MedicamentoPropio | null>(null);
@@ -177,9 +179,9 @@ export default function MedicamentosPropios() {
                   </Pressable>
                   <Pressable
                     style={styles.botonConfirmarEliminar}
-                    onPress={() => {
-                      eliminarMedicamento(medicamentoAEliminar.id);
+                    onPress={async () => {
                       setMedicamentoAEliminar(null);
+                      mostrarError(await eliminarMedicamento(medicamentoAEliminar.id));
                     }}>
                     <Text style={styles.botonPrimarioTexto}>Sí, eliminar</Text>
                   </Pressable>
