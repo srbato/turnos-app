@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { MiembroMedico, usePersonal } from '@/contextos/PersonalContext';
+import { useSesion } from '@/contextos/SesionContext';
 import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import { claveHorario, crearHorarioLibre } from '@/datos/adelantos';
 import { ID_CONSULTORIO, pedir } from '@/servicios/api';
@@ -70,6 +71,7 @@ type HorarioApi = {
 // Va dentro de TurnosProvider y PersonalProvider: usa los turnos y los datos de los médicos.
 export function AdelantosProvider({ children }: { children: ReactNode }) {
   const { consultorio } = useConsultorio();
+  const { usuario } = useSesion();
   const { turnos, recargarTurnos } = useTurnos();
   const { medicos } = usePersonal();
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
@@ -135,9 +137,16 @@ export function AdelantosProvider({ children }: { children: ReactNode }) {
   }
 
   // Cada vez que cambian los turnos (alguien canceló, sacó o movió uno) la API pudo haber mandado ofertas nuevas.
+  // Sin sesión no se pueden pedir.
   useEffect(() => {
+    if (usuario === null) {
+      setOfertas([]);
+      setPublicados([]);
+      setRetirados([]);
+      return;
+    }
     recargarAdelantos();
-  }, [turnos, medicos]);
+  }, [turnos, medicos, usuario]);
 
   // Manda el cambio a la API y, si salió bien, recarga los turnos (y con ellos las ofertas, por el useEffect de arriba).
   async function enviar(metodo: string, ruta: string, cuerpo: object) {

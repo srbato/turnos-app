@@ -73,7 +73,7 @@ function recetaDesdeApi(receta: RecetaApi): Receta {
 }
 
 export function RecetasProvider({ children }: { children: ReactNode }) {
-  const { idPaciente } = useSesion();
+  const { usuario, idPaciente } = useSesion();
   const [recetas, setRecetas] = useState<Receta[]>([]);
 
   async function recargarRecetas() {
@@ -83,9 +83,14 @@ export function RecetasProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Se cargan cada vez que cambia quién inició sesión. Sin sesión no se pueden pedir.
   useEffect(() => {
+    if (usuario === null) {
+      setRecetas([]);
+      return;
+    }
     recargarRecetas();
-  }, [idPaciente]);
+  }, [usuario]);
 
   // Manda el cambio a la API y, si salió bien, vuelve a pedir las recetas.
   async function enviar(metodo: string, ruta: string, cuerpo?: object) {

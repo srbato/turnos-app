@@ -208,6 +208,7 @@ const VALOR_POR_DEFECTO: PersonalContextType = {
 const PersonalContext = createContext(VALOR_POR_DEFECTO);
 
 export function PersonalProvider({ children }: { children: ReactNode }) {
+  const { usuario } = useSesion();
   const { recargarTurnos } = useTurnos();
   const [medicos, setMedicos] = useState<MiembroMedico[]>([]);
   const [secretarias, setSecretarias] = useState<MiembroSecretaria[]>([]);
@@ -223,9 +224,15 @@ export function PersonalProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // Se carga cada vez que cambia quién inició sesión. Sin sesión no se puede pedir.
   useEffect(() => {
+    if (usuario === null) {
+      setMedicos([]);
+      setSecretarias([]);
+      return;
+    }
     recargarPersonal();
-  }, []);
+  }, [usuario]);
 
   async function altaMedico(nuevo: MedicoNuevo) {
     const respuesta = await pedir('POST', '/api/medicos', { ...nuevo, consultorioId: ID_CONSULTORIO });

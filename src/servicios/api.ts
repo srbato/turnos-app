@@ -7,6 +7,20 @@ export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000
 // El consultorio con el que trabaja la app. Con varios consultorios lo definiría la cuenta del usuario.
 export const ID_CONSULTORIO = 1;
 
+// El token de quien inició sesión. Lo guarda SesionContext y acá se manda en cada pedido.
+let tokenActual = '';
+
+// Qué hacer si la API rechaza el token (por ejemplo, porque venció). Lo define SesionContext.
+let alVencerLaSesion = () => {};
+
+export function guardarToken(token: string) {
+  tokenActual = token;
+}
+
+export function avisarCuandoVenza(funcion: () => void) {
+  alVencerLaSesion = funcion;
+}
+
 // El resultado de un pedido: si salió bien, los datos que devolvió la API; si no, el mensaje de error.
 // datos es "any" porque cada ruta devuelve una forma distinta: cada contexto la convierte a sus tipos.
 export type Respuesta = {
@@ -19,13 +33,23 @@ export type Respuesta = {
 // cuerpo: lo que se manda (solo en POST, PATCH y PUT). Nunca lanza un error: si algo falla, devuelve ok: false.
 export async function pedir(metodo: string, ruta: string, cuerpo?: object): Promise<Respuesta> {
   try {
-    const opciones: RequestInit = { method: metodo };
+    const encabezados: Record<string, string> = {};
+    // Si hay una sesión iniciada, cada pedido lleva su token.
+    if (tokenActual !== '') {
+      encabezados.Authorization = `Bearer ${tokenActual}`;
+    }
+    const opciones: RequestInit = { method: metodo, headers: encabezados };
     if (cuerpo !== undefined) {
       // JSON.stringify convierte el objeto en texto, y Content-Type le dice a la API que es JSON.
-      opciones.headers = { 'Content-Type': 'application/json' };
+      encabezados['Content-Type'] = 'application/json';
       opciones.body = JSON.stringify(cuerpo);
     }
     const respuesta = await fetch(`${API_URL}${ruta}`, opciones);
+
+    // 401 con una sesión iniciada: el token venció o no es válido. (En el login, 401 es una contraseña incorrecta.)
+    if (respuesta.status === 401 && tokenActual !== '' && ruta !== '/api/login') {
+      alVencerLaSesion();
+    }
 
     // 204 No Content (por ejemplo, al borrar): salió bien y no hay JSON para leer.
     if (respuesta.status === 204) {

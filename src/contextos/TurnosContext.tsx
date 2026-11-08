@@ -158,7 +158,7 @@ function preconsultaDesdeApi(turno: TurnoApi): Preconsulta | null {
 
 export function TurnosProvider({ children }: { children: ReactNode }) {
   const { consultorio } = useConsultorio();
-  const { idPaciente } = useSesion();
+  const { usuario, idPaciente } = useSesion();
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [preconsultas, setPreconsultas] = useState<Preconsulta[]>([]);
 
@@ -179,10 +179,15 @@ export function TurnosProvider({ children }: { children: ReactNode }) {
     setPreconsultas(conPreconsulta);
   }
 
-  // Se cargan al abrir la app y cada vez que cambia quién inició sesión.
+  // Se cargan cada vez que cambia quién inició sesión. Sin sesión no se pueden pedir.
   useEffect(() => {
+    if (usuario === null) {
+      setTurnos([]);
+      setPreconsultas([]);
+      return;
+    }
     recargarTurnos();
-  }, [idPaciente]);
+  }, [usuario]);
 
   // Manda un cambio a la API y, si salió bien, vuelve a pedir los turnos: la pantalla muestra lo que quedó guardado.
   async function enviar(metodo: string, ruta: string, cuerpo?: object) {

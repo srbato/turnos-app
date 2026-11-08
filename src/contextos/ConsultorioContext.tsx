@@ -8,7 +8,8 @@ import { ID_CONSULTORIO, pedir } from '@/servicios/api';
 
 // El consultorio con el que se trabaja: sus datos, su configuración (Ajustes) y sus pacientes, y las obras sociales que
 // existen en la app. Todo viene de la API.
-// Es lo primero que se carga: hasta que llega, la app muestra una pantalla de espera.
+// Los datos del consultorio y las obras sociales son lo primero que se carga: hasta que llegan, la app muestra una
+// pantalla de espera. Los pacientes se piden después de iniciar sesión (los carga SesionContext).
 
 export type Consultorio = {
   id: number;
@@ -30,7 +31,8 @@ type ConsultorioContextType = {
   consultorio: Consultorio;
   coberturas: Cobertura[]; // todas las obras sociales que se pueden elegir
   recargarConsultorio: () => Promise<void>; // después de cambiar los Ajustes
-  recargarPacientes: () => Promise<void>; // después de un registro o de cambiar un perfil
+  recargarPacientes: () => Promise<void>; // al iniciar sesión o después de cambiar un perfil
+  vaciarPacientes: () => void; // al cerrar sesión
 };
 
 const CONSULTORIO_VACIO: Consultorio = {
@@ -55,6 +57,7 @@ const VALOR_POR_DEFECTO: ConsultorioContextType = {
   coberturas: [],
   recargarConsultorio: async () => {},
   recargarPacientes: async () => {},
+  vaciarPacientes: () => {},
 };
 
 const ConsultorioContext = createContext(VALOR_POR_DEFECTO);
@@ -130,14 +133,13 @@ export function ConsultorioProvider({ children }: { children: ReactNode }) {
     return respuesta;
   }
 
-  // Primera carga: el consultorio, sus pacientes y las obras sociales. Si la API no responde, se muestra el error y un botón para reintentar.
+  // Primera carga: el consultorio y las obras sociales. Si la API no responde, se muestra el error y un botón para reintentar.
   async function cargarTodo() {
     setError('');
     const datos = await cargarConsultorio();
-    const pacientes = await cargarPacientes();
     const listaCoberturas = await cargarCoberturas();
-    if (!datos.ok || !pacientes.ok || !listaCoberturas.ok) {
-      setError(datos.error || pacientes.error || listaCoberturas.error);
+    if (!datos.ok || !listaCoberturas.ok) {
+      setError(datos.error || listaCoberturas.error);
       return;
     }
     setCargado(true);
@@ -153,6 +155,10 @@ export function ConsultorioProvider({ children }: { children: ReactNode }) {
 
   async function recargarPacientes() {
     await cargarPacientes();
+  }
+
+  function vaciarPacientes() {
+    setConsultorio((anterior) => ({ ...anterior, pacientes: [] }));
   }
 
   if (!cargado) {
@@ -174,7 +180,7 @@ export function ConsultorioProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ConsultorioContext.Provider value={{ consultorio, coberturas, recargarConsultorio, recargarPacientes }}>
+    <ConsultorioContext.Provider value={{ consultorio, coberturas, recargarConsultorio, recargarPacientes, vaciarPacientes }}>
       {children}
     </ConsultorioContext.Provider>
   );

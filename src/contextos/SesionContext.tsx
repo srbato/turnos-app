@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 
 import { useConsultorio } from '@/contextos/ConsultorioContext';
-import { ID_CONSULTORIO, pedir } from '@/servicios/api';
+import { avisarCuandoVenza, guardarToken, ID_CONSULTORIO, pedir } from '@/servicios/api';
 
 // Quién inició sesión: un paciente, un médico o una secretaria. El login lo valida la API (POST /api/login).
 // Se guarda en el dispositivo, así al volver a abrir la app no hay que ingresar de nuevo.
@@ -13,6 +14,7 @@ export type Usuario = {
   rol: Rol;
   id: string; // el id de esa persona en la base (como texto, igual que el resto de los ids de la app)
   nombre: string;
+  token: string; // el "pase" que dio la API al iniciar sesión: se manda en cada pedido
 };
 
 // Lo que se manda al registrarse como paciente (POST /api/pacientes).
@@ -50,7 +52,7 @@ const VALOR_POR_DEFECTO: SesionContextType = {
 const SesionContext = createContext(VALOR_POR_DEFECTO);
 
 export function SesionProvider({ children }: { children: ReactNode }) {
-  const { recargarPacientes } = useConsultorio();
+  const { recargarPacientes, vaciarPacientes } = useConsultorio();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   // Al abrir la app se recupera la sesión guardada en el dispositivo, si hay una.
@@ -59,16 +61,41 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       try {
         const guardado = await AsyncStorage.getItem(CLAVE_STORAGE);
         if (guardado !== null) {
-          setUsuario(JSON.parse(guardado));
+          const sesion: Usuario = JSON.parse(guardado);
+          // Una sesión guardada sin token no sirve: hay que volver a ingresar.
+          if (sesion.token) {
+            guardarToken(sesion.token);
+            setUsuario(sesion);
+          }
         }
       } catch {
         // Si falla la lectura, hay que volver a ingresar.
       }
     }
     cargarSesion();
+
+    // Si la API rechaza el token, se cierra la sesión y se vuelve al inicio.
+    avisarCuandoVenza(() => {
+      guardarSesion(null);
+      if (router.canDismiss()) {
+        router.dismissAll();
+      }
+      router.replace('/');
+    });
   }, []);
 
+  // Los pacientes solo se pueden pedir con una sesión iniciada; al cerrarla, no quedan en memoria.
+  useEffect(() => {
+    if (usuario === null) {
+      vaciarPacientes();
+    } else {
+      recargarPacientes();
+    }
+  }, [usuario]);
+
   async function guardarSesion(nuevo: Usuario | null) {
+    // El token se guarda antes que el usuario: los contextos cargan sus datos apenas cambia el usuario.
+    guardarToken(nuevo === null ? '' : nuevo.token);
     setUsuario(nuevo);
     try {
       if (nuevo === null) {
@@ -91,7 +118,12 @@ export function SesionProvider({ children }: { children: ReactNode }) {
     if (!respuesta.ok) {
       return respuesta.error;
     }
-    await guardarSesion({ rol: rol, id: String(respuesta.datos.id), nombre: respuesta.datos.nombre });
+    await guardarSesion({
+      rol: rol,
+      id: String(respuesta.datos.id),
+      nombre: respuesta.datos.nombre,
+      token: respuesta.datos.token,
+    });
     return '';
   }
 
@@ -101,12 +133,7 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
   async function registrarPaciente(datos: DatosRegistro) {
     const respuesta = await pedir('POST', '/api/pacientes', { ...datos, consultorioId: ID_CONSULTORIO });
-    if (!respuesta.ok) {
-      return respuesta.error;
-    }
-    // El paciente nuevo ya aparece en las listas del médico y de la secretaría.
-    await recargarPacientes();
-    return '';
+    return respuesta.error;
   }
 
   let idPaciente = '';
