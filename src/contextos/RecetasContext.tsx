@@ -83,9 +83,10 @@ export function RecetasProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Se cargan cada vez que cambia quién inició sesión. Sin sesión no se pueden pedir.
+  // Se cargan cada vez que cambia quién inició sesión. Sin sesión no se pueden pedir, y Secretaría no ve las recetas
+  // (son información clínica). El paciente recibe solo las suyas: lo decide la API.
   useEffect(() => {
-    if (usuario === null) {
+    if (usuario === null || usuario.rol === 'secretaria') {
       setRecetas([]);
       return;
     }

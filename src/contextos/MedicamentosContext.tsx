@@ -4,8 +4,8 @@ import { useSesion } from '@/contextos/SesionContext';
 import { ID_CONSULTORIO, pedir } from '@/servicios/api';
 
 // Medicamentos que el propio paciente agrega (los recetados por el médico están en RecetasContext). Vienen de la API.
-// El paciente ve solo los suyos; el médico y la secretaría reciben los de todos los pacientes del consultorio, así el
-// médico ve la medicación de cada paciente y las interacciones.
+// El paciente ve solo los suyos; el médico recibe los de todos los pacientes del consultorio, así ve la medicación de
+// cada paciente y las interacciones. Secretaría no los ve (es información clínica).
 export type MedicamentoPropio = {
   id: string;
   idPaciente: string;
@@ -63,11 +63,12 @@ export function MedicamentosProvider({ children }: { children: ReactNode }) {
   const [medicamentos, setMedicamentos] = useState<MedicamentoPropio[]>([]);
 
   async function recargarMedicamentos() {
-    if (usuario === null) {
+    // Sin sesión no se pueden pedir, y Secretaría no ve la medicación (es información clínica).
+    if (usuario === null || usuario.rol === 'secretaria') {
       setMedicamentos([]);
       return;
     }
-    // El paciente pide los suyos; el médico y la secretaría, los de todo el consultorio.
+    // El paciente pide los suyos; el médico, los de todo el consultorio.
     let ruta = `/api/medicamentos?consultorioId=${ID_CONSULTORIO}`;
     if (usuario.rol === 'paciente') {
       ruta = `/api/medicamentos?pacienteId=${idPaciente}`;

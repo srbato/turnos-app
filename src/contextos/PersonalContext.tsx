@@ -218,6 +218,10 @@ export function PersonalProvider({ children }: { children: ReactNode }) {
     if (respuestaMedicos.ok) {
       setMedicos(respuestaMedicos.datos.map(medicoDesdeApi));
     }
+    // Las secretarias las ve el personal del consultorio; un paciente no las necesita (y la API no se las da).
+    if (usuario === null || usuario.rol === 'paciente') {
+      return;
+    }
     const respuestaSecretarias = await pedir('GET', `/api/secretarias?consultorioId=${ID_CONSULTORIO}`);
     if (respuestaSecretarias.ok) {
       setSecretarias(respuestaSecretarias.datos.map(secretariaDesdeApi));
