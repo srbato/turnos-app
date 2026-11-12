@@ -11,22 +11,26 @@ import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
-import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { Idioma, usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // "Hoy 10:00 h", "Mañana 10:00 h" o "Jue 15/10 · 10:00 h".
-function cuando(fecha: string, hora: string) {
+function cuando(fecha: string, hora: string, idioma: Idioma) {
+  const textos = TEXTOS_PACIENTE[idioma].aviso;
   const hoy = new Date();
   const manana = fechaComoTexto(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1));
-  if (fecha === HOY) return `hoy ${hora} h`;
-  if (fecha === manana) return `mañana ${hora} h`;
-  return `${detalleFecha(fecha).diaSemana.slice(0, 3)} ${formatearFecha(fecha).slice(0, 5)} · ${hora} h`;
+  if (fecha === HOY) return textos.hoy(hora);
+  if (fecha === manana) return textos.manana(hora);
+  return textos.otroDia(detalleFecha(fecha, idioma).diaSemana.slice(0, 3), formatearFecha(fecha).slice(0, 5), hora);
 }
 
 // Cartel de "Confirmá tu turno": aparece cuando Secretaría le mandó al paciente un aviso por un turno que sigue pendiente.
 // Si ya recibió los avisos necesarios y su historial es de riesgo alto, el cartel pasa a rojo y avisa que el turno puede
 // reprogramarse (sin hablar de puntos ni de riesgo: dice el hecho, no lo etiqueta).
 export function AvisoConfirmar() {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { turnos, misTurnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
   const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
@@ -53,25 +57,25 @@ export function AvisoConfirmar() {
           <View
             key={turno.id}
             style={[styles.tarjeta, urgente ? styles.tarjetaUrgente : { borderColor: COLOR_PACIENTE }]}>
-            <Text style={[styles.etiqueta, { color }]}>{urgente ? 'ÚLTIMO AVISO' : 'AVISO DEL CONSULTORIO'}</Text>
-            <Text style={styles.titulo}>{urgente ? 'Tu turno puede perderse' : 'Confirmá tu turno'}</Text>
+            <Text style={[styles.etiqueta, { color }]}>{urgente ? t.aviso.ultimoAviso : t.aviso.avisoConsultorio}</Text>
+            <Text style={styles.titulo}>{urgente ? t.aviso.puedePerderse : t.aviso.confirmaTurno}</Text>
             <Text style={styles.detalle}>
-              {turno.medico} · {cuando(turno.fecha, turno.hora)}
+              {turno.medico} · {cuando(turno.fecha, turno.hora, idioma)}
             </Text>
             <Text style={styles.texto}>
               {urgente
-                ? `Ya te avisamos ${turno.avisos?.length} veces y no lo confirmaste. Si no lo confirmás, el consultorio puede reprogramarlo para dárselo a otra persona.`
-                : 'El consultorio te pidió que confirmes que vas a ir. Así el horario no se pierde.'}
+                ? t.aviso.textoUrgente(turno.avisos?.length ?? 0)
+                : t.aviso.textoNormal}
             </Text>
 
             <View style={styles.filaBotones}>
               <Pressable style={styles.botonSecundario} onPress={async () => mostrarError(await cancelarTurno(turno.id))}>
-                <Text style={[styles.botonSecundarioTexto, { color }]}>{urgente ? 'Cancelar turno' : 'No puedo ir'}</Text>
+                <Text style={[styles.botonSecundarioTexto, { color }]}>{urgente ? t.comun.cancelarTurno : t.aviso.noPuedoIr}</Text>
               </Pressable>
               <Pressable
                 style={[styles.botonPrimario, { backgroundColor: color }]}
                 onPress={async () => mostrarError(await cambiarEstadoTurno(turno.id, 'confirmado'))}>
-                <Text style={styles.botonPrimarioTexto}>{urgente ? 'Confirmar ahora' : 'Confirmar turno'}</Text>
+                <Text style={styles.botonPrimarioTexto}>{urgente ? t.aviso.confirmarAhora : t.aviso.confirmarTurno}</Text>
               </Pressable>
             </View>
           </View>
@@ -83,7 +87,7 @@ export function AvisoConfirmar() {
 
 const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tarjeta: {
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     borderWidth: 1,
     borderRadius: 18,
     padding: 16,

@@ -23,6 +23,10 @@ import {
 } from '@/datos/preconsulta';
 import { respuestaDelAsistente } from '@/servicios/preconsulta-ia';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 type AutorMensaje = 'asistente' | 'paciente';
 
@@ -46,6 +50,11 @@ function volver() {
 }
 
 export default function PantallaPreconsulta() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
+  // Los síntomas se guardan siempre con su nombre en español (así los ve el médico); en pantalla se muestran traducidos.
+  const etiquetaSintoma = (sintoma: string) => t.preconsulta.sintomas[SINTOMAS.indexOf(sintoma)] ?? sintoma;
   const { turnoId } = useLocalSearchParams<{ turnoId?: string }>();
   const { turnos } = useTurnos();
   const { nombre, alergias: alergiasDelPerfil } = usePerfilPaciente();
@@ -84,7 +93,7 @@ export default function PantallaPreconsulta() {
   // Al entrar (si no había una preconsulta enviada) el asistente saluda y hace la primera pregunta.
   useEffect(() => {
     if (turno && !existente) {
-      agregarMensajes('asistente', respuestaDelAsistente(0, RESPUESTAS_VACIAS, contexto));
+      agregarMensajes('asistente', respuestaDelAsistente(0, RESPUESTAS_VACIAS, contexto, idioma));
     }
     // Solo al montar la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -111,7 +120,7 @@ export default function PantallaPreconsulta() {
 
     const siguiente = paso + 1;
     setPaso(siguiente);
-    agregarMensajes('asistente', respuestaDelAsistente(siguiente, nuevasRespuestas, contexto));
+    agregarMensajes('asistente', respuestaDelAsistente(siguiente, nuevasRespuestas, contexto, idioma));
     if (siguiente === PASOS.length) {
       setSintomasTexto(nuevasRespuestas.sintomas.join(', '));
       if (nuevasRespuestas.alergias === '') {
@@ -125,12 +134,12 @@ export default function PantallaPreconsulta() {
     const clave = PASOS[paso].clave;
     const valor = saltear ? '' : texto.trim();
     if (!saltear && valor === '') return;
-    responder(saltear ? 'Prefiero no responder' : valor, { ...respuestas, [clave]: valor });
+    responder(saltear ? t.preconsulta.prefieroNo : valor, { ...respuestas, [clave]: valor });
   }
 
   function enviarSintomas() {
     responder(
-      sintomasMarcados.length > 0 ? sintomasMarcados.join(', ') : 'Ninguno',
+      sintomasMarcados.length > 0 ? sintomasMarcados.map(etiquetaSintoma).join(', ') : t.preconsulta.ninguna,
       { ...respuestas, sintomas: sintomasMarcados }
     );
   }
@@ -160,7 +169,7 @@ export default function PantallaPreconsulta() {
   }
 
   const pasoActual = fase === 'chat' ? Math.min(paso, PASOS.length) : PASOS.length;
-  const encabezadoFecha = `${detalleFecha(turno.fecha).diaSemana} ${formatearFecha(turno.fecha)} · ${turno.hora} h`;
+  const encabezadoFecha = t.detalleTurno.hora(detalleFecha(turno.fecha, idioma).diaSemana, formatearFecha(turno.fecha), turno.hora);
 
   return (
     // Sube el contenido cuando aparece el teclado, así no tapa el campo de respuesta.
@@ -171,7 +180,7 @@ export default function PantallaPreconsulta() {
             <Text style={styles.volver}>‹</Text>
           </Pressable>
           <View style={styles.encabezadoTextos}>
-            <Text style={styles.titulo}>Preconsulta</Text>
+            <Text style={styles.titulo}>{t.preconsulta.titulo}</Text>
             <Text style={styles.subtitulo}>
               {turno.medico} · {encabezadoFecha}
             </Text>
@@ -200,7 +209,7 @@ export default function PantallaPreconsulta() {
               item.autor === 'asistente' ? (
                 <View style={styles.filaAsistente}>
                   <View style={styles.avatarAsistente}>
-                    <Text style={styles.avatarAsistenteTexto}>IA</Text>
+                    <Text style={styles.avatarAsistenteTexto}>{t.preconsulta.asistente}</Text>
                   </View>
                   <View style={styles.burbujaAsistente}>
                     <Text style={styles.burbujaAsistenteTexto}>{item.texto}</Text>
@@ -220,17 +229,17 @@ export default function PantallaPreconsulta() {
             <View style={styles.zonaRespuesta}>
               <View style={styles.selectorSintomas}>
                 <Desplegable
-                  opciones={SINTOMAS.map((sintoma) => ({ id: sintoma, texto: sintoma }))}
+                  opciones={SINTOMAS.map((sintoma) => ({ id: sintoma, texto: etiquetaSintoma(sintoma) }))}
                   elegidas={sintomasMarcados}
                   onAlternar={alternarSintoma}
-                  placeholder="Elegí tus síntomas"
+                  placeholder={t.preconsulta.elegirSintomas}
                   modo="modal"
                   color={COLOR_PACIENTE}
                 />
               </View>
               <Pressable style={styles.botonPrimario} onPress={enviarSintomas}>
                 <Text style={styles.botonPrimarioTexto}>
-                  {sintomasMarcados.length > 0 ? 'Listo' : 'Ninguno de estos'}
+                  {sintomasMarcados.length > 0 ? t.preconsulta.listo : t.preconsulta.ninguno}
                 </Text>
               </Pressable>
             </View>
@@ -243,7 +252,7 @@ export default function PantallaPreconsulta() {
                   style={styles.input}
                   value={texto}
                   onChangeText={setTexto}
-                  placeholder="Escribí tu respuesta..."
+                  placeholder={t.preconsulta.escribi}
                   placeholderTextColor="#8A8A8A"
                   onSubmitEditing={() => enviarTexto(false)}
                 />
@@ -252,7 +261,7 @@ export default function PantallaPreconsulta() {
                 </Pressable>
               </View>
               <Pressable onPress={() => enviarTexto(true)}>
-                <Text style={styles.saltear}>Saltear esta pregunta</Text>
+                <Text style={styles.saltear}>{t.preconsulta.saltear}</Text>
               </Pressable>
             </View>
           )}
@@ -266,18 +275,15 @@ export default function PantallaPreconsulta() {
             data={CAMPOS_RESUMEN}
             keyExtractor={(campo) => campo}
             ListHeaderComponent={
-              <Text style={styles.resumenIntro}>
-                Este es el resumen que va a ver tu médico. Podés corregir lo que quieras. Fue armado con un
-                asistente de IA a partir de tus respuestas; no es un diagnóstico.
-              </Text>
+              <Text style={styles.resumenIntro}>{t.preconsulta.intro}</Text>
             }
             renderItem={({ item }) => (
               <View style={styles.campoCaja}>
-                <Text style={styles.campoEtiqueta}>{ETIQUETAS_CAMPOS[item]}</Text>
+                <Text style={styles.campoEtiqueta}>{TEXTOS_MEDICO[idioma].preconsulta.campos[item]}</Text>
                 <TextInput
                   style={styles.campoInput}
                   multiline
-                  placeholder="Sin datos"
+                  placeholder={t.preconsulta.sinDatos}
                   placeholderTextColor="#9A9A9A"
                   value={item === 'sintomas' ? sintomasTexto : (respuestas[item] as string)}
                   onChangeText={(valor) =>
@@ -292,7 +298,7 @@ export default function PantallaPreconsulta() {
           <View style={styles.barraEnviar}>
             <Pressable style={styles.botonPrimario} onPress={enviarAlMedico}>
               <Text style={styles.botonPrimarioTexto}>
-                {existente ? 'Actualizar y enviar al médico' : 'Enviar al médico'}
+                {existente ? t.preconsulta.actualizarYEnviar : t.preconsulta.enviar}
               </Text>
             </Pressable>
           </View>
@@ -304,13 +310,10 @@ export default function PantallaPreconsulta() {
           <View style={styles.enviadaIcono}>
             <Text style={styles.enviadaTilde}>✓</Text>
           </View>
-          <Text style={styles.enviadaTitulo}>Preconsulta enviada</Text>
-          <Text style={styles.enviadaTexto}>
-            {turno.medico} la va a ver antes de tu turno. Podés volver a entrar y actualizarla cuando
-            quieras.
-          </Text>
+          <Text style={styles.enviadaTitulo}>{t.preconsulta.enviadaTitulo}</Text>
+          <Text style={styles.enviadaTexto}>{t.preconsulta.enviadaTexto(turno.medico)}</Text>
           <Pressable style={styles.botonPrimarioAncho} onPress={() => router.dismissTo('/paciente')}>
-            <Text style={styles.botonPrimarioTexto}>Volver al inicio</Text>
+            <Text style={styles.botonPrimarioTexto}>{t.preconsulta.volverAlInicio}</Text>
           </Pressable>
         </View>
       )}
@@ -318,17 +321,17 @@ export default function PantallaPreconsulta() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
   },
   encabezadoFila: {
     flexDirection: 'row',
@@ -336,7 +339,7 @@ const styles = StyleSheet.create({
   },
   volver: {
     fontSize: 30,
-    color: '#1A1A1A',
+    color: c.texto,
     marginRight: 14,
   },
   encabezadoTextos: {
@@ -345,11 +348,11 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 18,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   subtitulo: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   progresoFila: {
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#DCE6F8',
+    backgroundColor: c.chipAzul,
   },
   progresoSegmentoLleno: {
     backgroundColor: COLOR_PACIENTE,
@@ -393,7 +396,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   burbujaAsistente: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     borderBottomLeftRadius: 4,
     paddingHorizontal: 14,
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
   },
   burbujaAsistenteTexto: {
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     lineHeight: 20,
   },
   filaPaciente: {
@@ -423,12 +426,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   zonaRespuesta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12 + MARGEN_INFERIOR,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: c.bordeSuave,
   },
   selectorSintomas: {
     marginBottom: 12,
@@ -441,12 +444,12 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.borde,
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   botonEnviar: {
     width: 40,
@@ -463,7 +466,7 @@ const styles = StyleSheet.create({
   },
   saltear: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
     marginTop: 12,
   },
@@ -486,12 +489,12 @@ const styles = StyleSheet.create({
   },
   resumenIntro: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     lineHeight: 19,
     marginBottom: 16,
   },
   campoCaja: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -499,23 +502,23 @@ const styles = StyleSheet.create({
   campoEtiqueta: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   campoInput: {
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     padding: 0,
   },
   barraEnviar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12 + MARGEN_INFERIOR,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: c.bordeSuave,
   },
   enviadaZona: {
     flex: 1,
@@ -540,12 +543,12 @@ const styles = StyleSheet.create({
   enviadaTitulo: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 8,
   },
   enviadaTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,

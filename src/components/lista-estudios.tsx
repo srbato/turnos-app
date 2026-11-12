@@ -6,6 +6,7 @@ import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { Estudio } from '@/datos/estudios';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 type Props = {
   estudios: Estudio[];
@@ -14,7 +15,9 @@ type Props = {
 
 // Lista de estudios para las tabs de Estudios. Tocar uno abre su detalle.
 export function ListaEstudios({ estudios, textoVacio }: Props) {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const [estudioSeleccionado, setEstudioSeleccionado] = useState<Estudio | null>(null);
 
   return (
@@ -38,7 +41,7 @@ export function ListaEstudios({ estudios, textoVacio }: Props) {
               <Text style={styles.detalle}>{item.detalle}</Text>
             </View>
             <View style={[styles.chip, { backgroundColor: COLORES_ESTUDIO[item.estado] }]}>
-              <Text style={styles.chipTexto}>{ETIQUETAS_ESTUDIO[item.estado]}</Text>
+              <Text style={styles.chipTexto}>{t.estadosEstudio[item.estado]}</Text>
             </View>
           </Pressable>
         )}
@@ -54,7 +57,7 @@ export function ListaEstudios({ estudios, textoVacio }: Props) {
 const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -75,7 +78,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -83,7 +86,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tipoTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   datos: {
     flex: 1,

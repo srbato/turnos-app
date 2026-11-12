@@ -5,6 +5,7 @@ import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PACIENTE, COLOR_PENDIENTE, FON
 import { EstadoEstudio, Estudio } from '@/datos/estudios';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 export const COLORES_ESTUDIO: Record<EstadoEstudio, string> = {
   pendiente: COLOR_PENDIENTE,
@@ -27,7 +28,9 @@ type Props = {
 
 // Modal con el detalle de un estudio. Lo usan el home y la sección Estudios.
 export function DetalleEstudioModal({ estudio, onCerrar }: Props) {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   return (
     <Modal
       visible={estudio !== null}
@@ -39,10 +42,10 @@ export function DetalleEstudioModal({ estudio, onCerrar }: Props) {
           {estudio && (
             <>
               <View style={styles.modalEncabezado}>
-                <Text style={styles.modalEtiqueta}>Detalle del estudio</Text>
+                <Text style={styles.modalEtiqueta}>{t.estudios.detalle}</Text>
                 <View
                   style={[styles.chip, { backgroundColor: COLORES_ESTUDIO[estudio.estado] }]}>
-                  <Text style={styles.chipTexto}>{ETIQUETAS_ESTUDIO[estudio.estado]}</Text>
+                  <Text style={styles.chipTexto}>{t.estadosEstudio[estudio.estado]}</Text>
                 </View>
               </View>
 
@@ -57,7 +60,7 @@ export function DetalleEstudioModal({ estudio, onCerrar }: Props) {
               </View>
 
               <View style={styles.modalFila}>
-                <Text style={styles.modalFilaEtiqueta}>Pedido por</Text>
+                <Text style={styles.modalFilaEtiqueta}>{t.estudios.pedidoPor}</Text>
                 <Text style={styles.modalFilaValor}>{estudio.medico}</Text>
               </View>
 
@@ -78,11 +81,11 @@ export function DetalleEstudioModal({ estudio, onCerrar }: Props) {
                     onCerrar();
                     router.push('/paciente/sacar-turno');
                   }}>
-                  <Text style={styles.botonPrimarioTexto}>Sacar turno para este estudio</Text>
+                  <Text style={styles.botonPrimarioTexto}>{t.estudios.sacarTurno}</Text>
                 </Pressable>
               )}
               <Pressable style={styles.cerrar} onPress={() => onCerrar()}>
-                <Text style={styles.cerrarTexto}>Cerrar</Text>
+                <Text style={styles.cerrarTexto}>{t.comun.cerrar}</Text>
               </Pressable>
             </>
           )}
@@ -97,7 +100,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -105,7 +108,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tipoTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   datos: {
     flex: 1,

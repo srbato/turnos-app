@@ -5,9 +5,15 @@ import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PACIENTE, FONDO_PACIENTE } fro
 import { useRecetas } from '@/contextos/RecetasContext';
 import { recetaVigente, vencimientoReceta, Receta } from '@/datos/recetas';
 import { formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // Tab "Recetados": medicamentos que asignó el médico, cada uno con su receta.
 export default function MedicamentosRecetados() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { misRecetas } = useRecetas();
   const [recetaSeleccionada, setRecetaSeleccionada] = useState<Receta | null>(null);
 
@@ -21,7 +27,7 @@ export default function MedicamentosRecetados() {
         data={recetas}
         keyExtractor={(receta) => receta.id}
         ListEmptyComponent={
-          <Text style={styles.vacioTexto}>Tu médico todavía no te recetó medicamentos.</Text>
+          <Text style={styles.vacioTexto}>{t.medicamentos.sinRecetados}</Text>
         }
         renderItem={({ item }) => {
           const vigente = recetaVigente(item);
@@ -34,11 +40,11 @@ export default function MedicamentosRecetados() {
                 <Text style={styles.nombre}>{item.medicamento}</Text>
                 <Text style={styles.detalle}>{item.indicacion}</Text>
                 <Text style={styles.detalle}>
-                  {vigente ? 'Válida hasta' : 'Venció el'} {formatearFecha(vencimientoReceta(item))}
+                  {vigente ? t.medicamentos.validaHasta : t.medicamentos.vencioEl} {formatearFecha(vencimientoReceta(item))}
                 </Text>
               </View>
               <View style={[styles.chip, { backgroundColor: vigente ? COLOR_CONFIRMADO : COLOR_CANCELADO }]}>
-                <Text style={styles.chipTexto}>{vigente ? 'Vigente' : 'Vencida'}</Text>
+                <Text style={styles.chipTexto}>{vigente ? t.medicamentos.vigente : t.medicamentos.vencida}</Text>
               </View>
             </Pressable>
           );
@@ -55,14 +61,14 @@ export default function MedicamentosRecetados() {
             {recetaSeleccionada && (
               <>
                 <View style={styles.modalEncabezado}>
-                  <Text style={styles.modalEtiqueta}>Receta</Text>
+                  <Text style={styles.modalEtiqueta}>{t.medicamentos.receta}</Text>
                   <View
                     style={[
                       styles.chip,
                       { backgroundColor: recetaVigente(recetaSeleccionada) ? COLOR_CONFIRMADO : COLOR_CANCELADO },
                     ]}>
                     <Text style={styles.chipTexto}>
-                      {recetaVigente(recetaSeleccionada) ? 'Vigente' : 'Vencida'}
+                      {recetaVigente(recetaSeleccionada) ? t.medicamentos.vigente : t.medicamentos.vencida}
                     </Text>
                   </View>
                 </View>
@@ -72,15 +78,15 @@ export default function MedicamentosRecetados() {
 
                 <View style={styles.filas}>
                   <View style={styles.fila}>
-                    <Text style={styles.filaEtiqueta}>Recetado por</Text>
+                    <Text style={styles.filaEtiqueta}>{t.medicamentos.recetadoPor}</Text>
                     <Text style={styles.filaValor}>{recetaSeleccionada.medico}</Text>
                   </View>
                   <View style={styles.fila}>
-                    <Text style={styles.filaEtiqueta}>Emitida el</Text>
+                    <Text style={styles.filaEtiqueta}>{t.medicamentos.emitidaEl}</Text>
                     <Text style={styles.filaValor}>{formatearFecha(recetaSeleccionada.fechaEmision)}</Text>
                   </View>
                   <View style={[styles.fila, styles.filaUltima]}>
-                    <Text style={styles.filaEtiqueta}>Válida hasta</Text>
+                    <Text style={styles.filaEtiqueta}>{t.medicamentos.validaHasta}</Text>
                     <Text style={styles.filaValor}>
                       {formatearFecha(vencimientoReceta(recetaSeleccionada))}
                     </Text>
@@ -88,17 +94,17 @@ export default function MedicamentosRecetados() {
                 </View>
 
                 <View style={styles.codigoCaja}>
-                  <Text style={styles.codigoEtiqueta}>Código de receta</Text>
+                  <Text style={styles.codigoEtiqueta}>{t.medicamentos.codigo}</Text>
                   <Text style={styles.codigo}>{recetaSeleccionada.codigo}</Text>
                   <Text style={styles.codigoNota}>
                     {recetaVigente(recetaSeleccionada)
-                      ? 'Mostralo en la farmacia para retirar tu medicamento.'
-                      : 'Esta receta ya venció. Pedile una nueva a tu médico.'}
+                      ? t.medicamentos.mostrarEnFarmacia
+                      : t.medicamentos.recetaVencida}
                   </Text>
                 </View>
 
                 <Pressable style={styles.cerrar} onPress={() => setRecetaSeleccionada(null)}>
-                  <Text style={styles.cerrarTexto}>Cerrar</Text>
+                  <Text style={styles.cerrarTexto}>{t.comun.cerrar}</Text>
                 </Pressable>
               </>
             )}
@@ -109,10 +115,10 @@ export default function MedicamentosRecetados() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -123,13 +129,13 @@ const styles = StyleSheet.create({
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -138,7 +144,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
   iconoTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   datos: {
     flex: 1,
@@ -155,11 +161,11 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chip: {
@@ -180,7 +186,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
   },
@@ -193,24 +199,24 @@ const styles = StyleSheet.create({
   modalEtiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   modalNombre: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   modalIndicacion: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
     marginBottom: 14,
   },
   filas: {
     borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
+    borderTopColor: c.bordeSuave,
     marginBottom: 14,
   },
   fila: {
@@ -218,40 +224,40 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDEDED',
+    borderBottomColor: c.bordeSuave,
   },
   filaUltima: {
     borderBottomWidth: 0,
   },
   filaEtiqueta: {
     fontSize: 13,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   filaValor: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   codigoCaja: {
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
   },
   codigoEtiqueta: {
     fontSize: 11,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   codigo: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     letterSpacing: 1,
     marginVertical: 4,
   },
   codigoNota: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   cerrar: {
@@ -261,6 +267,6 @@ const styles = StyleSheet.create({
   cerrarTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
 });

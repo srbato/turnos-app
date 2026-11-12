@@ -23,17 +23,23 @@ import { Estudio } from '@/datos/estudios';
 import { useTurnos, Turno } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaHoraComoDate } from '@/utilidades/turnos';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 const FONDO_PENDIENTE = '#FCF1DC'; // tinte claro del ámbar, para chips y fondos suaves
 
-function saludoSegunHora() {
+function saludoSegunHora(saludo: { dia: string; tarde: string; noche: string }) {
   const hora = new Date().getHours();
-  if (hora < 12) return 'Buen día';
-  if (hora < 20) return 'Buenas tardes';
-  return 'Buenas noches';
+  if (hora < 12) return saludo.dia;
+  if (hora < 20) return saludo.tarde;
+  return saludo.noche;
 }
 
 export default function HubPaciente() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { turnos, misTurnos } = useTurnos();
   const { nombre } = usePerfilPaciente();
   const { estudios } = useEstudios();
@@ -55,12 +61,12 @@ export default function HubPaciente() {
     )[0];
 
   // Texto de la tarjeta de preconsulta.
-  let textoPreconsulta = 'Necesitás un turno próximo';
+  let textoPreconsulta = t.home.preconsultaNecesitas;
   if (proximoTurno) {
     if (buscarPorTurno(proximoTurno.id)) {
-      textoPreconsulta = 'Enviada al médico ✓';
+      textoPreconsulta = t.home.preconsultaEnviada;
     } else {
-      textoPreconsulta = 'Opcional · contale a tu médico';
+      textoPreconsulta = t.home.preconsultaOpcional;
     }
   }
 
@@ -69,7 +75,7 @@ export default function HubPaciente() {
       <ScrollView contentContainerStyle={styles.contenido}>
         <View style={styles.encabezado}>
           <View>
-            <Text style={styles.saludo}>{saludoSegunHora()},</Text>
+            <Text style={styles.saludo}>{saludoSegunHora(t.home.saludo)},</Text>
             <Text style={styles.nombre}>{nombre.split(' ')[0]}</Text>
           </View>
           <Pressable onPress={() => router.navigate('/perfil?rol=paciente')}>
@@ -83,29 +89,27 @@ export default function HubPaciente() {
 
         {!proximoTurno ? (
           <View style={styles.estadoVacio}>
-            <Text style={styles.estadoVacioTexto}>
-              Todavía no tenés turnos. Cuando saques uno, lo vas a ver acá.
-            </Text>
+            <Text style={styles.estadoVacioTexto}>{t.home.sinTurnos}</Text>
             <Pressable
               style={styles.botonNuevoTurno}
               onPress={() => router.push('/paciente/sacar-turno')}>
-              <Text style={styles.botonPrimarioTexto}>Sacar un nuevo turno</Text>
+              <Text style={styles.botonPrimarioTexto}>{t.home.sacarNuevo}</Text>
             </Pressable>
           </View>
         ) : (
           <View style={styles.tarjetaProximo}>
             <View style={styles.proximoEncabezado}>
-              <Text style={styles.proximoEtiqueta}>Próximo turno</Text>
+              <Text style={styles.proximoEtiqueta}>{t.home.proximo}</Text>
               <View
                 style={[styles.chipEstado, { backgroundColor: COLORES_ESTADO[proximoTurno.estado] }]}>
-                <Text style={styles.chipEstadoTexto}>{ETIQUETAS_ESTADO[proximoTurno.estado]}</Text>
+                <Text style={styles.chipEstadoTexto}>{t.estados[proximoTurno.estado]}</Text>
               </View>
             </View>
 
             <View style={styles.proximoCuerpo}>
               <View style={styles.fechaCaja}>
-                <Text style={styles.fechaDia}>{detalleFecha(proximoTurno.fecha).dia}</Text>
-                <Text style={styles.fechaMes}>{detalleFecha(proximoTurno.fecha).mes}</Text>
+                <Text style={styles.fechaDia}>{detalleFecha(proximoTurno.fecha, idioma).dia}</Text>
+                <Text style={styles.fechaMes}>{detalleFecha(proximoTurno.fecha, idioma).mes}</Text>
               </View>
               <View style={styles.proximoDatos}>
                 <Text style={styles.proximoMedico}>{proximoTurno.medico}</Text>
@@ -113,7 +117,7 @@ export default function HubPaciente() {
                   {proximoTurno.especialidad} · {proximoTurno.sala}
                 </Text>
                 <Text style={styles.proximoHora}>
-                  {detalleFecha(proximoTurno.fecha).diaSemana} {proximoTurno.hora} h
+                  {t.home.hora(detalleFecha(proximoTurno.fecha, idioma).diaSemana, proximoTurno.hora)}
                 </Text>
               </View>
             </View>
@@ -132,30 +136,30 @@ export default function HubPaciente() {
               <Pressable
                 style={styles.botonPrimario}
                 onPress={() => setTurnoSeleccionado(proximoTurno)}>
-                <Text style={styles.botonPrimarioTexto}>Ver detalle</Text>
+                <Text style={styles.botonPrimarioTexto}>{t.home.verDetalle}</Text>
               </Pressable>
               <Pressable
                 style={styles.botonSecundario}
                 onPress={() => router.push({ pathname: '/paciente/reprogramar/[id]', params: { id: proximoTurno.id } })}>
-                <Text style={styles.botonSecundarioTexto}>Reprogramar</Text>
+                <Text style={styles.botonSecundarioTexto}>{t.comun.reprogramar}</Text>
               </Pressable>
             </View>
             <Pressable style={styles.botonCancelar} onPress={() => setTurnoACancelar(proximoTurno)}>
-              <Text style={styles.botonCancelarTexto}>Cancelar turno</Text>
+              <Text style={styles.botonCancelarTexto}>{t.comun.cancelarTurno}</Text>
             </Pressable>
           </View>
         )}
 
         <Pressable style={styles.botonMisTurnos} onPress={() => router.push('/paciente/mis-turnos')}>
-          <Text style={styles.botonMisTurnosTexto}>Mis turnos</Text>
+          <Text style={styles.botonMisTurnosTexto}>{t.home.misTurnos}</Text>
         </Pressable>
 
         {estudiosPendientes.length > 0 && (
           <View style={styles.tarjeta}>
             <View style={styles.tarjetaEncabezado}>
-              <Text style={styles.tarjetaTitulo}>Mis estudios</Text>
+              <Text style={styles.tarjetaTitulo}>{t.home.misEstudios}</Text>
               <Pressable onPress={() => router.push('/paciente/estudios')}>
-                <Text style={styles.verTodos}>Ver todos</Text>
+                <Text style={styles.verTodos}>{t.home.verTodos}</Text>
               </Pressable>
             </View>
             {estudiosPendientes.map((estudio, indice) => (
@@ -174,7 +178,7 @@ export default function HubPaciente() {
                   <Text style={styles.estudioDetalle}>{estudio.detalle}</Text>
                 </View>
                 <View style={styles.chipPendiente}>
-                  <Text style={styles.chipPendienteTexto}>Pendiente</Text>
+                  <Text style={styles.chipPendienteTexto}>{t.home.pendiente}</Text>
                 </View>
               </Pressable>
             ))}
@@ -184,15 +188,11 @@ export default function HubPaciente() {
         {esperas.map(({ turno, posicion, total }) => (
           <View key={turno.id} style={styles.tarjetaEspera}>
             <View style={styles.esperaNumero}>
-              <Text style={styles.esperaNumeroTexto}>{posicion}°</Text>
+              <Text style={styles.esperaNumeroTexto}>{t.home.puesto(posicion)}</Text>
             </View>
             <View style={styles.esperaDatos}>
-              <Text style={styles.esperaTitulo}>
-                Lista de espera: {posicion}° de {total}
-              </Text>
-              <Text style={styles.esperaSubtitulo}>
-                {turno.medico} · te ofrecemos un horario antes si se libera
-              </Text>
+              <Text style={styles.esperaTitulo}>{t.home.esperaTitulo(posicion, total)}</Text>
+              <Text style={styles.esperaSubtitulo}>{t.home.esperaSubtitulo(turno.medico)}</Text>
             </View>
           </View>
         ))}
@@ -205,13 +205,13 @@ export default function HubPaciente() {
               proximoTurno &&
               router.push({ pathname: '/paciente/preconsulta', params: { turnoId: proximoTurno.id } })
             }>
-            <Text style={styles.accesoPreconsultaTitulo}>Preconsulta</Text>
+            <Text style={styles.accesoPreconsultaTitulo}>{t.home.preconsulta}</Text>
             <Text style={styles.accesoPreconsultaSubtitulo}>{textoPreconsulta}</Text>
           </Pressable>
           <Pressable
             style={styles.accesoMedicacion}
             onPress={() => router.push('/paciente/medicamentos')}>
-            <Text style={styles.accesoMedicacionTitulo}>Mis medicamentos</Text>
+            <Text style={styles.accesoMedicacionTitulo}>{t.home.misMedicamentos}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -232,11 +232,11 @@ export default function HubPaciente() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -250,15 +250,15 @@ const styles = StyleSheet.create({
   },
   saludo: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   nombre: {
     fontSize: 24,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   tarjetaProximo: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   proximoEtiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -292,12 +292,12 @@ const styles = StyleSheet.create({
   fechaDia: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   fechaMes: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   proximoDatos: {
     flex: 1,
@@ -306,17 +306,17 @@ const styles = StyleSheet.create({
   proximoMedico: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   proximoEspecialidad: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   proximoHora: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     marginTop: 4,
   },
   avisoCaja: {
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_PACIENTE,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
@@ -385,12 +385,12 @@ const styles = StyleSheet.create({
   tarjetaTitulo: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   verTodos: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   filaEstudio: {
     flexDirection: 'row',
@@ -399,13 +399,13 @@ const styles = StyleSheet.create({
   },
   filaEstudioConBorde: {
     borderBottomWidth: 1,
-    borderBottomColor: '#EDEDED',
+    borderBottomColor: c.bordeSuave,
   },
   tipoEstudio: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   tipoEstudioTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   estudioDatos: {
     flex: 1,
@@ -421,11 +421,11 @@ const styles = StyleSheet.create({
   estudioTitulo: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   estudioDetalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chipPendiente: {
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   tarjetaEspera: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -467,11 +467,11 @@ const styles = StyleSheet.create({
   esperaTitulo: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   esperaSubtitulo: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   accesos: {
@@ -501,19 +501,19 @@ const styles = StyleSheet.create({
   },
   accesoMedicacion: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 16,
     minHeight: 88,
     justifyContent: 'flex-end',
   },
   accesoMedicacionTitulo: {
-    color: '#1A1A1A',
+    color: c.texto,
     fontSize: 15,
     fontWeight: '700',
   },
   estadoVacio: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
@@ -529,11 +529,11 @@ const styles = StyleSheet.create({
   },
   estadoVacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   botonMisTurnos: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderWidth: 1,
     borderColor: COLOR_PACIENTE,
     borderRadius: 12,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   botonMisTurnosTexto: {
-    color: COLOR_PACIENTE,
+    color: c.acento,
     fontSize: 15,
     fontWeight: '700',
   },

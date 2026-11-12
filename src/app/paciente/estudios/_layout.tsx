@@ -6,7 +6,10 @@ import { MenuPaciente } from '@/components/menu-paciente';
 import { FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { OPCIONES_TABS_SUPERIORES } from '@/constantes/tabs-superiores';
+import { opcionesTabsSuperiores } from '@/constantes/tabs-superiores';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 function volver() {
   if (router.canGoBack()) {
@@ -18,25 +21,29 @@ function volver() {
 
 // Estudios es un navegador de tabs, igual que Mis turnos: Pendientes e Historial.
 export default function EstudiosLayout() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const paleta = paletaApp(modoOscuro, 'paciente');
+  const t = TEXTOS_PACIENTE[idioma];
+  const styles = crearEstilos(paleta);
   return (
     <View style={styles.pantalla}>
       <Pressable style={styles.encabezado} onPress={volver}>
-        <Text style={styles.volverTexto}>‹ Mis estudios</Text>
+        <Text style={styles.volverTexto}>{t.estudios.titulo}</Text>
       </Pressable>
-      <Tabs screenOptions={OPCIONES_TABS_SUPERIORES}>
-        <Tabs.Screen name="index" options={{ title: 'Pendientes' }} />
-        <Tabs.Screen name="historial" options={{ title: 'Historial' }} />
+      <Tabs screenOptions={opcionesTabsSuperiores(paleta, modoOscuro)}>
+        <Tabs.Screen name="index" options={{ title: t.estudios.pendientes }} />
+        <Tabs.Screen name="historial" options={{ title: t.estudios.historial }} />
       </Tabs>
       <MenuPaciente />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 20,
@@ -46,6 +53,6 @@ const styles = StyleSheet.create({
   volverTexto: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
   },
 });

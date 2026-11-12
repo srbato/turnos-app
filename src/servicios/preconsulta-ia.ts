@@ -1,4 +1,6 @@
-import { PASOS, SINTOMAS_DE_ALARMA, RespuestasPreconsulta } from '@/datos/preconsulta';
+import { Idioma } from '@/contextos/PreferenciasContext';
+import { PASOS, SINTOMAS, SINTOMAS_DE_ALARMA, RespuestasPreconsulta } from '@/datos/preconsulta';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // Asistente de preconsulta SIMULADO.
 //
@@ -15,48 +17,46 @@ type Contexto = {
 };
 
 // Devuelve los mensajes (burbujas) con los que el asistente responde para pasar al paso `indicePaso`.
-export function respuestaDelAsistente(indicePaso: number, respuestas: RespuestasPreconsulta, contexto: Contexto) {
+// El idioma es opcional: si no se pasa, el asistente habla en español.
+export function respuestaDelAsistente(
+  indicePaso: number,
+  respuestas: RespuestasPreconsulta,
+  contexto: Contexto,
+  idioma: Idioma = 'es'
+) {
+  const t = TEXTOS_PACIENTE[idioma].preconsulta;
   const mensajes: string[] = [];
 
   // Aviso de seguridad, solo después de que el paciente marcó síntomas de alarma.
   const alarma = respuestas.sintomas.filter((sintoma) => SINTOMAS_DE_ALARMA.includes(sintoma));
   if (indicePaso === 3 && alarma.length > 0) {
-    mensajes.push(
-      `Marcaste ${alarma.join(' y ').toLowerCase()}. Si en este momento es intenso o te cuesta respirar, no esperes al turno: andá a una guardia o llamá al 107.`
-    );
+    const nombres = alarma.map((sintoma) => (t.sintomas[SINTOMAS.indexOf(sintoma)] ?? sintoma).toLowerCase());
+    mensajes.push(t.alarma(nombres.join(idioma === 'es' ? ' y ' : ' and ')));
   }
 
   if (indicePaso === 0) {
-    mensajes.push(
-      `Hola ${contexto.nombre}. Soy el asistente de preconsulta: no soy médico ni hago diagnósticos, solo junto información para que tu médico llegue al turno con contexto. Podés saltear cualquier pregunta.`
-    );
-    mensajes.push('¿Cuál es el motivo principal de tu consulta?');
+    mensajes.push(t.saludo(contexto.nombre));
+    mensajes.push(t.pMotivo);
   } else if (indicePaso === 1) {
-    mensajes.push('Gracias. ¿Hace cuánto tiempo te pasa? ¿Es constante o va y viene?');
+    mensajes.push(t.pDuracion);
   } else if (indicePaso === 2) {
-    mensajes.push('¿Tuviste alguno de estos síntomas? Marcá todos los que apliquen.');
+    mensajes.push(t.pSintomas);
   } else if (indicePaso === 3) {
     if (contexto.medicamentosCargados.length > 0) {
-      mensajes.push(
-        `En la app tenés cargados: ${contexto.medicamentosCargados.join(', ')}. ¿Tomás algún otro medicamento, o dejaste de tomar alguno?`
-      );
+      mensajes.push(t.pMedicacionCargada(contexto.medicamentosCargados.join(', ')));
     } else {
-      mensajes.push('¿Tomás algún medicamento actualmente?');
+      mensajes.push(t.pMedicacion);
     }
   } else if (indicePaso === 4) {
     if (contexto.alergiasCargadas !== '') {
-      mensajes.push(
-        `En tu perfil figura: ${contexto.alergiasCargadas}. ¿Querés agregar o corregir algo? Si está todo bien, podés saltear la pregunta.`
-      );
+      mensajes.push(t.pAlergiasCargadas(contexto.alergiasCargadas));
     } else {
-      mensajes.push('¿Tenés alguna alergia (a medicamentos, alimentos u otras cosas)?');
+      mensajes.push(t.pAlergias);
     }
   } else if (indicePaso === 5) {
-    mensajes.push('¿Querés contarle algo más a tu médico? Por ejemplo, antecedentes o dudas que tengas.');
+    mensajes.push(t.pAdicional);
   } else if (indicePaso === PASOS.length) {
-    mensajes.push(
-      'Listo, con lo que me contaste armé un resumen para tu médico. Revisalo y corregí lo que haga falta antes de enviarlo.'
-    );
+    mensajes.push(t.cierre);
   }
 
   return mensajes;

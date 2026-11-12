@@ -2,6 +2,9 @@ import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { COLOR_PACIENTE } from '@/constantes/colores';
 import { DIAS_MINIMOS_ADELANTO } from '@/datos/adelantos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 type Props = {
   activo: boolean;
@@ -10,14 +13,14 @@ type Props = {
 
 // Opción del paciente: entrar a la lista de espera para que le ofrezcan adelantar su turno.
 export function OpcionAdelanto({ activo, onCambiar }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   return (
     <View style={styles.fila}>
       <View style={styles.textos}>
-        <Text style={styles.titulo}>Avisarme si se libera un horario antes</Text>
-        <Text style={styles.detalle}>
-          Si alguien cancela con {DIAS_MINIMOS_ADELANTO} días o más de anticipación, te ofrecemos adelantar tu turno.
-          Se le ofrece primero a quien hace más tiempo espera.
-        </Text>
+        <Text style={styles.titulo}>{t.adelanto.opcionTitulo}</Text>
+        <Text style={styles.detalle}>{t.adelanto.opcionDetalle(DIAS_MINIMOS_ADELANTO)}</Text>
       </View>
       <Switch
         value={activo}
@@ -28,11 +31,11 @@ export function OpcionAdelanto({ activo, onCambiar }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginTop: 16,
@@ -44,11 +47,11 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 3,
   },
 });

@@ -9,8 +9,14 @@ import { aceptaTurnos, fechaDeVuelta, usePersonal } from '@/contextos/PersonalCo
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { formatearFecha } from '@/utilidades/turnos';
 import { coberturaQueAtiende, medicosDelCatalogo, medicosParaPaciente, Medico } from '@/datos/catalogo';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 export default function ElegirMedico() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { especialidad, elegirMedico } = useSacarTurno();
   const { coberturaIds } = usePerfilPaciente();
   const { coberturas } = useConsultorio();
@@ -43,15 +49,15 @@ export default function ElegirMedico() {
             especialidad={especialidad}
             onCambiar={() => router.dismissTo('/paciente/sacar-turno')}
           />
-          <Text style={styles.titulo}>Elegí un profesional</Text>
+          <Text style={styles.titulo}>{t.sacarTurno.elegirProfesional}</Text>
         </View>
       }
       ListEmptyComponent={
         <View style={styles.vacio}>
           <Text style={styles.vacioTexto}>
             {coberturaIds.length === 0
-              ? 'Todavía no cargaste tu obra social. Agregala en Perfil > Editar perfil.'
-              : `No hay profesionales de ${especialidad.nombre} disponibles ahora que atiendan tus obras sociales.`}
+              ? t.sacarTurno.sinObraSocial
+              : t.sacarTurno.sinProfesionales(especialidad.nombre)}
           </Text>
         </View>
       }
@@ -62,10 +68,10 @@ export default function ElegirMedico() {
           </View>
           <View style={styles.textos}>
             <Text style={styles.nombre}>{item.nombre}</Text>
-            <Text style={styles.cobertura}>Atiende {coberturaQueAtiende(item, coberturaIds, coberturas)}</Text>
+            <Text style={styles.cobertura}>{t.sacarTurno.atiende(coberturaQueAtiende(item, coberturaIds, coberturas))}</Text>
             {fechaDeVuelta(personal, item.nombre) && (
               <Text style={styles.licencia}>
-                De licencia · vuelve el {formatearFecha(fechaDeVuelta(personal, item.nombre) ?? '').slice(0, 5)}
+                {t.sacarTurno.deLicencia(formatearFecha(fechaDeVuelta(personal, item.nombre) ?? '').slice(0, 5))}
               </Text>
             )}
           </View>
@@ -76,7 +82,7 @@ export default function ElegirMedico() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   licencia: {
     fontSize: 12,
     fontWeight: '700',
@@ -85,7 +91,7 @@ const styles = StyleSheet.create({
   },
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -93,13 +99,13 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 12,
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -124,11 +130,11 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   cobertura: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   flecha: {
@@ -136,13 +142,13 @@ const styles = StyleSheet.create({
     color: '#B7C6E8',
   },
   vacio: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 20,
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
 });

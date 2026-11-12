@@ -5,9 +5,15 @@ import { PantallaConTeclado } from '@/components/pantalla-con-teclado';
 import { COLOR_CANCELADO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { useErrores } from '@/contextos/ErroresContext';
 import { useMedicamentos, MedicamentoPropio } from '@/contextos/MedicamentosContext';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // Tab "Agregados por mí": medicamentos que el paciente carga por su cuenta.
 export default function MedicamentosPropios() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { medicamentos, agregarMedicamento, editarMedicamento, eliminarMedicamento } = useMedicamentos();
   const { mostrarError } = useErrores();
   const [formularioAbierto, setFormularioAbierto] = useState(false);
@@ -50,8 +56,8 @@ export default function MedicamentosPropios() {
     // El nombre y la dosis son obligatorios; el motivo es opcional.
     const faltaNombre = nombre.trim() === '';
     const faltaDosis = dosis.trim() === '';
-    setErrorNombre(faltaNombre ? 'El nombre es obligatorio' : '');
-    setErrorDosis(faltaDosis ? 'Indicá la dosis o cada cuánto lo tomás' : '');
+    setErrorNombre(faltaNombre ? t.medicamentos.errorNombre : '');
+    setErrorDosis(faltaDosis ? t.medicamentos.errorDosis : '');
     if (faltaNombre || faltaDosis) {
       return;
     }
@@ -81,7 +87,7 @@ export default function MedicamentosPropios() {
         data={medicamentos}
         keyExtractor={(medicamento) => medicamento.id}
         ListEmptyComponent={
-          <Text style={styles.vacioTexto}>Todavía no agregaste ningún medicamento.</Text>
+          <Text style={styles.vacioTexto}>{t.medicamentos.sinPropios}</Text>
         }
         renderItem={({ item }) => (
           <Pressable style={styles.tarjeta} onPress={() => abrirFormularioEdicion(item)}>
@@ -91,15 +97,15 @@ export default function MedicamentosPropios() {
             <View style={styles.datos}>
               <Text style={styles.nombre}>{item.nombre}</Text>
               {item.dosis !== '' && <Text style={styles.detalle}>{item.dosis}</Text>}
-              {item.motivo !== '' && <Text style={styles.detalle}>Para: {item.motivo}</Text>}
+              {item.motivo !== '' && <Text style={styles.detalle}>{t.medicamentos.para(item.motivo)}</Text>}
             </View>
-            <Text style={styles.editar}>Editar</Text>
+            <Text style={styles.editar}>{t.medicamentos.editar}</Text>
           </Pressable>
         )}
       />
 
       <Pressable style={styles.botonAgregar} onPress={abrirFormularioNuevo}>
-        <Text style={styles.botonAgregarTexto}>Agregar medicamento</Text>
+        <Text style={styles.botonAgregarTexto}>{t.medicamentos.agregar}</Text>
       </Pressable>
 
       <Modal visible={formularioAbierto} animationType="fade" transparent onRequestClose={cerrarFormulario}>
@@ -107,54 +113,54 @@ export default function MedicamentosPropios() {
         <PantallaConTeclado style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
             <Text style={styles.modalTitulo}>
-              {medicamentoEditando ? 'Editar medicamento' : 'Agregar medicamento'}
+              {medicamentoEditando ? t.medicamentos.editarMedicamento : t.medicamentos.agregar}
             </Text>
 
-            <Text style={styles.campoEtiqueta}>Nombre</Text>
+            <Text style={styles.campoEtiqueta}>{t.medicamentos.nombre}</Text>
             <TextInput
               style={styles.campo}
               value={nombre}
               onChangeText={setNombre}
-              placeholder="Ej. Paracetamol 500 mg"
+              placeholder={t.medicamentos.nombreEjemplo}
               placeholderTextColor="#9A9A9A"
               maxLength={40}
             />
             {errorNombre !== '' && <Text style={styles.errorTexto}>{errorNombre}</Text>}
 
-            <Text style={styles.campoEtiqueta}>Dosis y frecuencia</Text>
+            <Text style={styles.campoEtiqueta}>{t.medicamentos.dosis}</Text>
             <TextInput
               style={styles.campo}
               value={dosis}
               onChangeText={setDosis}
-              placeholder="Ej. 1 comprimido cada 8 h"
+              placeholder={t.medicamentos.dosisEjemplo}
               placeholderTextColor="#9A9A9A"
               maxLength={60}
             />
             {errorDosis !== '' && <Text style={styles.errorTexto}>{errorDosis}</Text>}
 
-            <Text style={styles.campoEtiqueta}>Motivo</Text>
+            <Text style={styles.campoEtiqueta}>{t.medicamentos.motivo}</Text>
             <TextInput
               style={styles.campo}
               value={motivo}
               onChangeText={setMotivo}
-              placeholder="Ej. Dolor de cabeza"
+              placeholder={t.medicamentos.motivoEjemplo}
               placeholderTextColor="#9A9A9A"
             />
 
             {medicamentoEditando && (
               <Pressable style={styles.botonEliminar} onPress={pedirEliminar}>
-                <Text style={styles.botonEliminarTexto}>Eliminar medicamento</Text>
+                <Text style={styles.botonEliminarTexto}>{t.medicamentos.eliminar}</Text>
               </Pressable>
             )}
 
             <View style={styles.modalBotones}>
               <Pressable style={styles.botonSecundario} onPress={cerrarFormulario}>
-                <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
+                <Text style={styles.botonSecundarioTexto}>{t.medicamentos.cancelar}</Text>
               </Pressable>
               <Pressable
                 style={styles.botonPrimario}
                 onPress={guardar}>
-                <Text style={styles.botonPrimarioTexto}>Guardar</Text>
+                <Text style={styles.botonPrimarioTexto}>{t.medicamentos.guardar}</Text>
               </Pressable>
             </View>
           </View>
@@ -170,12 +176,12 @@ export default function MedicamentosPropios() {
           <View style={styles.tarjetaModal}>
             {medicamentoAEliminar && (
               <>
-                <Text style={styles.modalTitulo}>¿Eliminar este medicamento?</Text>
+                <Text style={styles.modalTitulo}>{t.medicamentos.eliminarTitulo}</Text>
                 <Text style={styles.confirmarTexto}>{medicamentoAEliminar.nombre}</Text>
-                <Text style={styles.confirmarTexto}>Lo vas a sacar de tu lista.</Text>
+                <Text style={styles.confirmarTexto}>{t.medicamentos.sacarDeLista}</Text>
                 <View style={styles.modalBotones}>
                   <Pressable style={styles.botonSecundario} onPress={() => setMedicamentoAEliminar(null)}>
-                    <Text style={styles.botonSecundarioTexto}>Volver</Text>
+                    <Text style={styles.botonSecundarioTexto}>{t.medicamentos.volver}</Text>
                   </Pressable>
                   <Pressable
                     style={styles.botonConfirmarEliminar}
@@ -183,7 +189,7 @@ export default function MedicamentosPropios() {
                       setMedicamentoAEliminar(null);
                       mostrarError(await eliminarMedicamento(medicamentoAEliminar.id));
                     }}>
-                    <Text style={styles.botonPrimarioTexto}>Sí, eliminar</Text>
+                    <Text style={styles.botonPrimarioTexto}>{t.medicamentos.siEliminar}</Text>
                   </Pressable>
                 </View>
               </>
@@ -195,10 +201,10 @@ export default function MedicamentosPropios() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -209,13 +215,13 @@ const styles = StyleSheet.create({
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -224,7 +230,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -232,7 +238,7 @@ const styles = StyleSheet.create({
   iconoTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   datos: {
     flex: 1,
@@ -240,17 +246,17 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   editar: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   errorTexto: {
     fontSize: 12,
@@ -276,30 +282,30 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
   },
   modalTitulo: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 14,
   },
   campoEtiqueta: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 4,
   },
   campo: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.borde,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 12,
   },
   botonEliminar: {
@@ -324,7 +330,7 @@ const styles = StyleSheet.create({
   },
   confirmarTexto: {
     fontSize: 14,
-    color: '#3A3A3A',
+    color: c.texto,
     marginBottom: 6,
   },
   modalBotones: {
@@ -341,7 +347,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_PACIENTE,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },

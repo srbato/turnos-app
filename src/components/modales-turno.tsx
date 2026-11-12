@@ -15,6 +15,9 @@ import {
   fechaHoraComoDate,
   formatearFecha,
 } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 const FONDO_PENDIENTE = '#FCF1DC'; // tinte claro del ámbar, para el recuadro de instrucciones
 
@@ -26,6 +29,9 @@ type PropsDetalle = {
 
 // Modal de "Ver detalle". Lo usan el home y Mis turnos.
 export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { buscarPorTurno } = usePreconsultas();
   const { turnos, activarAdelanto } = useTurnos();
   const { mostrarError } = useErrores();
@@ -41,40 +47,40 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
           {turno && (
             <>
               <View style={styles.encabezado}>
-                <Text style={styles.titulo}>Detalle del turno</Text>
+                <Text style={styles.titulo}>{t.detalleTurno.titulo}</Text>
                 <View style={[styles.chipEstado, { backgroundColor: COLORES_ESTADO[turno.estado] }]}>
-                  <Text style={styles.chipEstadoTexto}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
+                  <Text style={styles.chipEstadoTexto}>{t.estados[turno.estado]}</Text>
                 </View>
               </View>
 
               <View style={styles.cuerpo}>
                 <View style={styles.fechaCaja}>
-                  <Text style={styles.fechaDia}>{detalleFecha(turno.fecha).dia}</Text>
-                  <Text style={styles.fechaMes}>{detalleFecha(turno.fecha).mes}</Text>
+                  <Text style={styles.fechaDia}>{detalleFecha(turno.fecha, idioma).dia}</Text>
+                  <Text style={styles.fechaMes}>{detalleFecha(turno.fecha, idioma).mes}</Text>
                 </View>
                 <View style={styles.datos}>
                   <Text style={styles.medico}>{turno.medico}</Text>
                   <Text style={styles.especialidad}>{turno.especialidad}</Text>
                   <Text style={styles.hora}>
-                    {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h
+                    {t.detalleTurno.hora(detalleFecha(turno.fecha, idioma).diaSemana, formatearFecha(turno.fecha), turno.hora)}
                   </Text>
                 </View>
               </View>
 
               <View style={styles.filas}>
                 <View style={styles.fila}>
-                  <Text style={styles.etiqueta}>Consultorio</Text>
+                  <Text style={styles.etiqueta}>{t.detalleTurno.consultorio}</Text>
                   <Text style={styles.valor}>{turno.sala}</Text>
                 </View>
                 <View style={styles.fila}>
-                  <Text style={styles.etiqueta}>Sede</Text>
+                  <Text style={styles.etiqueta}>{t.detalleTurno.sede}</Text>
                   <View style={styles.valorCaja}>
                     <Text style={styles.valor}>{turno.sede}</Text>
                     <Text style={styles.subvalor}>{direccion}</Text>
                   </View>
                 </View>
                 <View style={[styles.fila, styles.filaUltima]}>
-                  <Text style={styles.etiqueta}>Cobertura</Text>
+                  <Text style={styles.etiqueta}>{t.detalleTurno.cobertura}</Text>
                   <Text style={styles.valor}>{turno.cobertura}</Text>
                 </View>
               </View>
@@ -92,8 +98,8 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
               {/* Lo que anotó el médico al atenderlo (sin sus notas privadas). */}
               {turnoActual?.consulta && (
                 <View style={styles.consultaCaja}>
-                  <Text style={styles.consultaTitulo}>Lo que indicó el médico</Text>
-                  <Text style={styles.consultaTexto}>Diagnóstico: {turnoActual.consulta.diagnostico}</Text>
+                  <Text style={styles.consultaTitulo}>{t.detalleTurno.indicoMedico}</Text>
+                  <Text style={styles.consultaTexto}>{t.detalleTurno.diagnostico(turnoActual.consulta.diagnostico)}</Text>
                   {turnoActual.consulta.indicaciones !== '' && (
                     <Text style={styles.consultaTexto}>{turnoActual.consulta.indicaciones}</Text>
                   )}
@@ -121,7 +127,7 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                         router.push({ pathname: '/paciente/preconsulta', params: { turnoId: turno.id } });
                       }}>
                       <Text style={styles.botonPrimarioTexto}>
-                        {buscarPorTurno(turno.id) ? 'Ver preconsulta' : 'Preconsulta'}
+                        {buscarPorTurno(turno.id) ? t.detalleTurno.verPreconsulta : t.detalleTurno.preconsulta}
                       </Text>
                     </Pressable>
                     <Pressable
@@ -130,7 +136,7 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                         onCerrar();
                         router.push({ pathname: '/paciente/reprogramar/[id]', params: { id: turno.id } });
                       }}>
-                      <Text style={styles.botonSecundarioTexto}>Reprogramar</Text>
+                      <Text style={styles.botonSecundarioTexto}>{t.comun.reprogramar}</Text>
                     </Pressable>
                   </View>
                   <Pressable
@@ -139,7 +145,7 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                       onCancelar(turno);
                       onCerrar();
                     }}>
-                    <Text style={styles.botonCancelarTexto}>Cancelar turno</Text>
+                    <Text style={styles.botonCancelarTexto}>{t.comun.cancelarTurno}</Text>
                   </Pressable>
                 </>
               ) : (
@@ -150,11 +156,11 @@ export function DetalleTurnoModal({ turno, onCerrar, onCancelar }: PropsDetalle)
                     onCerrar();
                     volverAPedirTurno(turno, medicos);
                   }}>
-                  <Text style={styles.botonPrimarioTexto}>Volver a pedir turno con este profesional</Text>
+                  <Text style={styles.botonPrimarioTexto}>{t.detalleTurno.volverAPedir}</Text>
                 </Pressable>
               )}
               <Pressable style={styles.cerrar} onPress={onCerrar}>
-                <Text style={styles.cerrarTexto}>Cerrar</Text>
+                <Text style={styles.cerrarTexto}>{t.comun.cerrar}</Text>
               </Pressable>
             </>
           )}
@@ -186,6 +192,9 @@ type PropsCancelar = {
 
 // Confirmación antes de cancelar. Lo usan el home y Mis turnos.
 export function CancelarTurnoModal({ turno, onCerrar }: PropsCancelar) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { cancelarTurno } = useTurnos();
   const { mostrarError } = useErrores();
 
@@ -195,16 +204,14 @@ export function CancelarTurnoModal({ turno, onCerrar }: PropsCancelar) {
         <View style={styles.tarjetaModal}>
           {turno && (
             <>
-              <Text style={styles.confirmarTitulo}>¿Cancelar este turno?</Text>
+              <Text style={styles.confirmarTitulo}>{t.detalleTurno.cancelarTitulo}</Text>
               <Text style={styles.confirmarTexto}>
-                {turno.medico} · {formatearFecha(turno.fecha)} · {turno.hora} h
+                {turno.medico} · {formatearFecha(turno.fecha)} · {t.home.hora('', turno.hora).trim()}
               </Text>
-              <Text style={styles.confirmarTexto}>
-                El horario va a quedar libre para otros pacientes.
-              </Text>
+              <Text style={styles.confirmarTexto}>{t.detalleTurno.cancelarAviso}</Text>
               <View style={styles.confirmarBotones}>
                 <Pressable style={styles.botonSecundario} onPress={onCerrar}>
-                  <Text style={styles.botonSecundarioTexto}>Volver</Text>
+                  <Text style={styles.botonSecundarioTexto}>{t.comun.volver}</Text>
                 </Pressable>
                 <Pressable
                   style={styles.botonConfirmarCancelar}
@@ -212,7 +219,7 @@ export function CancelarTurnoModal({ turno, onCerrar }: PropsCancelar) {
                     onCerrar();
                     mostrarError(await cancelarTurno(turno.id));
                   }}>
-                  <Text style={styles.botonPrimarioTexto}>Sí, cancelar</Text>
+                  <Text style={styles.botonPrimarioTexto}>{t.detalleTurno.siCancelar}</Text>
                 </Pressable>
               </View>
             </>
@@ -223,7 +230,7 @@ export function CancelarTurnoModal({ turno, onCerrar }: PropsCancelar) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fondoModal: {
     flex: 1,
     backgroundColor: 'rgba(26, 24, 21, 0.5)',
@@ -231,7 +238,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
   },
@@ -244,7 +251,7 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -267,7 +274,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -275,12 +282,12 @@ const styles = StyleSheet.create({
   fechaDia: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   fechaMes: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   datos: {
     flex: 1,
@@ -289,22 +296,22 @@ const styles = StyleSheet.create({
   medico: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   especialidad: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   hora: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     marginTop: 4,
   },
   filas: {
     borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
+    borderTopColor: c.bordeSuave,
     marginBottom: 14,
   },
   fila: {
@@ -312,14 +319,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDEDED',
+    borderBottomColor: c.bordeSuave,
   },
   filaUltima: {
     borderBottomWidth: 0,
   },
   etiqueta: {
     fontSize: 13,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   valorCaja: {
     flex: 1,
@@ -328,12 +335,12 @@ const styles = StyleSheet.create({
   valor: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
     textAlign: 'right',
   },
   subvalor: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   avisoCaja: {
@@ -348,7 +355,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   consultaCaja: {
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     borderRadius: 10,
     padding: 12,
     marginBottom: 14,
@@ -356,12 +363,12 @@ const styles = StyleSheet.create({
   consultaTitulo: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     marginBottom: 4,
   },
   consultaTexto: {
     fontSize: 13,
-    color: '#1A1A1A',
+    color: c.texto,
     lineHeight: 19,
   },
   botones: {
@@ -395,7 +402,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_PACIENTE,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -419,17 +426,17 @@ const styles = StyleSheet.create({
   cerrarTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   confirmarTitulo: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 8,
   },
   confirmarTexto: {
     fontSize: 14,
-    color: '#3A3A3A',
+    color: c.texto,
     marginBottom: 6,
   },
   confirmarBotones: {

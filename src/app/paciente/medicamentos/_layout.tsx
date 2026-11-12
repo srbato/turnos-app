@@ -5,29 +5,36 @@ import { MenuPaciente } from '@/components/menu-paciente';
 import { FONDO_PACIENTE } from '@/constantes/colores';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-import { OPCIONES_TABS_SUPERIORES } from '@/constantes/tabs-superiores';
+import { opcionesTabsSuperiores } from '@/constantes/tabs-superiores';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // Medicamentos es un navegador de tabs: los que recetó el médico y los que agrega el paciente.
 export default function MedicamentosLayout() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const paleta = paletaApp(modoOscuro, 'paciente');
+  const t = TEXTOS_PACIENTE[idioma];
+  const styles = crearEstilos(paleta);
   return (
     <View style={styles.pantalla}>
       <View style={styles.encabezado}>
-        <Text style={styles.titulo}>Mis medicamentos</Text>
+        <Text style={styles.titulo}>{t.medicamentos.titulo}</Text>
       </View>
-      <Tabs screenOptions={OPCIONES_TABS_SUPERIORES}>
-        <Tabs.Screen name="index" options={{ title: 'Recetados' }} />
-        <Tabs.Screen name="propios" options={{ title: 'Agregados por mí' }} />
+      <Tabs screenOptions={opcionesTabsSuperiores(paleta, modoOscuro)}>
+        <Tabs.Screen name="index" options={{ title: t.medicamentos.recetados }} />
+        <Tabs.Screen name="propios" options={{ title: t.medicamentos.propios }} />
       </Tabs>
       <MenuPaciente activa="salud" />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 20,
@@ -37,6 +44,6 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
   },
 });

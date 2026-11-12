@@ -4,6 +4,9 @@ import { COLOR_MEDICO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/color
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { usePerfilPaciente } from '@/contextos/PerfilPacienteContext';
 import { coberturaQueAtiende, Especialidad, Medico } from '@/datos/catalogo';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // onCambiar es opcional: en Reprogramar la especialidad y el médico están fijos y no se muestra el link.
 type PropsEspecialidad = {
@@ -18,18 +21,21 @@ type PropsMedico = {
 
 // Tarjeta de un paso ya elegido, con el link "Cambiar" que vuelve a ese paso.
 export function ResumenEspecialidad({ especialidad, onCambiar }: PropsEspecialidad) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   return (
     <View style={styles.tarjeta}>
       <View style={styles.icono}>
         <Text style={styles.iconoTexto}>{especialidad.codigo}</Text>
       </View>
       <View style={styles.textos}>
-        <Text style={styles.etiqueta}>Especialidad</Text>
+        <Text style={styles.etiqueta}>{t.resumen.especialidad}</Text>
         <Text style={styles.valor}>{especialidad.nombre}</Text>
       </View>
       {onCambiar && (
         <Pressable onPress={onCambiar}>
-          <Text style={styles.cambiar}>Cambiar</Text>
+          <Text style={styles.cambiar}>{t.comun.cambiar}</Text>
         </Pressable>
       )}
     </View>
@@ -37,6 +43,9 @@ export function ResumenEspecialidad({ especialidad, onCambiar }: PropsEspecialid
 }
 
 export function ResumenMedico({ medico, onCambiar }: PropsMedico) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { coberturaIds } = usePerfilPaciente();
   const { coberturas } = useConsultorio();
 
@@ -46,24 +55,24 @@ export function ResumenMedico({ medico, onCambiar }: PropsMedico) {
         <Text style={styles.avatarTexto}>{medico.iniciales}</Text>
       </View>
       <View style={styles.textos}>
-        <Text style={styles.etiqueta}>Profesional</Text>
+        <Text style={styles.etiqueta}>{t.resumen.profesional}</Text>
         <Text style={styles.valor}>{medico.nombre}</Text>
-        <Text style={styles.subvalor}>Atiende {coberturaQueAtiende(medico, coberturaIds, coberturas)}</Text>
+        <Text style={styles.subvalor}>{t.sacarTurno.atiende(coberturaQueAtiende(medico, coberturaIds, coberturas))}</Text>
       </View>
       {onCambiar && (
         <Pressable onPress={onCambiar}>
-          <Text style={styles.cambiar}>Cambiar</Text>
+          <Text style={styles.cambiar}>{t.comun.cambiar}</Text>
         </Pressable>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -77,7 +86,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -85,7 +94,7 @@ const styles = StyleSheet.create({
   iconoTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   avatar: {
     width: 40,
@@ -106,22 +115,22 @@ const styles = StyleSheet.create({
   },
   etiqueta: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   valor: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 1,
   },
   subvalor: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   cambiar: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
 });

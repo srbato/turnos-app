@@ -21,8 +21,14 @@ import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 export default function ElegirHorario() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { especialidad, medico, fecha, hora, elegirFecha, elegirHora } = useSacarTurno();
   const { turnos, agregarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
@@ -45,7 +51,7 @@ export default function ElegirHorario() {
 
   // Si el médico está de licencia, los días disponibles arrancan cuando vuelve.
   const vuelta = fechaDeVuelta(personal, medico.nombre);
-  const dias = diasDesde(vuelta, DIAS_OFRECIDOS);
+  const dias = diasDesde(vuelta, DIAS_OFRECIDOS, idioma);
   // Solo se ofrecen los días en que el médico atiende (sus días de atención y sin licencia).
   const atiende = (dia: string) => atiendeEn(personal, medico.nombre, dia);
   const diasConAtencion = dias.filter((dia) => dia.disponible && atiende(dia.fecha));
@@ -94,7 +100,7 @@ export default function ElegirHorario() {
         {vuelta && (
           <View style={styles.avisoLicencia}>
             <Text style={styles.avisoLicenciaTexto}>
-              {medico.nombre} está de licencia y vuelve el {formatearFechaCorta(vuelta)}. Podés sacar turno desde ese día.
+              {t.sacarTurno.licenciaAviso(medico.nombre, formatearFechaCorta(vuelta, idioma))}
             </Text>
           </View>
         )}
@@ -126,25 +132,25 @@ export default function ElegirHorario() {
         onPress={confirmar}>
         <Text style={styles.botonConfirmarTexto}>
           {hora
-            ? `Confirmar ${formatearFechaCorta(fechaSeleccionada)} · ${hora} h`
-            : 'Seleccioná un horario'}
+            ? t.sacarTurno.confirmar(formatearFechaCorta(fechaSeleccionada, idioma), hora)
+            : t.sacarTurno.elegirHorario}
         </Text>
       </Pressable>
 
       <Modal visible={confirmado} animationType="slide" transparent onRequestClose={volverAlInicio}>
         <View style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
-            <Text style={styles.modalTitulo}>¡Turno solicitado!</Text>
+            <Text style={styles.modalTitulo}>{t.sacarTurno.solicitado}</Text>
             <Text style={styles.modalMedico}>{medico.nombre}</Text>
             <Text style={styles.modalDato}>
               {especialidad.nombre} · {medico.sala}
             </Text>
             <Text style={styles.modalDato}>
-              {formatearFechaLarga(fechaSeleccionada)} · {hora} h
+              {formatearFechaLarga(fechaSeleccionada, idioma)} · {hora}
             </Text>
             <Text style={styles.modalDato}>{nombreConsultorio}</Text>
             <Pressable style={styles.botonModal} onPress={volverAlInicio}>
-              <Text style={styles.botonConfirmarTexto}>Volver al inicio</Text>
+              <Text style={styles.botonConfirmarTexto}>{t.comun.volverAlInicio}</Text>
             </Pressable>
           </View>
         </View>
@@ -153,7 +159,7 @@ export default function ElegirHorario() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   error: {
     color: '#C0392B',
     fontSize: 14,
@@ -174,7 +180,7 @@ const styles = StyleSheet.create({
   },
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -200,7 +206,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -208,7 +214,7 @@ const styles = StyleSheet.create({
   modalTitulo: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
@@ -216,12 +222,12 @@ const styles = StyleSheet.create({
   modalMedico: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 4,
   },
   modalDato: {
     fontSize: 15,
-    color: '#3A3A3A',
+    color: c.texto,
     marginBottom: 4,
   },
   botonModal: {

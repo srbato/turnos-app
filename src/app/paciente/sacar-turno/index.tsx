@@ -5,8 +5,14 @@ import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { aceptaTurnos, usePersonal } from '@/contextos/PersonalContext';
 import { useSacarTurno } from '@/contextos/SacarTurnoContext';
 import { especialidadesDe, Especialidad } from '@/datos/catalogo';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 export default function ElegirEspecialidad() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { elegirEspecialidad } = useSacarTurno();
   const { medicos: personal } = usePersonal();
   // Solo las especialidades que tienen algún médico que atiende (no de baja ni de licencia sin fecha).
@@ -23,7 +29,7 @@ export default function ElegirEspecialidad() {
       contentContainerStyle={styles.contenido}
       data={especialidades}
       keyExtractor={(especialidad) => especialidad.id}
-      ListHeaderComponent={<Text style={styles.titulo}>¿Qué especialidad necesitás?</Text>}
+      ListHeaderComponent={<Text style={styles.titulo}>{t.sacarTurno.tituloEspecialidad}</Text>}
       renderItem={({ item }) => (
         <Pressable style={styles.tarjeta} onPress={() => elegir(item)}>
           <View style={styles.icono}>
@@ -37,10 +43,10 @@ export default function ElegirEspecialidad() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -48,13 +54,13 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 12,
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -63,7 +69,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -71,13 +77,13 @@ const styles = StyleSheet.create({
   iconoTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   nombre: {
     flex: 1,
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   flecha: {
     fontSize: 22,

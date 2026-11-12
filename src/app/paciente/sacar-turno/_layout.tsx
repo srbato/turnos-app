@@ -7,8 +7,9 @@ import { SacarTurnoProvider } from '@/contextos/SacarTurnoContext';
 import { aceptaTurnos, usePersonal } from '@/contextos/PersonalContext';
 import { especialidadesDe, medicosDelCatalogo } from '@/datos/catalogo';
 import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
-
-const PASOS = ['Especialidad', 'Médico', 'Horario'];
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 // El paso actual sale de la URL: cada paso tiene su ruta.
 function pasoActualSegunRuta(ruta: string) {
@@ -18,9 +19,12 @@ function pasoActualSegunRuta(ruta: string) {
 }
 
 function Pasos({ pasoActual }: { pasoActual: number }) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   return (
     <View style={styles.pasos}>
-      {PASOS.map((nombre, indice) => {
+      {[t.sacarTurno.pasos.especialidad, t.sacarTurno.pasos.medico, t.sacarTurno.pasos.horario].map((nombre, indice) => {
         const numero = indice + 1;
         const completo = numero < pasoActual;
         const activo = numero === pasoActual;
@@ -57,6 +61,10 @@ function volver() {
 }
 
 export default function SacarTurnoLayout() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const paleta = paletaApp(modoOscuro, 'paciente');
+  const styles = crearEstilos(paleta);
+  const t = TEXTOS_PACIENTE[idioma];
   const pasoActual = pasoActualSegunRuta(usePathname());
 
   // Si se entra con ?medicoId=..., el flujo arranca con ese médico y su especialidad ya elegidos.
@@ -75,14 +83,14 @@ export default function SacarTurnoLayout() {
       <View style={styles.pantalla}>
         <View style={styles.encabezado}>
           <Pressable onPress={volver}>
-            <Text style={styles.volverTexto}>{pasoActual === 1 ? '‹ Sacar turno' : '‹ Volver'}</Text>
+            <Text style={styles.volverTexto}>{pasoActual === 1 ? t.sacarTurno.volverTitulo : t.sacarTurno.volver}</Text>
           </Pressable>
           <Pasos pasoActual={pasoActual} />
         </View>
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: FONDO_PACIENTE },
+            contentStyle: { backgroundColor: paleta.fondo },
           }}
         />
       </View>
@@ -90,11 +98,11 @@ export default function SacarTurnoLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 20,
@@ -103,7 +111,7 @@ const styles = StyleSheet.create({
   volverTexto: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 16,
   },
   pasos: {
@@ -133,7 +141,7 @@ const styles = StyleSheet.create({
   pasoPendiente: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -153,11 +161,11 @@ const styles = StyleSheet.create({
   pasoCompletoTexto: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLOR_PACIENTE,
+    color: c.acento,
   },
   pasoPendienteTexto: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
 });

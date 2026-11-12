@@ -1,9 +1,13 @@
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 import { ListaTurnos } from '@/components/lista-turnos';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { fechaHoraComoDate } from '@/utilidades/turnos';
 
 // Tab "Historial": turnos cancelados, atendidos o que ya pasaron, del más reciente al más viejo.
 export default function TurnosHistorial() {
+  const { idioma } = usePreferencias();
+  const t = TEXTOS_PACIENTE[idioma];
   const { misTurnos } = useTurnos();
   const ahora = new Date();
 
@@ -13,5 +17,5 @@ export default function TurnosHistorial() {
       (a, b) => fechaHoraComoDate(b.fecha, b.hora).getTime() - fechaHoraComoDate(a.fecha, a.hora).getTime()
     );
 
-  return <ListaTurnos turnos={historial} textoVacio="Todavía no tenés turnos en el historial." />;
+  return <ListaTurnos turnos={historial} textoVacio={t.turnos.sinHistorial} />;
 }

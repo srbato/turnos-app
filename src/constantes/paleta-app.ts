@@ -1,7 +1,7 @@
 // Colores neutros de las pantallas de la app (todo lo que no es el color del rol) en modo claro y oscuro.
 // Los colores de cada rol (azul del médico, verde de la secretaría...) viven en colores.ts y no cambian con el modo.
 // El Perfil tiene su propia paleta dorada, en tema.ts.
-import { COLOR_MEDICO } from '@/constantes/colores';
+import { COLOR_MEDICO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 
 // Mezcla un color '#RRGGBB' con blanco (55 %) para que se vea sobre fondos oscuros.
 export function aclarar(hex: string) {
@@ -52,7 +52,18 @@ export const PALETA_OSCURA: PaletaApp = {
   acento: aclarar(COLOR_MEDICO),
 };
 
-// Por ahora el acento es el del médico; cada rol va a pasar el suyo cuando se tematicen sus pantallas.
-export function paletaApp(modoOscuro: boolean): PaletaApp {
-  return modoOscuro ? PALETA_OSCURA : PALETA_CLARA;
+export type RolPaleta = 'medico' | 'paciente';
+
+// Cada rol cambia el fondo (en claro) y el color de acento; el resto de los neutros es común.
+export function paletaApp(modoOscuro: boolean, rol: RolPaleta = 'medico'): PaletaApp {
+  const base = modoOscuro ? PALETA_OSCURA : PALETA_CLARA;
+  if (rol === 'paciente') {
+    return {
+      ...base,
+      fondo: modoOscuro ? base.fondo : FONDO_PACIENTE,
+      chipAzul: modoOscuro ? base.chipAzul : FONDO_PACIENTE,
+      acento: modoOscuro ? aclarar(COLOR_PACIENTE) : COLOR_PACIENTE,
+    };
+  }
+  return base;
 }

@@ -3,6 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { COLOR_PACIENTE } from '@/constantes/colores';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { horariosDelMedico, usePersonal } from '@/contextos/PersonalContext';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { Idioma, usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
 type DiaDisponible = {
   fecha: string; // AAAA-MM-DD
@@ -20,9 +23,6 @@ type Horario = {
   disponible: boolean;
 };
 
-const DIAS_SEMANA_CORTO = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
-const MESES_CORTO = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 // primerDia: si se pasa (por ejemplo, el día en que vuelve un médico de licencia) y es posterior a mañana, los días
 // arrancan ahí.
@@ -30,7 +30,8 @@ const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'vier
 const CANTIDAD_CORTA = 4;
 export const DIAS_OFRECIDOS = 28;
 
-function proximosDias(cantidad: number, primerDia?: string): DiaDisponible[] {
+function proximosDias(cantidad: number, primerDia?: string, idioma: Idioma = 'es'): DiaDisponible[] {
+  const textos = TEXTOS_PACIENTE[idioma].horarios;
   const dias: DiaDisponible[] = [];
   const hoy = new Date();
   let desde = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
@@ -43,9 +44,9 @@ function proximosDias(cantidad: number, primerDia?: string): DiaDisponible[] {
     const fecha = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate() + i - 1);
     dias.push({
       fecha: `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`,
-      etiquetaDia: DIAS_SEMANA_CORTO[fecha.getDay()],
+      etiquetaDia: textos.dias[fecha.getDay()],
       numero: fecha.getDate(),
-      mes: MESES_CORTO[fecha.getMonth()],
+      mes: textos.meses[fecha.getMonth()],
       // En la tanda corta de 4 días, el último queda sin cupos para mostrar el estado deshabilitado.
       disponible: cantidad > CANTIDAD_CORTA || i !== cantidad,
     });
@@ -56,19 +57,20 @@ function proximosDias(cantidad: number, primerDia?: string): DiaDisponible[] {
 export const DIAS = proximosDias(CANTIDAD_CORTA);
 
 // Los días que se ofrecen, a partir de primerDia (o de mañana si no se pasa).
-export function diasDesde(primerDia?: string, cantidad: number = CANTIDAD_CORTA) {
-  return proximosDias(cantidad, primerDia);
+export function diasDesde(primerDia?: string, cantidad: number = CANTIDAD_CORTA, idioma: Idioma = 'es') {
+  return proximosDias(cantidad, primerDia, idioma);
 }
 
-export function formatearFechaLarga(fecha: string) {
+export function formatearFechaLarga(fecha: string, idioma: Idioma = 'es') {
+  const textos = TEXTOS_PACIENTE[idioma].horarios;
   const [anio, mes, dia] = fecha.split('-').map(Number);
   const fechaLocal = new Date(anio, mes - 1, dia);
-  return `${DIAS_SEMANA[fechaLocal.getDay()]} ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
+  return textos.fechaLarga(textos.diasLargos[fechaLocal.getDay()], dia, mes);
 }
 
-export function formatearFechaCorta(fecha: string) {
-  const [, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}`;
+export function formatearFechaCorta(fecha: string, idioma: Idioma = 'es') {
+  const [, mes, dia] = fecha.split('-').map(Number);
+  return TEXTOS_PACIENTE[idioma].horarios.fechaCorta(dia, mes);
 }
 
 type Props = {
@@ -97,6 +99,9 @@ export function SelectorHorario({
   cantidadDias = CANTIDAD_CORTA,
   atiende,
 }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { duracionTurno, direccion } = useConfiguracion();
   const { medicos } = usePersonal();
   // Los horarios del médico ese día (los mismos que ven Secretaría y el médico en sus agendas), según la duración que
@@ -108,7 +113,7 @@ export function SelectorHorario({
   }));
   const hayManana = HORARIOS.some((horario) => horario.turno === 'Mañana');
   const hayTarde = HORARIOS.some((horario) => horario.turno === 'Tarde');
-  const dias = diasDesde(primerDia, cantidadDias);
+  const dias = diasDesde(primerDia, cantidadDias, idioma);
   // Con más de 4 días, la fila se desliza hacia el costado.
   const deslizable = dias.length > CANTIDAD_CORTA;
   function renderGrilla(turno: Franja) {
@@ -198,25 +203,25 @@ export function SelectorHorario({
       </ScrollView>
 
       <View style={styles.tarjetaHorarios}>
-        <Text style={styles.horariosTitulo}>Horarios del {formatearFechaLarga(fecha)}</Text>
-        <Text style={styles.horariosSubtitulo}>Turnos de {duracionTurno} minutos · {direccion}</Text>
+        <Text style={styles.horariosTitulo}>{t.horarios.horariosDel(formatearFechaLarga(fecha, idioma))}</Text>
+        <Text style={styles.horariosSubtitulo}>{t.horarios.duracion(duracionTurno, direccion)}</Text>
 
-        {HORARIOS.length === 0 && <Text style={styles.sinHorarios}>El médico no atiende este día.</Text>}
+        {HORARIOS.length === 0 && <Text style={styles.sinHorarios}>{t.horarios.sinHorarios}</Text>}
 
-        {hayManana && <Text style={styles.turnoLabel}>MAÑANA</Text>}
+        {hayManana && <Text style={styles.turnoLabel}>{t.horarios.manana}</Text>}
         {hayManana && renderGrilla('Mañana')}
 
-        {hayTarde && <Text style={styles.turnoLabel}>TARDE</Text>}
+        {hayTarde && <Text style={styles.turnoLabel}>{t.horarios.tarde}</Text>}
         {hayTarde && renderGrilla('Tarde')}
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   sinHorarios: {
     fontSize: 14,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 12,
   },
   contenedorDias: {
@@ -237,11 +242,11 @@ const styles = StyleSheet.create({
   diaMes: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaCaja: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -250,16 +255,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR_PACIENTE,
   },
   diaCajaDeshabilitada: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: c.relleno,
   },
   diaEtiqueta: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaNumero: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
   diaTextoSeleccionado: {
@@ -269,25 +274,25 @@ const styles = StyleSheet.create({
     color: '#C2C2C2',
   },
   tarjetaHorarios: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 16,
   },
   horariosTitulo: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   horariosSubtitulo: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
     marginBottom: 14,
   },
   turnoLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     letterSpacing: 0.5,
     marginBottom: 8,
   },
@@ -300,7 +305,7 @@ const styles = StyleSheet.create({
   horarioBoton: {
     width: '22%',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: c.borde,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -310,13 +315,13 @@ const styles = StyleSheet.create({
     borderColor: COLOR_PACIENTE,
   },
   horarioBotonDeshabilitado: {
-    backgroundColor: '#F5F5F5',
-    borderColor: '#F0F0F0',
+    backgroundColor: c.relleno,
+    borderColor: c.bordeSuave,
   },
   horarioTexto: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   horarioTextoSeleccionado: {
     color: '#FFFFFF',

@@ -7,14 +7,20 @@ import { useErrores } from '@/contextos/ErroresContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { ofertasVigentes } from '@/datos/adelantos';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { Idioma, usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
 
-function textoFecha(fecha: string, hora: string) {
-  return `${detalleFecha(fecha).diaSemana} ${formatearFecha(fecha).slice(0, 5)} · ${hora} h`;
+function textoFecha(fecha: string, hora: string, idioma: Idioma) {
+  return TEXTOS_PACIENTE[idioma].aviso.otroDia(detalleFecha(fecha, idioma).diaSemana, formatearFecha(fecha).slice(0, 5), hora);
 }
 
 // Ofertas de adelanto para el paciente: se ofrece un horario antes que su turno y puede aceptar (el turno se
 // mueve) o rechazar (la oferta pasa al siguiente de la lista de espera).
 export function OfertasAdelanto() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'paciente'));
+  const t = TEXTOS_PACIENTE[idioma];
   const { turnos, misTurnos } = useTurnos();
   const { ofertas, aceptarOferta, rechazarOferta } = useAdelantos();
   const { mostrarError } = useErrores();
@@ -32,28 +38,28 @@ export function OfertasAdelanto() {
     <View>
       {mias.map(({ oferta, turno }) => (
         <View key={oferta.id} style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>SE LIBERÓ UN HORARIO ANTES</Text>
-          <Text style={styles.titulo}>¿Querés adelantar tu turno?</Text>
+          <Text style={styles.etiqueta}>{t.adelanto.etiqueta}</Text>
+          <Text style={styles.titulo}>{t.adelanto.titulo}</Text>
           <Text style={styles.medico}>{turno?.medico}</Text>
 
           <View style={styles.cambio}>
             <View style={styles.cambioItem}>
-              <Text style={styles.cambioEtiqueta}>Tu turno</Text>
-              <Text style={styles.cambioFechaVieja}>{turno && textoFecha(turno.fecha, turno.hora)}</Text>
+              <Text style={styles.cambioEtiqueta}>{t.adelanto.tuTurno}</Text>
+              <Text style={styles.cambioFechaVieja}>{turno && textoFecha(turno.fecha, turno.hora, idioma)}</Text>
             </View>
             <Text style={styles.flecha}>→</Text>
             <View style={styles.cambioItem}>
-              <Text style={styles.cambioEtiqueta}>Nuevo horario</Text>
-              <Text style={styles.cambioFechaNueva}>{textoFecha(oferta.horario.fecha, oferta.horario.hora)}</Text>
+              <Text style={styles.cambioEtiqueta}>{t.adelanto.nuevoHorario}</Text>
+              <Text style={styles.cambioFechaNueva}>{textoFecha(oferta.horario.fecha, oferta.horario.hora, idioma)}</Text>
             </View>
           </View>
 
           <View style={styles.filaBotones}>
             <Pressable style={styles.botonSecundario} onPress={async () => mostrarError(await rechazarOferta(oferta))}>
-              <Text style={styles.botonSecundarioTexto}>No, gracias</Text>
+              <Text style={styles.botonSecundarioTexto}>{t.adelanto.noGracias}</Text>
             </Pressable>
             <Pressable style={styles.botonPrimario} onPress={async () => mostrarError(await aceptarOferta(oferta))}>
-              <Text style={styles.botonPrimarioTexto}>Sí, adelantar</Text>
+              <Text style={styles.botonPrimarioTexto}>{t.adelanto.siAdelantar}</Text>
             </Pressable>
           </View>
         </View>
@@ -62,9 +68,9 @@ export function OfertasAdelanto() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tarjeta: {
-    backgroundColor: FONDO_PACIENTE,
+    backgroundColor: c.chipAzul,
     borderWidth: 1,
     borderColor: COLOR_PACIENTE,
     borderRadius: 18,
@@ -74,24 +80,24 @@ const styles = StyleSheet.create({
   etiqueta: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     letterSpacing: 0.5,
   },
   titulo: {
     fontSize: 18,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 4,
   },
   medico: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   cambio: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
@@ -101,24 +107,24 @@ const styles = StyleSheet.create({
   },
   cambioEtiqueta: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   cambioFechaVieja: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     textDecorationLine: 'line-through',
     marginTop: 2,
   },
   cambioFechaNueva: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_PACIENTE,
+    color: c.acento,
     marginTop: 2,
   },
   flecha: {
     fontSize: 18,
-    color: COLOR_PACIENTE,
+    color: c.acento,
     marginHorizontal: 8,
   },
   filaBotones: {
@@ -135,7 +141,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_PACIENTE,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },
