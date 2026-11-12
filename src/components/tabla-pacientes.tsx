@@ -9,6 +9,7 @@ import { Paciente } from '@/datos/consultorio';
 import { buscarProximoTurno } from '@/utilidades/turnos';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 type Props = {
   pacientes: Paciente[]; // los del consultorio activo
@@ -18,12 +19,13 @@ type Props = {
 };
 
 const COLOR_RIESGO = { bajo: COLOR_CONFIRMADO, 'en-riesgo': COLOR_PENDIENTE, alto: COLOR_CANCELADO };
-const ETIQUETA_RIESGO = { bajo: 'bajo', 'en-riesgo': 'medio', alto: 'alto' };
 
 // Tabla con todos los pacientes del consultorio: se busca por nombre, DNI u obra social, y al tocar una fila se elige
 // al paciente (para darle un turno). Solo datos administrativos.
 export function TablaPacientes({ pacientes, color, onElegir, onVerFicha }: Props) {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
   const { turnos } = useTurnos();
   const { reglasRiesgo } = useConfiguracion();
   const [busqueda, setBusqueda] = useState('');
@@ -39,24 +41,22 @@ export function TablaPacientes({ pacientes, color, onElegir, onVerFicha }: Props
         style={styles.buscador}
         value={busqueda}
         onChangeText={setBusqueda}
-        placeholder="Buscar por nombre, DNI u obra social"
+        placeholder={t.tabla.buscador}
         placeholderTextColor="#8A8E95"
       />
-      <Text style={styles.cantidad}>
-        {filtrados.length} paciente{filtrados.length === 1 ? '' : 's'} · tocá uno para darle turno
-      </Text>
+      <Text style={styles.cantidad}>{t.tabla.cantidad(filtrados.length)}</Text>
 
       <View style={styles.tabla}>
         <View style={[styles.fila, styles.filaEncabezado]}>
-          <Text style={[styles.encabezado, styles.colPaciente]}>Paciente</Text>
-          <Text style={[styles.encabezado, styles.colCobertura]}>Cobertura</Text>
-          <Text style={[styles.encabezado, styles.colProximo]}>Turno</Text>
-          <Text style={[styles.encabezado, styles.colRiesgo]}>Riesgo</Text>
+          <Text style={[styles.encabezado, styles.colPaciente]}>{t.tabla.paciente}</Text>
+          <Text style={[styles.encabezado, styles.colCobertura]}>{t.tabla.cobertura}</Text>
+          <Text style={[styles.encabezado, styles.colProximo]}>{t.tabla.turno}</Text>
+          <Text style={[styles.encabezado, styles.colRiesgo]}>{t.tabla.riesgo}</Text>
           <View style={styles.colFicha} />
         </View>
 
         <ScrollView style={styles.cuerpo} nestedScrollEnabled>
-          {filtrados.length === 0 && <Text style={styles.vacio}>No se encontró ningún paciente.</Text>}
+          {filtrados.length === 0 && <Text style={styles.vacio}>{t.tabla.vacio}</Text>}
           {filtrados.map((paciente, i) => {
             const proximo = buscarProximoTurno(turnos.filter((t) => t.idPaciente === paciente.id));
             const riesgo = evaluarRiesgo(paciente, turnos, reglasRiesgo);
@@ -87,11 +87,11 @@ export function TablaPacientes({ pacientes, color, onElegir, onVerFicha }: Props
                   </View>
                   <View style={styles.colRiesgo}>
                     <View style={[styles.punto, { backgroundColor: COLOR_RIESGO[riesgo.nivel] }]} />
-                    <Text style={styles.celdaChica}>{ETIQUETA_RIESGO[riesgo.nivel]}</Text>
+                    <Text style={styles.celdaChica}>{t.tabla.nivelesRiesgo[riesgo.nivel]}</Text>
                   </View>
                 </Pressable>
                 <Pressable style={styles.colFicha} onPress={() => onVerFicha(paciente)}>
-                  <Text style={[styles.ficha, { color }]}>Ficha ›</Text>
+                  <Text style={[styles.ficha, { color }]}>{t.tabla.ficha}</Text>
                 </Pressable>
               </View>
             );

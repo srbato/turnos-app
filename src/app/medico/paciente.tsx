@@ -16,6 +16,7 @@ import { datosParaMedico } from '@/utilidades/datos-medico';
 import { fechaHoraComoDate, formatearFecha } from '@/utilidades/turnos';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -33,17 +34,11 @@ const COLORES_ESTADO: Record<EstadoTurno, string> = {
   ausente: COLOR_RIESGO_ALTO,
 };
 
-const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
-  confirmado: 'Confirmado',
-  pendiente: 'Pendiente',
-  cancelado: 'Cancelado',
-  atendido: 'Atendido',
-  ausente: 'No asistió',
-};
-
 // Ficha de un paciente, vista por el médico. El id del paciente llega por la URL.
 export default function FichaPaciente() {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
   const { id } = useLocalSearchParams();
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
@@ -65,9 +60,9 @@ export default function FichaPaciente() {
     return (
       <SafeAreaView style={styles.pantallaVacia}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.volverVacio}>‹ Pacientes</Text>
+          <Text style={styles.volverVacio}>{t.ficha.volver}</Text>
         </Pressable>
-        <Text style={styles.textoVacio}>No se encontró el paciente.</Text>
+        <Text style={styles.textoVacio}>{t.ficha.noEncontrado}</Text>
       </SafeAreaView>
     );
   }
@@ -91,7 +86,7 @@ export default function FichaPaciente() {
     <View style={styles.pantalla}>
       <SafeAreaView style={styles.encabezado} edges={['top']}>
         <Pressable onPress={() => router.back()}>
-          <Text style={styles.volver}>‹ Pacientes</Text>
+          <Text style={styles.volver}>{t.ficha.volver}</Text>
         </Pressable>
         <View style={styles.filaPaciente}>
           <View style={styles.avatar}>
@@ -118,26 +113,26 @@ export default function FichaPaciente() {
         {interacciones.map((interaccion) => (
           <View key={interaccion.medicamentos.join('+')} style={styles.aviso}>
             <Text style={styles.avisoTexto}>
-              ⚠ Interacción detectada: {interaccion.medicamentos.join(' + ')}. {interaccion.descripcion}
+              ⚠ {t.agenda.interaccionDetalle} {interaccion.medicamentos.join(' + ')}. {interaccion.descripcion}
             </Text>
           </View>
         ))}
 
-        <Text style={styles.seccion}>Datos</Text>
+        <Text style={styles.seccion}>{t.ficha.datos}</Text>
         <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Cobertura</Text>
+          <Text style={styles.etiqueta}>{t.ficha.cobertura}</Text>
           <Text style={styles.valor}>
             {pacienteDeLaFicha.cobertura} {pacienteDeLaFicha.plan}
           </Text>
-          <Text style={styles.etiqueta}>N° de afiliado</Text>
+          <Text style={styles.etiqueta}>{t.ficha.afiliado}</Text>
           <Text style={styles.valor}>{pacienteDeLaFicha.numeroAfiliado}</Text>
-          <Text style={styles.etiqueta}>Alergias</Text>
+          <Text style={styles.etiqueta}>{t.ficha.alergias}</Text>
           <Text style={styles.valor}>{pacienteDeLaFicha.alergias}</Text>
         </View>
 
-        <Text style={styles.seccion}>Medicación</Text>
+        <Text style={styles.seccion}>{t.ficha.medicacion}</Text>
         <View style={styles.tarjeta}>
-          {medicamentos.length === 0 && <Text style={styles.valor}>No tiene medicamentos cargados.</Text>}
+          {medicamentos.length === 0 && <Text style={styles.valor}>{t.ficha.sinMedicamentos}</Text>}
           {medicamentos.map((medicamento) => (
             <View key={medicamento.id} style={styles.filaMedicamento}>
               <Text style={styles.valor}>
@@ -149,9 +144,9 @@ export default function FichaPaciente() {
           ))}
         </View>
 
-        <Text style={styles.seccion}>Recetas que le hiciste</Text>
+        <Text style={styles.seccion}>{t.ficha.recetasHechas}</Text>
         <View style={styles.tarjeta}>
-          {recetasDelPaciente.length === 0 && <Text style={styles.valor}>Todavía no le hiciste recetas.</Text>}
+          {recetasDelPaciente.length === 0 && <Text style={styles.valor}>{t.ficha.sinRecetas}</Text>}
           {recetasDelPaciente.map((receta) => (
             <View key={receta.id} style={styles.filaMedicamento}>
               <Text style={styles.valor}>
@@ -165,10 +160,10 @@ export default function FichaPaciente() {
           ))}
         </View>
 
-        <Text style={styles.seccion}>Historia clínica</Text>
+        <Text style={styles.seccion}>{t.ficha.historiaClinica}</Text>
         {historia.length === 0 && (
           <View style={styles.tarjeta}>
-            <Text style={styles.valor}>Todavía no hay consultas anotadas.</Text>
+            <Text style={styles.valor}>{t.ficha.sinConsultas}</Text>
           </View>
         )}
         {historia.map((turno) => {
@@ -176,7 +171,7 @@ export default function FichaPaciente() {
           return (
             <View key={turno.id} style={styles.tarjeta}>
               <Text style={styles.valor}>
-                {formatearFecha(turno.fecha)} · {esTuya ? 'Con vos' : turno.medico}
+                {formatearFecha(turno.fecha)} · {esTuya ? t.ficha.conVos : turno.medico}
               </Text>
               <Text style={styles.detalleMedicamento}>{turno.especialidad}</Text>
               {/* Las notas privadas solo las ve el médico que las escribió. */}
@@ -185,7 +180,7 @@ export default function FichaPaciente() {
           );
         })}
 
-        <Text style={styles.seccion}>Turnos con vos</Text>
+        <Text style={styles.seccion}>{t.ficha.turnosConVos}</Text>
         {turnosConElMedico.map((turno) => {
           const abierto = idTurnoAbierto === turno.id;
           const preconsulta = buscarPorTurno(turno.id);
@@ -196,25 +191,25 @@ export default function FichaPaciente() {
                   {formatearFecha(turno.fecha)} · {turno.hora} h
                 </Text>
                 <View style={[styles.chipEstado, { backgroundColor: COLORES_ESTADO[turno.estado] }]}>
-                  <Text style={styles.chipEstadoTexto}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
+                  <Text style={styles.chipEstadoTexto}>{t.estados[turno.estado]}</Text>
                 </View>
               </View>
 
               {!preconsulta && (
-                <Text style={styles.detalleMedicamento}>Sin preconsulta</Text>
+                <Text style={styles.detalleMedicamento}>{t.ficha.sinPreconsulta}</Text>
               )}
 
               {preconsulta && (
                 <Pressable onPress={() => setIdTurnoAbierto(abierto ? '' : turno.id)}>
                   <Text style={styles.verPreconsulta}>
-                    {abierto ? 'Ocultar preconsulta ▴' : 'Ver preconsulta ▾'}
+                    {abierto ? t.ficha.ocultarPreconsulta : t.ficha.verPreconsulta}
                   </Text>
                 </Pressable>
               )}
 
               {abierto &&
                 preconsulta &&
-                filasPreconsulta(preconsulta.respuestas).map((fila) => (
+                filasPreconsulta(preconsulta.respuestas, idioma).map((fila) => (
                   <View key={fila.titulo} style={styles.filaPreconsulta}>
                     <Text style={styles.etiqueta}>{fila.titulo}</Text>
                     <Text style={styles.valor}>{fila.valor}</Text>

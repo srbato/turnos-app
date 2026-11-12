@@ -1,5 +1,7 @@
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes/colores';
+import { Idioma } from '@/contextos/PreferenciasContext';
 import { Turno } from '@/contextos/TurnosContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 const COLOR_ATENDIDO = '#5A6B7D'; // gris azulado: el turno ya se realizó
 const COLOR_AUSENTE = '#B03A3A'; // rojo oscuro: el paciente no se presentó
@@ -35,13 +37,16 @@ export function fechaHoraComoDate(fecha: string, hora: string) {
   return new Date(anio, mes - 1, dia, horas, minutos);
 }
 
-export function detalleFecha(fecha: string) {
+// El idioma es opcional: si no se pasa, la fecha sale en español como siempre.
+export function detalleFecha(fecha: string, idioma: Idioma = 'es') {
   const { anio, mes, dia } = parsearFecha(fecha);
   const fechaLocal = new Date(anio, mes - 1, dia);
+  const textos = TEXTOS_MEDICO[idioma].fechas;
   return {
     dia: fechaLocal.getDate(),
-    mes: MESES_ABREV[fechaLocal.getMonth()],
-    diaSemana: DIAS_SEMANA[fechaLocal.getDay()],
+    // 'enero' → 'ENE', 'January' → 'JAN'
+    mes: idioma === 'es' ? MESES_ABREV[fechaLocal.getMonth()] : textos.meses[fechaLocal.getMonth()].slice(0, 3).toUpperCase(),
+    diaSemana: idioma === 'es' ? DIAS_SEMANA[fechaLocal.getDay()] : textos.dias[fechaLocal.getDay()],
   };
 }
 

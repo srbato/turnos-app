@@ -3,6 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, Vi
 import { buscarMedicamentos, MedicamentoVademecum, ResultadoVademecum } from '@/servicios/vademecum';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -17,7 +18,9 @@ type Props = {
 // Buscador de medicamentos en CIMA (el vademécum de la AEMPS, de España): un campo, un botón Buscar y la lista de
 // resultados. El estado es de este componente y no lo comparte nadie, así que alcanza con useState.
 export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
   const [texto, setTexto] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +33,7 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
   async function buscar() {
     const consulta = texto.trim();
     if (consulta === '') {
-      setAviso('Escribí el nombre de un medicamento.');
+      setAviso(t.buscador.avisoVacio);
       return;
     }
     if (cargando) {
@@ -45,7 +48,7 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
       setResultado(encontrados);
       setUltimaBusqueda(consulta);
     } catch {
-      setError('No se pudo consultar el vademécum. Revisá tu conexión e intentá de nuevo.');
+      setError(t.buscador.errorRed);
     }
     setCargando(false);
   }
@@ -53,12 +56,12 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
   const medicamentos = resultado ? resultado.medicamentos : [];
 
   // Lo que se muestra cuando no hay filas: buscando, error, sin resultados o todavía no se buscó nada.
-  let mensajeVacio = <Text style={styles.vacioTexto}>Escribí el nombre de un medicamento y apretá Buscar.</Text>;
+  let mensajeVacio = <Text style={styles.vacioTexto}>{t.buscador.pista}</Text>;
   if (cargando) {
     mensajeVacio = (
       <View style={styles.vacioCentrado}>
         <ActivityIndicator size="small" color={COLOR_MEDICO} />
-        <Text style={styles.vacioTexto}>Buscando…</Text>
+        <Text style={styles.vacioTexto}>{t.buscador.buscando}</Text>
       </View>
     );
   } else if (error !== '') {
@@ -66,12 +69,12 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
       <View style={styles.vacioCentrado}>
         <Text style={[styles.vacioTexto, styles.errorTexto]}>{error}</Text>
         <Pressable style={styles.botonReintentar} onPress={buscar}>
-          <Text style={styles.botonReintentarTexto}>Reintentar</Text>
+          <Text style={styles.botonReintentarTexto}>{t.buscador.reintentar}</Text>
         </Pressable>
       </View>
     );
   } else if (resultado) {
-    mensajeVacio = <Text style={styles.vacioTexto}>No hay medicamentos que coincidan con «{ultimaBusqueda}».</Text>;
+    mensajeVacio = <Text style={styles.vacioTexto}>{t.buscador.sinResultados(ultimaBusqueda)}</Text>;
   }
 
   return (
@@ -87,7 +90,7 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
             }}
             onSubmitEditing={buscar}
             returnKeyType="search"
-            placeholder="Ej: ibuprofeno"
+            placeholder={t.buscador.ejemplo}
             placeholderTextColor="#8A8E95"
             autoCapitalize="none"
             autoCorrect={false}
@@ -96,7 +99,7 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
             style={[styles.botonBuscar, cargando && styles.botonBuscarOcupado]}
             disabled={cargando}
             onPress={buscar}>
-            <Text style={styles.botonBuscarTexto}>Buscar</Text>
+            <Text style={styles.botonBuscarTexto}>{t.buscador.buscar}</Text>
           </Pressable>
         </View>
         {aviso !== '' && <Text style={[styles.avisoTexto, oscuro && styles.avisoTextoOscuro]}>{aviso}</Text>}
@@ -110,9 +113,7 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
         keyExtractor={(medicamento) => medicamento.nregistro}
         ListHeaderComponent={
           resultado && resultado.total > medicamentos.length ? (
-            <Text style={styles.cantidad}>
-              Mostrando los primeros {medicamentos.length} de {resultado.total}. Probá con un nombre más específico.
-            </Text>
+            <Text style={styles.cantidad}>{t.buscador.mostrando(medicamentos.length, resultado.total)}</Text>
           ) : null
         }
         ListEmptyComponent={<View style={oscuro ? styles.vacioOscuro : styles.vacioClaro}>{mensajeVacio}</View>}
@@ -128,10 +129,10 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
             <View style={styles.lateral}>
               {item.receta && (
                 <View style={styles.marcaReceta}>
-                  <Text style={styles.marcaRecetaTexto}>Con receta</Text>
+                  <Text style={styles.marcaRecetaTexto}>{t.buscador.conReceta}</Text>
                 </View>
               )}
-              {onElegir !== undefined && <Text style={styles.elegir}>Elegir ›</Text>}
+              {onElegir !== undefined && <Text style={styles.elegir}>{t.buscador.elegir}</Text>}
             </View>
           </Pressable>
         )}

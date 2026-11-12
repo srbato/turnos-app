@@ -1,4 +1,6 @@
 // Estructura de la preconsulta: qué se le pregunta al paciente y qué se guarda.
+import { Idioma } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 export type RespuestasPreconsulta = {
   motivo: string;
@@ -83,10 +85,12 @@ export const ETIQUETAS_CAMPOS: Record<CampoPreconsulta, string> = {
 };
 
 // Las respuestas de una preconsulta como filas (título + valor) para mostrarlas al médico.
-export function filasPreconsulta(respuestas: RespuestasPreconsulta) {
+// El idioma es opcional: si no se pasa, los títulos salen en español como siempre.
+export function filasPreconsulta(respuestas: RespuestasPreconsulta, idioma: Idioma = 'es') {
+  const textos = TEXTOS_MEDICO[idioma].preconsulta;
   return CAMPOS_PRECONSULTA.map((campo) => {
     const valor = respuestas[campo];
     const texto = Array.isArray(valor) ? valor.join(', ') : valor;
-    return { titulo: ETIQUETAS_CAMPOS[campo], valor: texto === '' ? 'No informó' : texto };
+    return { titulo: textos.campos[campo], valor: texto === '' ? textos.noInformo : texto };
   });
 }

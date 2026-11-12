@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { aclarar, PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 export type OpcionDesplegable = {
   id: string;
@@ -48,10 +49,11 @@ export function Desplegable({
   placeholder,
   modo,
   color,
-  textoVacio = 'No hay opciones para elegir.',
+  textoVacio,
   placeholderBuscador,
 }: Props) {
-  const { modoOscuro } = usePreferencias();
+  const { idioma, modoOscuro } = usePreferencias();
+  const t = TEXTOS_MEDICO[idioma];
   const styles = crearEstilos(paletaApp(modoOscuro));
   // El color del rol es oscuro: como texto sobre fondo oscuro se aclara.
   const colorTexto = modoOscuro ? aclarar(color) : color;
@@ -103,7 +105,7 @@ export function Desplegable({
       keyExtractor={(opcion) => opcion.id}
       ListEmptyComponent={
         <Text style={styles.vacio}>
-          {opciones.length > 0 ? 'Ninguna opción coincide con la búsqueda.' : textoVacio}
+          {opciones.length > 0 ? t.desplegable.sinCoincidencias : (textoVacio ?? t.desplegable.sinOpciones)}
         </Text>
       }
       renderItem={({ item }) => {
@@ -154,7 +156,7 @@ export function Desplegable({
               )}
               {lista}
               <Pressable style={[styles.botonCerrar, { borderColor: color }]} onPress={() => cambiarAbierto(false)}>
-                <Text style={[styles.botonCerrarTexto, { color: colorTexto }]}>Cerrar</Text>
+                <Text style={[styles.botonCerrarTexto, { color: colorTexto }]}>{t.desplegable.cerrar}</Text>
               </Pressable>
             </View>
           </View>

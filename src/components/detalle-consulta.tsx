@@ -4,6 +4,7 @@ import { COLOR_MEDICO } from '@/constantes/colores';
 import { Consulta } from '@/datos/consultorio';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 // conNotas: las notas privadas solo las ve el médico que las escribió.
 type Props = {
@@ -13,14 +14,16 @@ type Props = {
 
 // Lo que el médico anotó al atender un turno (una entrada de la historia clínica). Los campos vacíos no se muestran.
 export function DetalleConsulta({ consulta, conNotas }: Props) {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
   const filas = [
-    { titulo: 'Motivo', valor: consulta.motivo },
-    { titulo: 'Diagnóstico', valor: consulta.diagnostico },
-    { titulo: 'Indicaciones', valor: consulta.indicaciones },
+    { titulo: t.consulta.motivo, valor: consulta.motivo },
+    { titulo: t.consulta.diagnostico, valor: consulta.diagnostico },
+    { titulo: t.consulta.indicaciones, valor: consulta.indicaciones },
   ];
   if (conNotas) {
-    filas.push({ titulo: 'Notas privadas', valor: consulta.notas });
+    filas.push({ titulo: t.consulta.notasPrivadas, valor: consulta.notas });
   }
 
   return (

@@ -13,6 +13,7 @@ import { HOY } from '@/datos/consultorio';
 import { buscarProximoTurno, detalleFecha, fechaHoraComoDate } from '@/utilidades/turnos';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -20,7 +21,9 @@ const COLOR_RIESGO_ALTO = '#D64545';
 const FONDO_RIESGO_ALTO = '#FBDCDC';
 
 export default function PacientesDelMedico() {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
   const { consultorio } = useConsultorio();
@@ -43,13 +46,13 @@ export default function PacientesDelMedico() {
     <View style={styles.pantalla}>
       <SafeAreaView style={styles.encabezado} edges={['top']}>
         <Text style={styles.subtituloEncabezado}>{medicoLogueado.nombre}</Text>
-        <Text style={styles.titulo}>{vista === 'mios' ? 'Tus pacientes' : 'Pacientes del consultorio'}</Text>
+        <Text style={styles.titulo}>{vista === 'mios' ? t.pacientes.tusPacientes : t.pacientes.delConsultorio}</Text>
         <View style={styles.vistaFila}>
           <Pressable style={[styles.vistaChip, vista === 'mios' && styles.vistaChipActivo]} onPress={() => setVista('mios')}>
-            <Text style={[styles.vistaTexto, vista === 'mios' && styles.vistaTextoActivo]}>Mis pacientes</Text>
+            <Text style={[styles.vistaTexto, vista === 'mios' && styles.vistaTextoActivo]}>{t.pacientes.mios}</Text>
           </Pressable>
           <Pressable style={[styles.vistaChip, vista === 'todos' && styles.vistaChipActivo]} onPress={() => setVista('todos')}>
-            <Text style={[styles.vistaTexto, vista === 'todos' && styles.vistaTextoActivo]}>Todos</Text>
+            <Text style={[styles.vistaTexto, vista === 'todos' && styles.vistaTextoActivo]}>{t.pacientes.todos}</Text>
           </Pressable>
         </View>
         {vista === 'mios' && (
@@ -57,7 +60,7 @@ export default function PacientesDelMedico() {
             style={styles.buscador}
             value={busqueda}
             onChangeText={setBusqueda}
-            placeholder="Buscar por nombre..."
+            placeholder={t.pacientes.buscar}
             placeholderTextColor="#8A8E95"
           />
         )}
@@ -72,16 +75,14 @@ export default function PacientesDelMedico() {
         />
       ) : (
         <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
-          <Text style={styles.cantidad}>
-            {pacientesFiltrados.length} paciente{pacientesFiltrados.length === 1 ? '' : 's'}
-          </Text>
+          <Text style={styles.cantidad}>{t.pacientes.cantidad(pacientesFiltrados.length)}</Text>
 
           {pacientesFiltrados.length === 0 && (
             <View style={styles.estadoVacio}>
               <Text style={styles.estadoVacioTexto}>
                 {pacientesDelMedico.length === 0
-                  ? 'Todavía no tenés pacientes con turnos.'
-                  : 'No hay pacientes con ese nombre.'}
+                  ? t.pacientes.sinPacientes
+                  : t.pacientes.sinCoincidencias}
               </Text>
             </View>
           )}
@@ -97,13 +98,13 @@ export default function PacientesDelMedico() {
                   fechaHoraComoDate(b.fecha, b.hora).getTime() - fechaHoraComoDate(a.fecha, a.hora).getTime()
               )[0];
 
-            let textoTurno = 'Sin turnos';
+            let textoTurno = t.pacientes.sinTurnos;
             if (proximoTurno) {
-              const fecha = detalleFecha(proximoTurno.fecha);
-              textoTurno = `Próximo: ${fecha.diaSemana} ${fecha.dia} · ${proximoTurno.hora} h`;
+              const fecha = detalleFecha(proximoTurno.fecha, idioma);
+              textoTurno = t.pacientes.proximo(fecha.diaSemana, fecha.dia, proximoTurno.hora);
             } else if (ultimoTurno) {
-              const fecha = detalleFecha(ultimoTurno.fecha);
-              textoTurno = `Último: ${fecha.diaSemana} ${fecha.dia} · ${ultimoTurno.hora} h`;
+              const fecha = detalleFecha(ultimoTurno.fecha, idioma);
+              textoTurno = t.pacientes.ultimo(fecha.diaSemana, fecha.dia, ultimoTurno.hora);
             }
 
             return (
@@ -123,7 +124,7 @@ export default function PacientesDelMedico() {
                 </View>
                 {paciente.alerta !== '' && (
                   <View style={styles.chipRiesgo}>
-                    <Text style={styles.chipRiesgoTexto}>Riesgo</Text>
+                    <Text style={styles.chipRiesgoTexto}>{t.pacientes.riesgo}</Text>
                   </View>
                 )}
                 <Text style={styles.flecha}>›</Text>

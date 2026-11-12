@@ -29,7 +29,8 @@ import { filasPreconsulta } from '@/datos/preconsulta';
 import { datosParaMedico } from '@/utilidades/datos-medico';
 import { detalleFecha, fechaComoTexto, fechaHoraComoDate, formatearFecha } from '@/utilidades/turnos';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
-import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { Idioma, usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -47,27 +48,6 @@ const COLORES_ESTADO: Record<EstadoTurno, string> = {
   ausente: COLOR_RIESGO_ALTO,
 };
 
-const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
-  confirmado: 'Confirmado',
-  pendiente: 'Pendiente',
-  cancelado: 'Cancelado',
-  atendido: 'Atendido',
-  ausente: 'No asistió',
-};
-
-// Filtros de la lista: '' muestra todos.
-const FILTROS = [
-  { estado: '', etiqueta: 'Todos' },
-  { estado: 'pendiente', etiqueta: 'Pendientes' },
-  { estado: 'confirmado', etiqueta: 'Confirmados' },
-  { estado: 'atendido', etiqueta: 'Atendidos' },
-];
-
-const MESES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-];
-
 // Cantidad de días que se pueden ver en la agenda (hoy incluido).
 const DIAS_DE_AGENDA = 14;
 
@@ -81,11 +61,11 @@ function diasDeLaAgenda() {
   return dias;
 }
 
-// Ej: 'Jueves 1 de octubre'
-function fechaLarga(fecha: string) {
-  const detalle = detalleFecha(fecha);
+// Ej: 'Jueves 1 de octubre' / 'Thursday, October 1'
+function fechaLarga(fecha: string, idioma: Idioma) {
+  const detalle = detalleFecha(fecha, idioma);
   const mes = Number(fecha.split('-')[1]);
-  return `${detalle.diaSemana} ${detalle.dia} de ${MESES[mes - 1]}`;
+  return TEXTOS_MEDICO[idioma].fechas.larga(detalle.diaSemana, detalle.dia, mes);
 }
 
 function ordenarPorHora(turnos: Turno[]) {
@@ -104,10 +84,12 @@ type PropsTarjetaTurno = {
 
 // Tarjeta de un turno en la agenda.
 function TarjetaTurno(props: PropsTarjetaTurno) {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
-  const nombre = props.paciente ? `${props.paciente.nombre} ${props.paciente.apellido}` : 'Paciente';
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
+  const nombre = props.paciente ? `${props.paciente.nombre} ${props.paciente.apellido}` : t.agenda.paciente;
   const cobertura = props.paciente ? props.paciente.cobertura : '';
-  const preconsulta = props.tienePreconsulta ? 'preconsulta lista' : 'sin preconsulta';
+  const preconsulta = props.tienePreconsulta ? t.agenda.preconsultaLista : t.agenda.sinPreconsulta;
   const atendido = props.turno.estado === 'atendido';
   // Un turno ya atendido no se marca como riesgo: se muestra en gris.
   const mostrarRiesgo = props.riesgo && !atendido;
@@ -116,7 +98,7 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
   if (mostrarRiesgo && props.paciente && props.paciente.alerta !== '') {
     subtitulo = props.paciente.alerta;
   } else if (mostrarRiesgo) {
-    subtitulo = 'Interacción medicamentosa detectada';
+    subtitulo = t.agenda.interaccionDetectada;
   }
 
   return (
@@ -125,7 +107,7 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
       onPress={props.onPress}>
       <View style={styles.tarjetaHora}>
         <Text style={styles.horaTexto}>{props.turno.hora}</Text>
-        <Text style={styles.duracionTexto}>20 min</Text>
+        <Text style={styles.duracionTexto}>{t.agenda.duracion}</Text>
       </View>
       <View style={styles.tarjetaDatos}>
         <Text style={styles.pacienteTexto}>{nombre}</Text>
@@ -139,7 +121,7 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
           { backgroundColor: mostrarRiesgo ? FONDO_RIESGO_ALTO : COLORES_ESTADO[props.turno.estado] },
         ]}>
         <Text style={[styles.chipEstadoTexto, mostrarRiesgo && { color: COLOR_RIESGO_ALTO }]}>
-          {mostrarRiesgo ? 'Riesgo alto' : ETIQUETAS_ESTADO[props.turno.estado]}
+          {mostrarRiesgo ? t.agenda.riesgoAltoChip : t.estados[props.turno.estado]}
         </Text>
       </View>
     </Pressable>
@@ -147,7 +129,16 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
 }
 
 export default function AgendaMedico() {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
+  // Filtros de la lista: '' muestra todos.
+  const FILTROS = [
+    { estado: '', etiqueta: t.agenda.filtros.todos },
+    { estado: 'pendiente', etiqueta: t.agenda.filtros.pendientes },
+    { estado: 'confirmado', etiqueta: t.agenda.filtros.confirmados },
+    { estado: 'atendido', etiqueta: t.agenda.filtros.atendidos },
+  ];
   const { turnos, cancelarTurno, cambiarEstadoTurno, registrarConsulta } = useTurnos();
   const perfilMedico = usePerfilMedico();
   const medicoLogueado = useMedicoLogueado();
@@ -217,7 +208,7 @@ export default function AgendaMedico() {
   // Guarda la consulta y el turno queda como atendido.
   async function guardarConsulta(id: string) {
     if (diagnostico.trim() === '') {
-      setErrorConsulta('Escribí el diagnóstico.');
+      setErrorConsulta(t.agenda.errorDiagnostico);
       return;
     }
     const error = await registrarConsulta(id, {
@@ -280,9 +271,9 @@ export default function AgendaMedico() {
       <SafeAreaView style={styles.encabezado} edges={['top']}>
         <View style={styles.encabezadoFila}>
           <View>
-            <Text style={styles.fecha}>{fechaLarga(diaElegido)}</Text>
+            <Text style={styles.fecha}>{fechaLarga(diaElegido, idioma)}</Text>
             <Text style={styles.titulo}>
-              {diaElegido === HOY ? 'Tu agenda de hoy' : 'Tu agenda'}
+              {diaElegido === HOY ? t.agenda.tituloHoy : t.agenda.titulo}
             </Text>
           </View>
           {/* Tocar la foto lleva a Editar perfil, donde el médico puede cambiarla. */}
@@ -303,19 +294,19 @@ export default function AgendaMedico() {
         <View style={styles.resumen}>
           <View style={styles.resumenCaja}>
             <Text style={styles.resumenNumero}>{turnosDelDia.length}</Text>
-            <Text style={styles.resumenEtiqueta}>turnos</Text>
+            <Text style={styles.resumenEtiqueta}>{t.agenda.turnos}</Text>
           </View>
           <View style={styles.resumenCaja}>
             <Text style={[styles.resumenNumero, { color: COLOR_CONFIRMADO }]}>{confirmados}</Text>
-            <Text style={styles.resumenEtiqueta}>confirmados</Text>
+            <Text style={styles.resumenEtiqueta}>{t.agenda.confirmados}</Text>
           </View>
           <View style={styles.resumenCaja}>
             <Text style={[styles.resumenNumero, { color: COLOR_PENDIENTE }]}>{pendientes}</Text>
-            <Text style={styles.resumenEtiqueta}>pendientes</Text>
+            <Text style={styles.resumenEtiqueta}>{t.agenda.pendientes}</Text>
           </View>
           <View style={styles.resumenCaja}>
             <Text style={[styles.resumenNumero, { color: COLOR_RIESGO_ALTO }]}>{riesgoAlto}</Text>
-            <Text style={styles.resumenEtiqueta}>riesgo alto</Text>
+            <Text style={styles.resumenEtiqueta}>{t.agenda.riesgoAlto}</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -331,13 +322,13 @@ export default function AgendaMedico() {
                 style={[styles.diaCaja, elegido && styles.diaCajaElegida]}
                 onPress={() => setDiaElegido(dia)}>
                 <Text style={[styles.diaNombre, elegido && styles.diaTextoElegido]}>
-                  {dia === HOY ? 'HOY' : detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
+                  {dia === HOY ? t.fechas.hoy : detalleFecha(dia, idioma).diaSemana.slice(0, 3).toUpperCase()}
                 </Text>
                 <Text style={[styles.diaNumero, elegido && styles.diaTextoElegido]}>
                   {detalleFecha(dia).dia}
                 </Text>
                 <Text style={[styles.diaCantidad, elegido && styles.diaTextoElegido]}>
-                  {cantidad > 0 ? `${cantidad} t.` : '–'}
+                  {cantidad > 0 ? t.agenda.cantidadTurnos(cantidad) : '–'}
                 </Text>
               </Pressable>
             );
@@ -361,8 +352,8 @@ export default function AgendaMedico() {
           <View style={styles.estadoVacio}>
             <Text style={styles.estadoVacioTexto}>
               {turnosDelDia.length === 0
-                ? 'No tenés turnos para este día.'
-                : 'No hay turnos con este filtro.'}
+                ? t.agenda.sinTurnosDia
+                : t.agenda.sinTurnosFiltro}
             </Text>
           </View>
         )}
@@ -400,7 +391,7 @@ export default function AgendaMedico() {
                       { backgroundColor: COLORES_ESTADO[turnoSeleccionado.estado] },
                     ]}>
                     <Text style={styles.chipEstadoTexto}>
-                      {ETIQUETAS_ESTADO[turnoSeleccionado.estado]}
+                      {t.estados[turnoSeleccionado.estado]}
                     </Text>
                   </View>
                   <Pressable style={styles.botonX} onPress={cerrarDetalle}>
@@ -421,15 +412,15 @@ export default function AgendaMedico() {
                 {datosSeleccionado.interacciones.map((interaccion) => (
                   <View key={interaccion.medicamentos.join('+')} style={styles.modalAviso}>
                     <Text style={styles.modalAvisoTexto}>
-                      ⚠ Interacción detectada: {interaccion.medicamentos.join(' + ')}.{' '}
+                      ⚠ {t.agenda.interaccionDetalle} {interaccion.medicamentos.join(' + ')}.{' '}
                       {interaccion.descripcion}
                     </Text>
                   </View>
                 ))}
 
-                <Text style={styles.modalSeccion}>Preconsulta</Text>
+                <Text style={styles.modalSeccion}>{t.agenda.preconsulta}</Text>
                 {!preconsultaSeleccionada && (
-                  <Text style={styles.modalTexto}>Todavía no completó la preconsulta.</Text>
+                  <Text style={styles.modalTexto}>{t.agenda.sinCompletarPreconsulta}</Text>
                 )}
                 {preconsultaSeleccionada &&
                   filasPreconsulta(preconsultaSeleccionada.respuestas).map((fila) => (
@@ -439,22 +430,22 @@ export default function AgendaMedico() {
                     </View>
                   ))}
 
-                <Text style={styles.modalSeccion}>Historia clínica</Text>
+                <Text style={styles.modalSeccion}>{t.agenda.historiaClinica}</Text>
                 <View style={styles.modalFila}>
-                  <Text style={styles.modalEtiqueta}>Medicación habitual</Text>
+                  <Text style={styles.modalEtiqueta}>{t.agenda.medicacionHabitual}</Text>
                   <Text style={styles.modalTexto}>
                     {datosSeleccionado.medicamentos.length > 0
                       ? datosSeleccionado.medicamentos.map((medicamento) => medicamento.nombre).join(', ')
-                      : 'No tiene medicación cargada.'}
+                      : t.agenda.sinMedicacion}
                   </Text>
                 </View>
                 <View style={styles.modalFila}>
-                  <Text style={styles.modalEtiqueta}>Alergias</Text>
+                  <Text style={styles.modalEtiqueta}>{t.agenda.alergias}</Text>
                   <Text style={styles.modalTexto}>{pacienteSeleccionado.alergias}</Text>
                 </View>
                 {ultimaConsulta && ultimaConsulta.consulta && (
                   <View style={styles.modalFila}>
-                    <Text style={styles.modalEtiqueta}>Última consulta</Text>
+                    <Text style={styles.modalEtiqueta}>{t.agenda.ultimaConsulta}</Text>
                     <Text style={styles.modalTexto}>
                       {formatearFecha(ultimaConsulta.fecha)} · {ultimaConsulta.medico}:{' '}
                       {ultimaConsulta.consulta.diagnostico}
@@ -464,15 +455,15 @@ export default function AgendaMedico() {
 
                 {turnoSeleccionado.estado === 'atendido' && !registrandoConsulta && (
                   <View>
-                    <Text style={styles.modalSeccion}>Consulta</Text>
+                    <Text style={styles.modalSeccion}>{t.agenda.consulta}</Text>
                     {turnoSeleccionado.consulta ? (
                       <DetalleConsulta consulta={turnoSeleccionado.consulta} conNotas={true} />
                     ) : (
-                      <Text style={styles.modalTexto}>Todavía no anotaste la consulta.</Text>
+                      <Text style={styles.modalTexto}>{t.agenda.sinConsultaAnotada}</Text>
                     )}
                     <Pressable style={styles.botonEditarConsulta} onPress={() => abrirConsulta(turnoSeleccionado)}>
                       <Text style={styles.botonAtendidoSecundarioTexto}>
-                        {turnoSeleccionado.consulta ? 'Editar consulta' : 'Anotar consulta'}
+                        {turnoSeleccionado.consulta ? t.agenda.editarConsulta : t.agenda.anotarConsulta}
                       </Text>
                     </Pressable>
                   </View>
@@ -480,58 +471,56 @@ export default function AgendaMedico() {
 
                 {registrandoConsulta && (
                   <View>
-                    <Text style={styles.modalSeccion}>Consulta</Text>
-                    <Text style={styles.avisoCorreccion}>
-                      Queda en la historia clínica del paciente. Al guardarla, el turno pasa a atendido.
-                    </Text>
+                    <Text style={styles.modalSeccion}>{t.agenda.consulta}</Text>
+                    <Text style={styles.avisoCorreccion}>{t.agenda.avisoConsulta}</Text>
 
-                    <Text style={styles.modalEtiqueta}>Motivo</Text>
+                    <Text style={styles.modalEtiqueta}>{t.agenda.motivo}</Text>
                     <TextInput
                       style={styles.input}
                       value={motivo}
                       onChangeText={setMotivo}
-                      placeholder="Por qué vino"
+                      placeholder={t.agenda.motivoEjemplo}
                       placeholderTextColor="#8A8A8A"
                     />
 
-                    <Text style={styles.modalEtiqueta}>Diagnóstico</Text>
+                    <Text style={styles.modalEtiqueta}>{t.agenda.diagnostico}</Text>
                     <TextInput
                       style={[styles.input, errorConsulta !== '' && styles.inputError]}
                       value={diagnostico}
                       onChangeText={setDiagnostico}
-                      placeholder="Ej: Faringitis aguda"
+                      placeholder={t.agenda.diagnosticoEjemplo}
                       placeholderTextColor="#8A8A8A"
                     />
                     {errorConsulta !== '' && <Text style={styles.errorTexto}>{errorConsulta}</Text>}
 
-                    <Text style={styles.modalEtiqueta}>Indicaciones</Text>
+                    <Text style={styles.modalEtiqueta}>{t.agenda.indicaciones}</Text>
                     <TextInput
                       style={[styles.input, styles.inputLargo]}
                       value={indicaciones}
                       onChangeText={setIndicaciones}
-                      placeholder="Tratamiento, estudios, cuándo volver"
+                      placeholder={t.agenda.indicacionesEjemplo}
                       placeholderTextColor="#8A8A8A"
                       multiline
                     />
 
-                    <Text style={styles.modalEtiqueta}>Notas privadas</Text>
+                    <Text style={styles.modalEtiqueta}>{t.agenda.notasPrivadas}</Text>
                     <TextInput
                       style={[styles.input, styles.inputLargo]}
                       value={notas}
                       onChangeText={setNotas}
-                      placeholder="Solo las ves vos"
+                      placeholder={t.agenda.notasEjemplo}
                       placeholderTextColor="#8A8A8A"
                       multiline
                     />
 
                     <View style={styles.filaConfirmacion}>
                       <Pressable style={styles.botonNo} onPress={() => setRegistrandoConsulta(false)}>
-                        <Text style={styles.botonNoTexto}>Volver</Text>
+                        <Text style={styles.botonNoTexto}>{t.agenda.volver}</Text>
                       </Pressable>
                       <Pressable
                         style={styles.botonGuardarConsulta}
                         onPress={() => guardarConsulta(turnoSeleccionado.id)}>
-                        <Text style={styles.botonCerrarTexto}>Guardar consulta</Text>
+                        <Text style={styles.botonCerrarTexto}>{t.agenda.guardarConsulta}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -545,12 +534,12 @@ export default function AgendaMedico() {
                         <Pressable
                           style={styles.botonConfirmar}
                           onPress={() => cambiarEstado(turnoSeleccionado.id, 'confirmado')}>
-                          <Text style={styles.botonCerrarTexto}>Confirmar</Text>
+                          <Text style={styles.botonCerrarTexto}>{t.agenda.confirmar}</Text>
                         </Pressable>
                         <Pressable
                           style={styles.botonAtendidoSecundario}
                           onPress={() => abrirConsulta(turnoSeleccionado)}>
-                          <Text style={styles.botonAtendidoSecundarioTexto}>Atendido</Text>
+                          <Text style={styles.botonAtendidoSecundarioTexto}>{t.agenda.atendido}</Text>
                         </Pressable>
                       </View>
                     ) : (
@@ -558,50 +547,48 @@ export default function AgendaMedico() {
                       <Pressable
                         style={styles.botonAtendido}
                         onPress={() => abrirConsulta(turnoSeleccionado)}>
-                        <Text style={styles.botonCerrarTexto}>Marcar como atendido</Text>
+                        <Text style={styles.botonCerrarTexto}>{t.agenda.marcarAtendido}</Text>
                       </Pressable>
                     )}
 
                     <Pressable
                       style={styles.botonAtendidoSecundario}
                       onPress={() => cambiarEstado(turnoSeleccionado.id, 'ausente')}>
-                      <Text style={styles.botonAtendidoSecundarioTexto}>El paciente no asistió</Text>
+                      <Text style={styles.botonAtendidoSecundarioTexto}>{t.agenda.noAsistio}</Text>
                     </Pressable>
 
                     <Pressable
                       style={styles.linkCancelar}
                       onPress={() => setConfirmandoCancelacion(true)}>
-                      <Text style={styles.linkCancelarTexto}>Cancelar turno</Text>
+                      <Text style={styles.linkCancelarTexto}>{t.agenda.cancelarTurno}</Text>
                     </Pressable>
                   </View>
                 )}
 
                 {turnoSeleccionado.estado === 'ausente' && !registrandoConsulta && (
                   <View style={styles.acciones}>
-                    <Text style={styles.avisoCorreccion}>
-                      Si lo marcaste por error, corregilo: la falta deja de sumar puntos de riesgo al paciente.
-                    </Text>
+                    <Text style={styles.avisoCorreccion}>{t.agenda.avisoCorreccion}</Text>
                     <Pressable
                       style={styles.botonAtendido}
                       onPress={() => abrirConsulta(turnoSeleccionado)}>
-                      <Text style={styles.botonCerrarTexto}>El paciente sí asistió</Text>
+                      <Text style={styles.botonCerrarTexto}>{t.agenda.siAsistio}</Text>
                     </Pressable>
                   </View>
                 )}
 
                 {confirmandoCancelacion && (
                   <View style={styles.cajaConfirmacion}>
-                    <Text style={styles.textoConfirmacion}>¿Seguro que querés cancelar este turno?</Text>
+                    <Text style={styles.textoConfirmacion}>{t.agenda.confirmarCancelacion}</Text>
                     <View style={styles.filaConfirmacion}>
                       <Pressable
                         style={styles.botonNo}
                         onPress={() => setConfirmandoCancelacion(false)}>
-                        <Text style={styles.botonNoTexto}>No</Text>
+                        <Text style={styles.botonNoTexto}>{t.agenda.no}</Text>
                       </Pressable>
                       <Pressable
                         style={styles.botonSiCancelar}
                         onPress={() => confirmarCancelacion(turnoSeleccionado.id)}>
-                        <Text style={styles.botonCerrarTexto}>Sí, cancelar</Text>
+                        <Text style={styles.botonCerrarTexto}>{t.agenda.siCancelar}</Text>
                       </Pressable>
                     </View>
                   </View>

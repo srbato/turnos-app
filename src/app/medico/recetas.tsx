@@ -27,13 +27,16 @@ import { MedicamentoVademecum } from '@/servicios/vademecum';
 import { formatearFecha } from '@/utilidades/turnos';
 import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
 import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_MEDICO } from '@/datos/textos-medico';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
 const COLOR_ERROR = '#D64545';
 
 export default function RecetasDelMedico() {
-  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  const t = TEXTOS_MEDICO[idioma];
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
   const { recetas, emitirReceta, editarReceta, eliminarReceta } = useRecetas();
@@ -87,7 +90,7 @@ export default function RecetasDelMedico() {
 
   function nombreDelPaciente(id: string) {
     const paciente = pacientes.find((pacienteDeLaLista) => pacienteDeLaLista.id === id);
-    return paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente';
+    return paciente ? `${paciente.nombre} ${paciente.apellido}` : t.recetas.nombreDePaciente;
   }
 
   function cerrarFormulario() {
@@ -116,21 +119,21 @@ export default function RecetasDelMedico() {
     let hayError = false;
 
     if (idPaciente === '') {
-      setErrorPaciente('Elegí un paciente');
+      setErrorPaciente(t.recetas.errorPaciente);
       hayError = true;
     } else {
       setErrorPaciente('');
     }
 
     if (medicamento.trim() === '') {
-      setErrorMedicamento('El medicamento es obligatorio');
+      setErrorMedicamento(t.recetas.errorMedicamento);
       hayError = true;
     } else {
       setErrorMedicamento('');
     }
 
     if (indicacion.trim() === '') {
-      setErrorIndicacion('Indicá la dosis o cada cuánto tomarlo');
+      setErrorIndicacion(t.recetas.errorIndicacion);
       hayError = true;
     } else {
       setErrorIndicacion('');
@@ -174,9 +177,9 @@ export default function RecetasDelMedico() {
       <SafeAreaView style={styles.encabezado} edges={['top']}>
         <Text style={styles.subtituloEncabezado}>{medicoLogueado.nombre}</Text>
         <View style={styles.filaTitulo}>
-          <Text style={styles.titulo}>Recetas</Text>
+          <Text style={styles.titulo}>{t.recetas.titulo}</Text>
           <Pressable style={styles.botonNueva} onPress={() => setFormularioVisible(true)}>
-            <Text style={styles.botonNuevaTexto}>+ Nueva receta</Text>
+            <Text style={styles.botonNuevaTexto}>{t.recetas.nueva}</Text>
           </Pressable>
         </View>
         <View style={styles.vistaFila}>
@@ -184,19 +187,19 @@ export default function RecetasDelMedico() {
             style={[styles.vistaChip, vista === 'vigentes' && styles.vistaChipActivo]}
             onPress={() => setVista('vigentes')}>
             <Text style={[styles.vistaTexto, vista === 'vigentes' && styles.vistaTextoActivo]}>
-              Vigentes ({recetasVigentes.length})
+              {t.recetas.vigentes(recetasVigentes.length)}
             </Text>
           </Pressable>
           <Pressable
             style={[styles.vistaChip, vista === 'historial' && styles.vistaChipActivo]}
             onPress={() => setVista('historial')}>
             <Text style={[styles.vistaTexto, vista === 'historial' && styles.vistaTextoActivo]}>
-              Historial ({recetasPasadas.length})
+              {t.recetas.historial(recetasPasadas.length)}
             </Text>
           </Pressable>
           {/* Pantalla de consulta del vademécum: no toca las recetas. */}
           <Pressable style={styles.botonVademecum} onPress={() => router.push('/medico/vademecum' as Href)}>
-            <Text style={styles.botonVademecumTexto}>Vademécum ›</Text>
+            <Text style={styles.botonVademecumTexto}>{t.recetas.vademecum}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -205,7 +208,7 @@ export default function RecetasDelMedico() {
         {recetasMostradas.length === 0 && (
           <View style={styles.estadoVacio}>
             <Text style={styles.estadoVacioTexto}>
-              {vista === 'vigentes' ? 'No tenés recetas vigentes.' : 'Todavía no tenés recetas vencidas.'}
+              {vista === 'vigentes' ? t.recetas.sinVigentes : t.recetas.sinVencidas}
             </Text>
           </View>
         )}
@@ -230,11 +233,11 @@ export default function RecetasDelMedico() {
               </Text>
               <Text style={styles.detalleVigencia}>
                 {vista === 'historial'
-                  ? `Venció el ${formatearFecha(vencimientoReceta(receta))}`
-                  : `Vigente hasta el ${formatearFecha(vencimientoReceta(receta))}`}
+                  ? t.recetas.vencio(formatearFecha(vencimientoReceta(receta)))
+                  : t.recetas.vigenteHasta(formatearFecha(vencimientoReceta(receta)))}
               </Text>
             </View>
-            {vista === 'vigentes' && <Text style={styles.editar}>Editar ›</Text>}
+            {vista === 'vigentes' && <Text style={styles.editar}>{t.recetas.editar}</Text>}
           </Pressable>
         ))}
       </ScrollView>
@@ -254,21 +257,19 @@ export default function RecetasDelMedico() {
             {buscandoMedicamento ? (
               <View>
                 <Pressable onPress={() => setBuscandoMedicamento(false)} hitSlop={10}>
-                  <Text style={styles.volverReceta}>‹ Volver a la receta</Text>
+                  <Text style={styles.volverReceta}>{t.recetas.volverAReceta}</Text>
                 </Pressable>
-                <Text style={styles.modalTitulo}>Buscar medicamento</Text>
-                <Text style={styles.ayudaBuscador}>
-                  Vademécum de España (AEMPS). Elegí uno para cargar su nombre en la receta; después lo podés editar.
-                </Text>
+                <Text style={styles.modalTitulo}>{t.recetas.buscarMedicamento}</Text>
+                <Text style={styles.ayudaBuscador}>{t.recetas.ayudaBuscador}</Text>
                 <View style={styles.alturaBuscador}>
                   <BuscadorMedicamentos onElegir={elegirDelVademecum} />
                 </View>
               </View>
             ) : (
               <ScrollView keyboardShouldPersistTaps="handled">
-                <Text style={styles.modalTitulo}>{idEditando !== '' ? 'Editar receta' : 'Nueva receta'}</Text>
+                <Text style={styles.modalTitulo}>{idEditando !== '' ? t.recetas.editarReceta : t.recetas.nuevaReceta}</Text>
 
-                <Text style={styles.label}>Paciente</Text>
+                <Text style={styles.label}>{t.recetas.paciente}</Text>
                 {idEditando !== '' ? (
                   <Text style={styles.pacienteFijo}>{nombreDelPaciente(idPaciente)}</Text>
                 ) : (
@@ -277,44 +278,44 @@ export default function RecetasDelMedico() {
                       opciones={opcionesPacientes}
                       elegida={opcionesPacientes.find((opcion) => opcion.id === idPaciente)}
                       onElegir={setIdPaciente}
-                      placeholder="Elegí un paciente"
-                      placeholderBuscador="Buscar por nombre"
+                      placeholder={t.recetas.elegirPaciente}
+                      placeholderBuscador={t.recetas.buscarPaciente}
                       modo="modal"
                       color={COLOR_MEDICO}
-                      textoVacio="Todavía no tenés pacientes con turnos."
+                      textoVacio={t.recetas.sinPacientesConTurnos}
                     />
                   </View>
                 )}
                 {errorPaciente !== '' && <Text style={styles.errorTexto}>{errorPaciente}</Text>}
 
                 <View style={styles.filaMedicamento}>
-                  <Text style={styles.labelSinMargen}>Medicamento</Text>
+                  <Text style={styles.labelSinMargen}>{t.recetas.medicamento}</Text>
                   <Pressable onPress={() => setBuscandoMedicamento(true)} hitSlop={8}>
-                    <Text style={styles.linkVademecum}>Buscar en el vademécum ›</Text>
+                    <Text style={styles.linkVademecum}>{t.recetas.buscarEnVademecum}</Text>
                   </Pressable>
                 </View>
                 <TextInput
                   style={[styles.input, errorMedicamento !== '' && styles.inputError]}
                   value={medicamento}
                   onChangeText={setMedicamento}
-                  placeholder="Ej: Amoxicilina 500 mg"
+                  placeholder={t.recetas.medicamentoEjemplo}
                   placeholderTextColor="#8A8A8A"
                 />
                 {errorMedicamento !== '' && <Text style={styles.errorTexto}>{errorMedicamento}</Text>}
 
-                <Text style={styles.label}>Indicación</Text>
+                <Text style={styles.label}>{t.recetas.indicacion}</Text>
                 <TextInput
                   style={[styles.input, errorIndicacion !== '' && styles.inputError]}
                   value={indicacion}
                   onChangeText={setIndicacion}
-                  placeholder="Ej: 1 comprimido cada 8 h por 7 días"
+                  placeholder={t.recetas.indicacionEjemplo}
                   placeholderTextColor="#8A8A8A"
                 />
                 {errorIndicacion !== '' && <Text style={styles.errorTexto}>{errorIndicacion}</Text>}
 
-                <Text style={styles.label}>Riesgo</Text>
+                <Text style={styles.label}>{t.recetas.riesgo}</Text>
                 <View style={styles.filaSwitch}>
-                  <Text style={styles.textoSwitch}>Puede ser riesgoso con otros medicamentos</Text>
+                  <Text style={styles.textoSwitch}>{t.recetas.puedeSerRiesgoso}</Text>
                   <Switch
                     value={esRiesgoso}
                     onValueChange={setEsRiesgoso}
@@ -325,29 +326,27 @@ export default function RecetasDelMedico() {
 
                 <View style={styles.filaBotones}>
                   <Pressable style={styles.botonCancelar} onPress={cerrarFormulario}>
-                    <Text style={styles.botonCancelarTexto}>Cancelar</Text>
+                    <Text style={styles.botonCancelarTexto}>{t.recetas.cancelar}</Text>
                   </Pressable>
                   <Pressable style={styles.botonGuardar} onPress={guardarReceta}>
-                    <Text style={styles.botonGuardarTexto}>{idEditando !== '' ? 'Guardar cambios' : 'Emitir receta'}</Text>
+                    <Text style={styles.botonGuardarTexto}>{idEditando !== '' ? t.recetas.guardarCambios : t.recetas.emitir}</Text>
                   </Pressable>
                 </View>
 
                 {idEditando !== '' && !confirmandoEliminar && (
                   <Pressable style={styles.botonEliminar} onPress={() => setConfirmandoEliminar(true)}>
-                    <Text style={styles.botonEliminarTexto}>Eliminar receta</Text>
+                    <Text style={styles.botonEliminarTexto}>{t.recetas.eliminar}</Text>
                   </Pressable>
                 )}
                 {idEditando !== '' && confirmandoEliminar && (
                   <View style={styles.confirmacion}>
-                    <Text style={styles.confirmacionTexto}>
-                      ¿Eliminar esta receta? El paciente deja de verla y no se puede deshacer.
-                    </Text>
+                    <Text style={styles.confirmacionTexto}>{t.recetas.confirmarEliminar}</Text>
                     <View style={styles.filaBotones}>
                       <Pressable style={styles.botonCancelar} onPress={() => setConfirmandoEliminar(false)}>
-                        <Text style={styles.botonCancelarTexto}>No, volver</Text>
+                        <Text style={styles.botonCancelarTexto}>{t.recetas.noVolver}</Text>
                       </Pressable>
                       <Pressable style={styles.botonConfirmarEliminar} onPress={eliminar}>
-                        <Text style={styles.botonGuardarTexto}>Sí, eliminar</Text>
+                        <Text style={styles.botonGuardarTexto}>{t.recetas.siEliminar}</Text>
                       </Pressable>
                     </View>
                   </View>
