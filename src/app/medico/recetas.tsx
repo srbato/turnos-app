@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
+import { BuscadorMedicamentos } from '@/components/buscador-medicamentos';
 import { Desplegable } from '@/components/desplegable';
 import { MenuMedico } from '@/components/menu-medico';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
@@ -22,6 +23,7 @@ import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { useRecetas } from '@/contextos/RecetasContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { recetaVigente, vencimientoReceta, Receta } from '@/datos/recetas';
+import { MedicamentoVademecum } from '@/servicios/vademecum';
 import { formatearFecha } from '@/utilidades/turnos';
 
 const COLOR_MEDICO = '#1B4B8F';
@@ -49,6 +51,8 @@ export default function RecetasDelMedico() {
   const [idEditando, setIdEditando] = useState('');
   const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const [vista, setVista] = useState<'vigentes' | 'historial'>('vigentes');
+  // Si el médico está buscando el medicamento en el vademécum (reemplaza los campos del formulario mientras tanto).
+  const [buscandoMedicamento, setBuscandoMedicamento] = useState(false);
 
   // Se calcula en cada render: no hace falta useEffect para esto.
   // Se le pueden hacer recetas a los pacientes que tienen turnos con este médico.
@@ -94,6 +98,15 @@ export default function RecetasDelMedico() {
     setErrorIndicacion('');
     setIdEditando('');
     setConfirmandoEliminar(false);
+    setBuscandoMedicamento(false);
+  }
+
+  // El medicamento elegido del vademécum se carga con su nombre completo en el mismo campo que se escribía a mano:
+  // desde acá la receta se trata igual que siempre (el médico todavía puede editar el texto).
+  function elegirDelVademecum(elegido: MedicamentoVademecum) {
+    setMedicamento(elegido.nombre);
+    setErrorMedicamento('');
+    setBuscandoMedicamento(false);
   }
 
   async function guardarReceta() {
@@ -235,88 +248,108 @@ export default function RecetasDelMedico() {
           style={styles.fondoModal}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <SafeAreaView style={styles.tarjetaModal} edges={['bottom']}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <Text style={styles.modalTitulo}>{idEditando !== '' ? 'Editar receta' : 'Nueva receta'}</Text>
+            {buscandoMedicamento ? (
+              <View>
+                <Pressable onPress={() => setBuscandoMedicamento(false)} hitSlop={10}>
+                  <Text style={styles.volverReceta}>‹ Volver a la receta</Text>
+                </Pressable>
+                <Text style={styles.modalTitulo}>Buscar medicamento</Text>
+                <Text style={styles.ayudaBuscador}>
+                  Vademécum de España (AEMPS). Elegí uno para cargar su nombre en la receta; después lo podés editar.
+                </Text>
+                <View style={styles.alturaBuscador}>
+                  <BuscadorMedicamentos onElegir={elegirDelVademecum} />
+                </View>
+              </View>
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled">
+                <Text style={styles.modalTitulo}>{idEditando !== '' ? 'Editar receta' : 'Nueva receta'}</Text>
 
-              <Text style={styles.label}>Paciente</Text>
-              {idEditando !== '' ? (
-                <Text style={styles.pacienteFijo}>{nombreDelPaciente(idPaciente)}</Text>
-              ) : (
-                <View style={styles.selectorPaciente}>
-                  <Desplegable
-                    opciones={opcionesPacientes}
-                    elegida={opcionesPacientes.find((opcion) => opcion.id === idPaciente)}
-                    onElegir={setIdPaciente}
-                    placeholder="Elegí un paciente"
-                    modo="modal"
-                    color={COLOR_MEDICO}
-                    textoVacio="Todavía no tenés pacientes con turnos."
+                <Text style={styles.label}>Paciente</Text>
+                {idEditando !== '' ? (
+                  <Text style={styles.pacienteFijo}>{nombreDelPaciente(idPaciente)}</Text>
+                ) : (
+                  <View style={styles.selectorPaciente}>
+                    <Desplegable
+                      opciones={opcionesPacientes}
+                      elegida={opcionesPacientes.find((opcion) => opcion.id === idPaciente)}
+                      onElegir={setIdPaciente}
+                      placeholder="Elegí un paciente"
+                      modo="modal"
+                      color={COLOR_MEDICO}
+                      textoVacio="Todavía no tenés pacientes con turnos."
+                    />
+                  </View>
+                )}
+                {errorPaciente !== '' && <Text style={styles.errorTexto}>{errorPaciente}</Text>}
+
+                <View style={styles.filaMedicamento}>
+                  <Text style={styles.labelSinMargen}>Medicamento</Text>
+                  <Pressable onPress={() => setBuscandoMedicamento(true)} hitSlop={8}>
+                    <Text style={styles.linkVademecum}>Buscar en el vademécum ›</Text>
+                  </Pressable>
+                </View>
+                <TextInput
+                  style={[styles.input, errorMedicamento !== '' && styles.inputError]}
+                  value={medicamento}
+                  onChangeText={setMedicamento}
+                  placeholder="Ej: Amoxicilina 500 mg"
+                  placeholderTextColor="#8A8A8A"
+                />
+                {errorMedicamento !== '' && <Text style={styles.errorTexto}>{errorMedicamento}</Text>}
+
+                <Text style={styles.label}>Indicación</Text>
+                <TextInput
+                  style={[styles.input, errorIndicacion !== '' && styles.inputError]}
+                  value={indicacion}
+                  onChangeText={setIndicacion}
+                  placeholder="Ej: 1 comprimido cada 8 h por 7 días"
+                  placeholderTextColor="#8A8A8A"
+                />
+                {errorIndicacion !== '' && <Text style={styles.errorTexto}>{errorIndicacion}</Text>}
+
+                <Text style={styles.label}>Riesgo</Text>
+                <View style={styles.filaSwitch}>
+                  <Text style={styles.textoSwitch}>Puede ser riesgoso con otros medicamentos</Text>
+                  <Switch
+                    value={esRiesgoso}
+                    onValueChange={setEsRiesgoso}
+                    trackColor={{ false: '#D5D8DD', true: COLOR_MEDICO }}
+                    thumbColor="#FFFFFF"
                   />
                 </View>
-              )}
-              {errorPaciente !== '' && <Text style={styles.errorTexto}>{errorPaciente}</Text>}
 
-              <Text style={styles.label}>Medicamento</Text>
-              <TextInput
-                style={[styles.input, errorMedicamento !== '' && styles.inputError]}
-                value={medicamento}
-                onChangeText={setMedicamento}
-                placeholder="Ej: Amoxicilina 500 mg"
-                placeholderTextColor="#8A8A8A"
-              />
-              {errorMedicamento !== '' && <Text style={styles.errorTexto}>{errorMedicamento}</Text>}
-
-              <Text style={styles.label}>Indicación</Text>
-              <TextInput
-                style={[styles.input, errorIndicacion !== '' && styles.inputError]}
-                value={indicacion}
-                onChangeText={setIndicacion}
-                placeholder="Ej: 1 comprimido cada 8 h por 7 días"
-                placeholderTextColor="#8A8A8A"
-              />
-              {errorIndicacion !== '' && <Text style={styles.errorTexto}>{errorIndicacion}</Text>}
-
-              <Text style={styles.label}>Riesgo</Text>
-              <View style={styles.filaSwitch}>
-                <Text style={styles.textoSwitch}>Puede ser riesgoso con otros medicamentos</Text>
-                <Switch
-                  value={esRiesgoso}
-                  onValueChange={setEsRiesgoso}
-                  trackColor={{ false: '#D5D8DD', true: COLOR_MEDICO }}
-                  thumbColor="#FFFFFF"
-                />
-              </View>
-
-              <View style={styles.filaBotones}>
-                <Pressable style={styles.botonCancelar} onPress={cerrarFormulario}>
-                  <Text style={styles.botonCancelarTexto}>Cancelar</Text>
-                </Pressable>
-                <Pressable style={styles.botonGuardar} onPress={guardarReceta}>
-                  <Text style={styles.botonGuardarTexto}>{idEditando !== '' ? 'Guardar cambios' : 'Emitir receta'}</Text>
-                </Pressable>
-              </View>
-
-              {idEditando !== '' && !confirmandoEliminar && (
-                <Pressable style={styles.botonEliminar} onPress={() => setConfirmandoEliminar(true)}>
-                  <Text style={styles.botonEliminarTexto}>Eliminar receta</Text>
-                </Pressable>
-              )}
-              {idEditando !== '' && confirmandoEliminar && (
-                <View style={styles.confirmacion}>
-                  <Text style={styles.confirmacionTexto}>
-                    ¿Eliminar esta receta? El paciente deja de verla y no se puede deshacer.
-                  </Text>
-                  <View style={styles.filaBotones}>
-                    <Pressable style={styles.botonCancelar} onPress={() => setConfirmandoEliminar(false)}>
-                      <Text style={styles.botonCancelarTexto}>No, volver</Text>
-                    </Pressable>
-                    <Pressable style={styles.botonConfirmarEliminar} onPress={eliminar}>
-                      <Text style={styles.botonGuardarTexto}>Sí, eliminar</Text>
-                    </Pressable>
-                  </View>
+                <View style={styles.filaBotones}>
+                  <Pressable style={styles.botonCancelar} onPress={cerrarFormulario}>
+                    <Text style={styles.botonCancelarTexto}>Cancelar</Text>
+                  </Pressable>
+                  <Pressable style={styles.botonGuardar} onPress={guardarReceta}>
+                    <Text style={styles.botonGuardarTexto}>{idEditando !== '' ? 'Guardar cambios' : 'Emitir receta'}</Text>
+                  </Pressable>
                 </View>
-              )}
-            </ScrollView>
+
+                {idEditando !== '' && !confirmandoEliminar && (
+                  <Pressable style={styles.botonEliminar} onPress={() => setConfirmandoEliminar(true)}>
+                    <Text style={styles.botonEliminarTexto}>Eliminar receta</Text>
+                  </Pressable>
+                )}
+                {idEditando !== '' && confirmandoEliminar && (
+                  <View style={styles.confirmacion}>
+                    <Text style={styles.confirmacionTexto}>
+                      ¿Eliminar esta receta? El paciente deja de verla y no se puede deshacer.
+                    </Text>
+                    <View style={styles.filaBotones}>
+                      <Pressable style={styles.botonCancelar} onPress={() => setConfirmandoEliminar(false)}>
+                        <Text style={styles.botonCancelarTexto}>No, volver</Text>
+                      </Pressable>
+                      <Pressable style={styles.botonConfirmarEliminar} onPress={eliminar}>
+                        <Text style={styles.botonGuardarTexto}>Sí, eliminar</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            )}
           </SafeAreaView>
         </KeyboardAvoidingView>
       </Modal>
@@ -384,6 +417,36 @@ const styles = StyleSheet.create({
   },
   vistaTextoActivo: {
     color: '#1E2126',
+  },
+  filaMedicamento: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  labelSinMargen: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#5A5A5A',
+  },
+  linkVademecum: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLOR_MEDICO,
+  },
+  volverReceta: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLOR_MEDICO,
+    marginBottom: 12,
+  },
+  ayudaBuscador: {
+    fontSize: 12,
+    color: '#5A5A5A',
+    marginBottom: 12,
+  },
+  alturaBuscador: {
+    height: 420,
   },
   botonVademecum: {
     marginLeft: 'auto',
