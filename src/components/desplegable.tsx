@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export type OpcionDesplegable = {
   id: string;
@@ -23,7 +23,18 @@ type Props = {
   // Selección múltiple: cada toque marca o desmarca una opción y la lista queda abierta para marcar más.
   elegidas?: string[]; // ids de las opciones marcadas
   onAlternar?: (id: string) => void;
+  // Si se pasa, la lista trae un campo para filtrar las opciones mientras se escribe (solo en modo 'modal').
+  // El texto es el placeholder del campo. Las pantallas que ya filtran por su cuenta no lo usan.
+  placeholderBuscador?: string;
 };
+
+// Pasa a minúsculas y le saca las tildes, para que "jose" encuentre "José".
+function normalizar(texto: string) {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
 
 // Lista desplegable: muestra lo elegido (o un placeholder) y al tocarla abre la lista de opciones.
 export function Desplegable({
@@ -36,16 +47,32 @@ export function Desplegable({
   modo,
   color,
   textoVacio = 'No hay opciones para elegir.',
+  placeholderBuscador,
 }: Props) {
   const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
   const esMultiple = onAlternar !== undefined;
+  const conBuscador = placeholderBuscador !== undefined && modo === 'modal';
+
+  // Abre o cierra la lista; al cerrarla se borra lo escrito para que la próxima vez arranque completa.
+  function cambiarAbierto(nuevoValor: boolean) {
+    setAbierto(nuevoValor);
+    setBusqueda('');
+  }
+
+  // Con buscador, se muestran solo las opciones cuyo texto o detalle contienen lo escrito.
+  const consulta = normalizar(busqueda.trim());
+  const opcionesVisibles =
+    conBuscador && consulta !== ''
+      ? opciones.filter((opcion) => normalizar(`${opcion.texto} ${opcion.detalle ?? ''}`).includes(consulta))
+      : opciones;
 
   function tocarOpcion(id: string) {
     if (onAlternar !== undefined) {
       onAlternar(id);
     } else if (onElegir !== undefined) {
       onElegir(id);
-      setAbierto(false);
+      cambiarAbierto(false);
     }
   }
 
@@ -63,11 +90,16 @@ export function Desplegable({
   const lista = (
     <FlatList
       style={modo === 'modal' ? styles.listaModal : styles.listaExpandida}
-      data={opciones}
+      data={opcionesVisibles}
+      keyboardShouldPersistTaps="handled"
       // La FlatList solo vuelve a dibujar las filas si cambia "data": hay que avisarle cuando cambian las marcadas.
       extraData={esMultiple ? elegidas : elegida}
       keyExtractor={(opcion) => opcion.id}
-      ListEmptyComponent={<Text style={styles.vacio}>{textoVacio}</Text>}
+      ListEmptyComponent={
+        <Text style={styles.vacio}>
+          {opciones.length > 0 ? 'Ninguna opción coincide con la búsqueda.' : textoVacio}
+        </Text>
+      }
       renderItem={({ item }) => {
         const esElegida = estaElegida(item.id);
         return (
@@ -87,7 +119,7 @@ export function Desplegable({
 
   return (
     <View>
-      <Pressable style={[styles.boton, { borderColor: color }]} onPress={() => setAbierto(!abierto)}>
+      <Pressable style={[styles.boton, { borderColor: color }]} onPress={() => cambiarAbierto(!abierto)}>
         <Text style={[styles.botonTexto, !hayElegidas && styles.botonPlaceholder]} numberOfLines={esMultiple ? 2 : 1}>
           {hayElegidas ? textoBoton : placeholder}
         </Text>
@@ -97,14 +129,25 @@ export function Desplegable({
       {modo === 'expandido' && abierto && <View style={[styles.contenedorExpandido, { borderColor: color }]}>{lista}</View>}
 
       {modo === 'modal' && (
-        <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>
+        <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => cambiarAbierto(false)}>
           <View style={styles.fondo}>
             {/* Tocar afuera de la tarjeta cierra la lista. */}
-            <Pressable style={StyleSheet.absoluteFill} onPress={() => setAbierto(false)} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => cambiarAbierto(false)} />
             <View style={styles.tarjeta}>
               <Text style={styles.titulo}>{placeholder}</Text>
+              {conBuscador && (
+                <TextInput
+                  style={[styles.buscador, { borderColor: color }]}
+                  value={busqueda}
+                  onChangeText={setBusqueda}
+                  placeholder={placeholderBuscador}
+                  placeholderTextColor="#8A8A8A"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              )}
               {lista}
-              <Pressable style={[styles.botonCerrar, { borderColor: color }]} onPress={() => setAbierto(false)}>
+              <Pressable style={[styles.botonCerrar, { borderColor: color }]} onPress={() => cambiarAbierto(false)}>
                 <Text style={[styles.botonCerrarTexto, { color }]}>Cerrar</Text>
               </Pressable>
             </View>
@@ -204,6 +247,15 @@ const styles = StyleSheet.create({
     color: '#5A5A5A',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  buscador: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 14,
+    color: '#1A1A1A',
     marginBottom: 8,
   },
   botonCerrar: {

@@ -275,6 +275,7 @@ export default function RecetasDelMedico() {
                       elegida={opcionesPacientes.find((opcion) => opcion.id === idPaciente)}
                       onElegir={setIdPaciente}
                       placeholder="Elegí un paciente"
+                      placeholderBuscador="Buscar por nombre"
                       modo="modal"
                       color={COLOR_MEDICO}
                       textoVacio="Todavía no tenés pacientes con turnos."
