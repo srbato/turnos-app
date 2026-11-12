@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Href } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -177,6 +177,10 @@ export default function RecetasDelMedico() {
             <Text style={[styles.vistaTexto, vista === 'historial' && styles.vistaTextoActivo]}>
               Historial ({recetasPasadas.length})
             </Text>
+          </Pressable>
+          {/* Pantalla de consulta del vademécum: no toca las recetas. */}
+          <Pressable style={styles.botonVademecum} onPress={() => router.push('/medico/vademecum' as Href)}>
+            <Text style={styles.botonVademecumTexto}>Vademécum ›</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -380,6 +384,16 @@ const styles = StyleSheet.create({
   },
   vistaTextoActivo: {
     color: '#1E2126',
+  },
+  botonVademecum: {
+    marginLeft: 'auto',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+  },
+  botonVademecumTexto: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#A9ADB4',
   },
   detalleVigencia: {
     fontSize: 11,
