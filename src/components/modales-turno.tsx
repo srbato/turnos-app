@@ -344,14 +344,14 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     marginTop: 2,
   },
   avisoCaja: {
-    backgroundColor: FONDO_PENDIENTE,
+    backgroundColor: c.ambar,
     borderRadius: 10,
     padding: 12,
     marginBottom: 14,
   },
   avisoTexto: {
     fontSize: 13,
-    color: '#7A5A12',
+    color: c.textoAmbar,
     lineHeight: 19,
   },
   consultaCaja: {

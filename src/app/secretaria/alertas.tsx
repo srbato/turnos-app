@@ -426,7 +426,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     marginTop: 10,
   },
   fichaAusente: {
-    backgroundColor: '#F6E3E3',
+    backgroundColor: c.chipRojo,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,

@@ -202,7 +202,7 @@ export default function TurnosDelDia() {
                   </Text>
                 </View>
                 <View style={styles.tarjetaEstado}>
-                  <Text style={[styles.estado, { color: '#A66F00' }]}>{t.agenda.ofrecido}</Text>
+                  <Text style={[styles.estado, { color: paletaApp(modoOscuro, 'secretaria').textoAmbar }]}>{t.agenda.ofrecido}</Text>
                   <Text style={styles.riesgo}>{t.agenda.esperandoRespuesta}</Text>
                 </View>
               </Pressable>
@@ -410,7 +410,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     color: c.textoSecundario,
   },
   tarjetaOfrecida: {
-    backgroundColor: '#FDF4DE',
+    backgroundColor: c.ambar,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: COLOR_PENDIENTE,

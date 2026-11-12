@@ -321,7 +321,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     borderColor: 'transparent',
   },
   celdaLicencia: {
-    backgroundColor: '#FBEFD2',
+    backgroundColor: c.ambar,
   },
   celdaSinAtencion: {
     backgroundColor: c.relleno,

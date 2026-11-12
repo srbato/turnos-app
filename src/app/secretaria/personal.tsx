@@ -323,7 +323,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   },
   vuelve: {
     fontSize: 11,
-    color: '#8A5A00',
+    color: c.textoAmbar,
     marginTop: 1,
   },
   estado: {

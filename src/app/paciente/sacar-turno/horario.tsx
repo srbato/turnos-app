@@ -168,14 +168,14 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     marginTop: 12,
   },
   avisoLicencia: {
-    backgroundColor: '#FCF1DC',
+    backgroundColor: c.ambar,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
   },
   avisoLicenciaTexto: {
     fontSize: 13,
-    color: '#7A5200',
+    color: c.textoAmbar,
     fontWeight: '600',
   },
   pantalla: {

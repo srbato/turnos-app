@@ -86,7 +86,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   licencia: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#A66F00',
+    color: c.textoAmbar,
     marginTop: 2,
   },
   pantalla: {

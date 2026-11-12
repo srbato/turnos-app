@@ -275,7 +275,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   etiquetaLiberado: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#A66F00',
+    color: c.textoAmbar,
     letterSpacing: 0.5,
   },
   chip: {
@@ -297,7 +297,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   ofrecido: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FDF4DE',
+    backgroundColor: c.ambar,
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
@@ -307,13 +307,13 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   },
   ofrecidoEtiqueta: {
     fontSize: 11,
-    color: '#A66F00',
+    color: c.textoAmbar,
     fontWeight: '700',
   },
   esperando: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#A66F00',
+    color: c.textoAmbar,
     marginTop: 4,
   },
   noContesta: {
@@ -359,11 +359,11 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     padding: 10,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: '#EDEDED',
+    borderColor: c.bordeSuave,
   },
   candidatoConOferta: {
     borderColor: COLOR_PENDIENTE,
-    backgroundColor: '#FFFBF1',
+    backgroundColor: c.ambarSuave,
   },
   posicion: {
     width: 26,
@@ -397,7 +397,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tagOferta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#A66F00',
+    color: c.textoAmbar,
     marginTop: 3,
   },
   filaSimple: {

@@ -22,6 +22,9 @@ export type PaletaApp = {
   chipAzul: string;
   chipRojo: string;
   bordeAcento: string; // borde de tarjetas y campos (en la secretaría, con un tinte verdoso en modo claro)
+  ambar: string; // fondo de las cajas de aviso color ámbar
+  ambarSuave: string; // variante más suave del ámbar (filas destacadas)
+  textoAmbar: string; // texto sobre el ámbar
   acento: string; // color del rol usado como texto (en modo oscuro se aclara para que se lea)
 };
 
@@ -37,6 +40,9 @@ export const PALETA_CLARA: PaletaApp = {
   chipAzul: '#E6ECF5',
   chipRojo: '#FBDCDC',
   bordeAcento: '#D5D8DD',
+  ambar: '#FDF4DE',
+  ambarSuave: '#FFFBF1',
+  textoAmbar: '#A66F00',
   acento: COLOR_MEDICO,
 };
 
@@ -52,6 +58,9 @@ export const PALETA_OSCURA: PaletaApp = {
   chipAzul: '#233450',
   chipRojo: '#4A2A2D',
   bordeAcento: '#3A3F47',
+  ambar: '#3B3115',
+  ambarSuave: '#2B2411',
+  textoAmbar: '#E3B341',
   acento: aclarar(COLOR_MEDICO),
 };
 

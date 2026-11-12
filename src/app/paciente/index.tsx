@@ -320,14 +320,14 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     marginTop: 4,
   },
   avisoCaja: {
-    backgroundColor: FONDO_PENDIENTE,
+    backgroundColor: c.ambar,
     borderRadius: 10,
     padding: 12,
     marginBottom: 14,
   },
   avisoTexto: {
     fontSize: 13,
-    color: '#7A5A12',
+    color: c.textoAmbar,
     lineHeight: 19,
   },
   proximoBotones: {
@@ -451,7 +451,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: FONDO_PENDIENTE,
+    backgroundColor: c.ambar,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

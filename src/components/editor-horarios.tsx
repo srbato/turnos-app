@@ -122,7 +122,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEF0F2',
+    borderBottomColor: c.bordeSuave,
   },
   filaDia: {
     width: 90,

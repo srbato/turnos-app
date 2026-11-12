@@ -510,7 +510,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   },
   campoBloqueadoTexto: {
     fontSize: 14,
-    color: '#6B6B6B',
+    color: c.textoSecundario,
   },
   nota: {
     fontSize: 11,
@@ -566,7 +566,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   },
   aviso: {
     marginTop: 10,
-    color: '#8A5A00',
+    color: c.textoAmbar,
   },
   filaBotones: {
     flexDirection: 'row',

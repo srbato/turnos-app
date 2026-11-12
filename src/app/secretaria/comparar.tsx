@@ -409,7 +409,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     backgroundColor: c.tarjeta,
     borderRadius: 12,
     borderLeftWidth: 3,
-    borderLeftColor: '#B9DAD6',
+    borderLeftColor: c.bordeAcento,
     paddingHorizontal: 8,
     paddingVertical: 8,
     justifyContent: 'center',
@@ -428,7 +428,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
     color: c.acento,
   },
   celdaOfrecida: {
-    backgroundColor: '#FDF4DE',
+    backgroundColor: c.ambar,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: '#E0A123',
@@ -438,11 +438,11 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   celdaOfrecidaTitulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#A66F00',
+    color: c.textoAmbar,
   },
   celdaOfrecidaTexto: {
     fontSize: 11,
-    color: '#A66F00',
+    color: c.textoAmbar,
     marginTop: 1,
   },
   celdaBloqueo: {
@@ -452,7 +452,7 @@ const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   },
   celdaBloqueoTexto: {
     fontSize: 11,
-    color: '#6E8C88',
+    color: c.textoTenue,
   },
   celdaPaciente: {
     fontSize: 12,
