@@ -20,6 +20,10 @@ import { ofertasVigentes } from '@/datos/adelantos';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 const COLOR_AUSENTE = '#B03A3A';
 const DIAS_VISIBLES = 28; // 4 semanas hacia adelante
@@ -42,6 +46,9 @@ type ItemAgenda =
   | { tipo: 'oferta'; hora: string; oferta: Oferta };
 
 export default function TurnosDelDia() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
   const { ofertas } = useAdelantos();
@@ -85,9 +92,9 @@ export default function TurnosDelDia() {
         <View style={styles.encabezadoFila}>
           <View>
             <Text style={styles.fecha}>
-              {detalleFecha(diaElegido).diaSemana} {formatearFecha(diaElegido).slice(0, 5)}
+              {detalleFecha(diaElegido, idioma).diaSemana} {formatearFecha(diaElegido).slice(0, 5)}
             </Text>
-            <Text style={styles.titulo}>{diaElegido === HOY ? 'Turnos de hoy' : 'Turnos del día'}</Text>
+            <Text style={styles.titulo}>{diaElegido === HOY ? t.agenda.tituloHoy : t.agenda.titulo}</Text>
           </View>
           <View style={styles.encabezadoAcciones}>
             <Pressable style={styles.botonMas} onPress={() => setNuevoAbierto(true)}>
@@ -115,11 +122,11 @@ export default function TurnosDelDia() {
                 style={[styles.diaCaja, seleccionado && styles.diaCajaSeleccionada]}
                 onPress={() => setDiaElegido(dia)}>
                 <Text style={[styles.diaEtiqueta, seleccionado && styles.diaTextoSeleccionado]}>
-                  {dia === HOY ? 'HOY' : detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
+                  {dia === HOY ? t.agenda.hoy : detalleFecha(dia, idioma).diaSemana.slice(0, 3).toUpperCase()}
                 </Text>
-                <Text style={[styles.diaNumero, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).dia}</Text>
-                <Text style={[styles.diaMes, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).mes}</Text>
-                <Text style={[styles.diaCantidad, seleccionado && styles.diaTextoSeleccionado]}>{cantidad} t.</Text>
+                <Text style={[styles.diaNumero, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia, idioma).dia}</Text>
+                <Text style={[styles.diaMes, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia, idioma).mes}</Text>
+                <Text style={[styles.diaCantidad, seleccionado && styles.diaTextoSeleccionado]}>{t.agenda.cantidad(cantidad)}</Text>
               </Pressable>
             );
           })}
@@ -128,30 +135,30 @@ export default function TurnosDelDia() {
         <View style={styles.resumen}>
           <View style={styles.resumenItem}>
             <Text style={styles.resumenNumero}>{turnosDelDia.length}</Text>
-            <Text style={styles.resumenTexto}>Turnos</Text>
+            <Text style={styles.resumenTexto}>{t.agenda.turnos}</Text>
           </View>
           <View style={styles.resumenItem}>
             <Text style={[styles.resumenNumero, { color: COLOR_PENDIENTE }]}>{sinConfirmar}</Text>
-            <Text style={styles.resumenTexto}>Sin confirmar</Text>
+            <Text style={styles.resumenTexto}>{t.agenda.sinConfirmar}</Text>
           </View>
           <View style={styles.resumenItem}>
             <Text style={styles.resumenNumero}>{medicosDelDia.length}</Text>
-            <Text style={styles.resumenTexto}>Médicos</Text>
+            <Text style={styles.resumenTexto}>{t.agenda.medicos}</Text>
           </View>
         </View>
 
         <View style={styles.botonesFila}>
           <Pressable style={styles.botonComparar} onPress={() => router.push('/secretaria/comparar')}>
-            <Text style={styles.botonCompararTexto}>▦  Comparar horarios</Text>
+            <Text style={styles.botonCompararTexto}>{t.agenda.comparar}</Text>
           </Pressable>
           <Pressable style={styles.botonComparar} onPress={() => router.push('/secretaria/pacientes')}>
-            <Text style={styles.botonCompararTexto}>◍  Pacientes</Text>
+            <Text style={styles.botonCompararTexto}>{t.agenda.pacientes}</Text>
           </Pressable>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
           <Pressable style={[styles.chip, medicoFiltro === '' && styles.chipActivo]} onPress={() => setMedicoFiltro('')}>
-            <Text style={[styles.chipTexto, medicoFiltro === '' && styles.chipTextoActivo]}>Todos</Text>
+            <Text style={[styles.chipTexto, medicoFiltro === '' && styles.chipTextoActivo]}>{t.agenda.todos}</Text>
           </Pressable>
           {medicos.filter((medico) => medico.estado !== 'baja').map((medico) => (
             <Pressable
@@ -167,7 +174,7 @@ export default function TurnosDelDia() {
 
         {items.length === 0 && (
           <View style={styles.vacio}>
-            <Text style={styles.vacioTexto}>No hay turnos para este día.</Text>
+            <Text style={styles.vacioTexto}>{t.agenda.sinTurnos}</Text>
           </View>
         )}
 
@@ -185,18 +192,18 @@ export default function TurnosDelDia() {
                 <View style={[styles.barra, { backgroundColor: COLOR_PENDIENTE }]} />
                 <View style={styles.tarjetaTextos}>
                   <Text style={styles.paciente} numberOfLines={1}>
-                    {pacienteOfrecido ? `${pacienteOfrecido.nombre} ${pacienteOfrecido.apellido}` : 'Paciente'}
+                    {pacienteOfrecido ? `${pacienteOfrecido.nombre} ${pacienteOfrecido.apellido}` : t.agenda.paciente}
                   </Text>
                   <Text style={styles.detalle} numberOfLines={1}>
-                    Horario ofrecido · {oferta.horario.medico}
+                    {t.agenda.ofrecidoPor(oferta.horario.medico)}
                   </Text>
                   <Text style={styles.detalle} numberOfLines={1}>
                     {oferta.horario.especialidad} · {oferta.horario.sala}
                   </Text>
                 </View>
                 <View style={styles.tarjetaEstado}>
-                  <Text style={[styles.estado, { color: '#A66F00' }]}>Ofrecido</Text>
-                  <Text style={styles.riesgo}>Esperando respuesta</Text>
+                  <Text style={[styles.estado, { color: '#A66F00' }]}>{t.agenda.ofrecido}</Text>
+                  <Text style={styles.riesgo}>{t.agenda.esperandoRespuesta}</Text>
                 </View>
               </Pressable>
             );
@@ -212,7 +219,7 @@ export default function TurnosDelDia() {
               <View style={[styles.barra, { backgroundColor: color }]} />
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.paciente} numberOfLines={1}>
-                  {paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'}
+                  {paciente ? `${paciente.nombre} ${paciente.apellido}` : t.agenda.paciente}
                 </Text>
                 <Text style={styles.detalle} numberOfLines={1}>
                   {turno.medico}
@@ -222,8 +229,8 @@ export default function TurnosDelDia() {
                 </Text>
               </View>
               <View style={styles.tarjetaEstado}>
-                <Text style={[styles.estado, { color }]}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
-                {riesgoAlto && <Text style={styles.riesgo}>Riesgo alto</Text>}
+                <Text style={[styles.estado, { color }]}>{TEXTOS_PACIENTE[idioma].estados[turno.estado]}</Text>
+                {riesgoAlto && <Text style={styles.riesgo}>{t.agenda.riesgoAlto}</Text>}
               </View>
             </Pressable>
           );
@@ -247,11 +254,11 @@ export default function TurnosDelDia() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -265,12 +272,12 @@ const styles = StyleSheet.create({
   },
   fecha: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   titulo: {
     fontSize: 24,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginTop: 2,
   },
   encabezadoAcciones: {
@@ -298,7 +305,7 @@ const styles = StyleSheet.create({
   },
   diaCaja: {
     width: 56,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     paddingVertical: 7,
     alignItems: 'center',
@@ -309,21 +316,21 @@ const styles = StyleSheet.create({
   diaEtiqueta: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaNumero: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   diaMes: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaCantidad: {
     fontSize: 10,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   diaTextoSeleccionado: {
     color: '#FFFFFF',
@@ -334,7 +341,7 @@ const styles = StyleSheet.create({
   },
   resumenItem: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     paddingVertical: 10,
     alignItems: 'center',
@@ -342,11 +349,11 @@ const styles = StyleSheet.create({
   resumenNumero: {
     fontSize: 22,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   resumenTexto: {
     fontSize: 11,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   botonesFila: {
@@ -366,7 +373,7 @@ const styles = StyleSheet.create({
   botonCompararTexto: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   chipsFila: {
     gap: 8,
@@ -374,8 +381,8 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
-    backgroundColor: '#FFFFFF',
+    borderColor: c.bordeAcento,
+    backgroundColor: c.tarjeta,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -387,20 +394,20 @@ const styles = StyleSheet.create({
   chipTexto: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   chipTextoActivo: {
     color: '#FFFFFF',
   },
   vacio: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 18,
     alignItems: 'center',
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   tarjetaOfrecida: {
     backgroundColor: '#FDF4DE',
@@ -411,7 +418,7 @@ const styles = StyleSheet.create({
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 12,
     marginBottom: 8,
@@ -420,7 +427,7 @@ const styles = StyleSheet.create({
     width: 44,
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   barra: {
     width: 3,
@@ -434,11 +441,11 @@ const styles = StyleSheet.create({
   paciente: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   tarjetaEstado: {

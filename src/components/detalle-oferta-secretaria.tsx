@@ -14,19 +14,26 @@ import { useErrores } from "@/contextos/ErroresContext";
 import { useTurnos } from "@/contextos/TurnosContext";
 import { ofertasVigentes } from "@/datos/adelantos";
 import { detalleFecha, formatearFecha } from "@/utilidades/turnos";
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { Idioma, usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 type Props = {
   idOferta: string; // '' = cerrado
   onCerrar: () => void;
 };
 
-function textoFecha(fecha: string, hora: string) {
-  return `${detalleFecha(fecha).diaSemana} ${formatearFecha(fecha)} · ${hora} h`;
+function textoFecha(fecha: string, hora: string, idioma: Idioma) {
+  return TEXTOS_PACIENTE[idioma].detalleTurno.hora(detalleFecha(fecha, idioma).diaSemana, formatearFecha(fecha), hora);
 }
 
 // Detalle de un horario ofrecido a la lista de espera: se puede reprogramar el turno del paciente, cancelar la oferta
 // o ver su ficha, igual que con un turno común.
 export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos } = useTurnos();
   const { ofertas, retirarOferta } = useAdelantos();
   const { mostrarError } = useErrores();
@@ -65,9 +72,9 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
             {oferta && turno && paciente && (
               <>
                 <View style={styles.encabezado}>
-                  <Text style={styles.titulo}>Horario ofrecido</Text>
+                  <Text style={styles.titulo}>{t.detalleOferta.titulo}</Text>
                   <View style={styles.chip}>
-                    <Text style={styles.chipTexto}>Esperando respuesta</Text>
+                    <Text style={styles.chipTexto}>{t.detalleOferta.esperando}</Text>
                   </View>
                 </View>
 
@@ -75,22 +82,22 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
                   {paciente.nombre} {paciente.apellido}
                 </Text>
                 <Text style={styles.subtitulo}>
-                  {textoFecha(oferta.horario.fecha, oferta.horario.hora)}
+                  {textoFecha(oferta.horario.fecha, oferta.horario.hora, idioma)}
                 </Text>
 
                 <View style={styles.filas}>
                   <View style={styles.fila}>
-                    <Text style={styles.etiqueta}>Médico</Text>
+                    <Text style={styles.etiqueta}>{t.comun.medico}</Text>
                     <Text style={styles.valor}>{oferta.horario.medico}</Text>
                   </View>
                   <View style={styles.fila}>
-                    <Text style={styles.etiqueta}>Su turno actual</Text>
+                    <Text style={styles.etiqueta}>{t.detalleOferta.suTurno}</Text>
                     <Text style={styles.valor}>
-                      {textoFecha(turno.fecha, turno.hora)}
+                      {textoFecha(turno.fecha, turno.hora, idioma)}
                     </Text>
                   </View>
                   <View style={[styles.fila, styles.filaUltima]}>
-                    <Text style={styles.etiqueta}>En espera desde</Text>
+                    <Text style={styles.etiqueta}>{t.detalleOferta.enEsperaDesde}</Text>
                     <Text style={styles.valor}>
                       {formatearFecha(turno.adelantoDesde ?? "")}
                     </Text>
@@ -103,33 +110,26 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
                       style={styles.botonSecundario}
                       onPress={() => setReprogramando(true)}
                     >
-                      <Text style={styles.botonSecundarioTexto}>
-                        Reprogramar
-                      </Text>
+                      <Text style={styles.botonSecundarioTexto}>{t.comun.reprogramar}</Text>
                     </Pressable>
                     <Pressable
                       style={styles.botonCancelar}
                       onPress={() => setConfirmando(true)}
                     >
-                      <Text style={styles.botonCancelarTexto}>
-                        Cancelar oferta
-                      </Text>
+                      <Text style={styles.botonCancelarTexto}>{t.detalleOferta.cancelarOferta}</Text>
                     </Pressable>
                   </>
                 )}
 
                 {confirmando && (
                   <>
-                    <Text style={styles.confirmarTexto}>
-                      ¿Cancelar esta oferta? El horario deja de ofrecerse y
-                      queda libre en la agenda del médico.
-                    </Text>
+                    <Text style={styles.confirmarTexto}>{t.detalleOferta.confirmar}</Text>
                     <View style={styles.filaBotones}>
                       <Pressable
                         style={styles.botonSecundarioMitad}
                         onPress={() => setConfirmando(false)}
                       >
-                        <Text style={styles.botonSecundarioTexto}>Volver</Text>
+                        <Text style={styles.botonSecundarioTexto}>{t.comun.volver}</Text>
                       </Pressable>
                       <Pressable
                         style={styles.botonConfirmar}
@@ -138,9 +138,7 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
                           mostrarError(await retirarOferta(oferta));
                         }}
                       >
-                        <Text style={styles.botonConfirmarTexto}>
-                          Sí, cancelar
-                        </Text>
+                        <Text style={styles.botonConfirmarTexto}>{t.detalleOferta.siCancelar}</Text>
                       </Pressable>
                     </View>
                   </>
@@ -157,10 +155,10 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
                     });
                   }}
                 >
-                  <Text style={styles.enlaceTexto}>Ver ficha del paciente</Text>
+                  <Text style={styles.enlaceTexto}>{t.comun.verFicha}</Text>
                 </Pressable>
                 <Pressable style={styles.enlace} onPress={cerrar}>
-                  <Text style={styles.cerrarTexto}>Cerrar</Text>
+                  <Text style={styles.cerrarTexto}>{t.comun.cerrar}</Text>
                 </Pressable>
               </>
             )}
@@ -176,7 +174,7 @@ export function DetalleOfertaSecretaria({ idOferta, onCerrar }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fondo: {
     flex: 1,
     backgroundColor: "rgba(26, 24, 21, 0.5)",
@@ -184,7 +182,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjeta: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
     maxHeight: "90%",
@@ -198,7 +196,7 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#5A5A5A",
+    color: c.textoSecundario,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -216,18 +214,18 @@ const styles = StyleSheet.create({
   paciente: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: c.texto,
   },
   subtitulo: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginTop: 2,
     marginBottom: 14,
   },
   filas: {
     borderTopWidth: 1,
-    borderTopColor: "#EDEDED",
+    borderTopColor: c.bordeSuave,
     marginBottom: 16,
   },
   fila: {
@@ -235,20 +233,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#EDEDED",
+    borderBottomColor: c.bordeSuave,
   },
   filaUltima: {
     borderBottomWidth: 0,
   },
   etiqueta: {
     fontSize: 13,
-    color: "#8A8A8A",
+    color: c.textoTenue,
   },
   valor: {
     flex: 1,
     fontSize: 14,
     fontWeight: "600",
-    color: "#1A1A1A",
+    color: c.texto,
     textAlign: "right",
     marginLeft: 12,
   },
@@ -268,7 +266,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   botonSecundarioTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -287,7 +285,7 @@ const styles = StyleSheet.create({
   },
   confirmarTexto: {
     fontSize: 14,
-    color: "#3A3A3A",
+    color: c.texto,
     marginBottom: 12,
   },
   filaBotones: {
@@ -313,11 +311,11 @@ const styles = StyleSheet.create({
   enlaceTexto: {
     fontSize: 14,
     fontWeight: "700",
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   cerrarTexto: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#5A5A5A",
+    color: c.textoSecundario,
   },
 });

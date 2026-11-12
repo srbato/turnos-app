@@ -3,6 +3,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_SECRETARIA, FONDO_SECRETARIA } from '@/constantes/colores';
 import { FranjaHoraria, NOMBRES_DIAS, NOMBRES_DIAS_LARGOS, normalizarHora, ordenarFranjas, SEMANA } from '@/datos/atencion';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 type Props = {
   franjas: FranjaHoraria[];
@@ -12,6 +16,9 @@ type Props = {
 // Editor de los horarios de un médico: la lista de franjas (día, desde, hasta) y un formulario para agregar otra.
 // Lo usa Secretaría en la ficha del médico y en el alta.
 export function EditorHorarios({ franjas, onCambiar }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const [dia, setDia] = useState(-1); // -1 = ningún día elegido
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
@@ -21,21 +28,21 @@ export function EditorHorarios({ franjas, onCambiar }: Props) {
     const horaDesde = normalizarHora(desde);
     const horaHasta = normalizarHora(hasta);
     if (dia === -1) {
-      setError('Elegí el día.');
+      setError(t.editor.errores.dia);
       return;
     }
     if (horaDesde === '' || horaHasta === '') {
-      setError('Escribí las horas así: 9, 9:30 o 14:00.');
+      setError(t.editor.errores.horas);
       return;
     }
     if (horaDesde >= horaHasta) {
-      setError('La hora de inicio tiene que ser anterior a la de fin.');
+      setError(t.editor.errores.orden);
       return;
     }
     // Dos franjas del mismo día no se pueden pisar.
     const sePisa = franjas.some((franja) => franja.dia === dia && horaDesde < franja.hasta && franja.desde < horaHasta);
     if (sePisa) {
-      setError('Se superpone con otro horario de ese día.');
+      setError(t.editor.errores.superpone);
       return;
     }
     onCambiar([...franjas, { dia: dia, desde: horaDesde, hasta: horaHasta }]);
@@ -51,21 +58,21 @@ export function EditorHorarios({ franjas, onCambiar }: Props) {
   return (
     <View>
       {franjas.length === 0 && (
-        <Text style={styles.vacio}>Todavía no tiene horarios: no se le pueden dar turnos.</Text>
+        <Text style={styles.vacio}>{t.editor.sinHorarios}</Text>
       )}
       {ordenarFranjas(franjas).map((franja) => (
         <View key={`${franja.dia}-${franja.desde}`} style={styles.fila}>
-          <Text style={styles.filaDia}>{NOMBRES_DIAS_LARGOS[franja.dia]}</Text>
+          <Text style={styles.filaDia}>{t.diasLargos[franja.dia]}</Text>
           <Text style={styles.filaHoras}>
-            {franja.desde} a {franja.hasta}
+            {t.editor.a(franja.desde, franja.hasta)}
           </Text>
           <Pressable onPress={() => quitar(franja)} hitSlop={8}>
-            <Text style={styles.quitar}>Quitar</Text>
+            <Text style={styles.quitar}>{t.editor.quitar}</Text>
           </Pressable>
         </View>
       ))}
 
-      <Text style={styles.etiqueta}>Agregar horario</Text>
+      <Text style={styles.etiqueta}>{t.editor.agregar}</Text>
       <View style={styles.dias}>
         {SEMANA.map((numero) => (
           <Pressable
@@ -73,7 +80,7 @@ export function EditorHorarios({ franjas, onCambiar }: Props) {
             style={[styles.diaChip, dia === numero && styles.diaChipActivo]}
             onPress={() => setDia(numero)}>
             <Text style={[styles.diaChipTexto, dia === numero && styles.diaChipTextoActivo]}>
-              {NOMBRES_DIAS[numero]}
+              {t.dias[numero]}
             </Text>
           </Pressable>
         ))}
@@ -83,7 +90,7 @@ export function EditorHorarios({ franjas, onCambiar }: Props) {
           style={styles.campo}
           value={desde}
           onChangeText={setDesde}
-          placeholder="Desde (9:00)"
+          placeholder={t.editor.desde}
           placeholderTextColor="#8FB9B5"
           maxLength={5}
         />
@@ -91,20 +98,20 @@ export function EditorHorarios({ franjas, onCambiar }: Props) {
           style={styles.campo}
           value={hasta}
           onChangeText={setHasta}
-          placeholder="Hasta (13:00)"
+          placeholder={t.editor.hasta}
           placeholderTextColor="#8FB9B5"
           maxLength={5}
         />
       </View>
       {error !== '' && <Text style={styles.error}>{error}</Text>}
       <Pressable style={styles.botonAgregar} onPress={agregar}>
-        <Text style={styles.botonAgregarTexto}>+ Agregar</Text>
+        <Text style={styles.botonAgregarTexto}>{t.editor.boton}</Text>
       </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   vacio: {
     fontSize: 13,
     color: COLOR_CANCELADO,
@@ -121,12 +128,12 @@ const styles = StyleSheet.create({
     width: 90,
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   filaHoras: {
     flex: 1,
     fontSize: 14,
-    color: '#3A3A3A',
+    color: c.texto,
   },
   quitar: {
     fontSize: 13,
@@ -136,7 +143,7 @@ const styles = StyleSheet.create({
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 14,
     marginBottom: 6,
   },
@@ -149,7 +156,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 999,
     paddingVertical: 6,
   },
@@ -160,7 +167,7 @@ const styles = StyleSheet.create({
   diaChipTexto: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#3A3A3A',
+    color: c.texto,
   },
   diaChipTextoActivo: {
     color: '#FFFFFF',
@@ -175,12 +182,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   error: {
     fontSize: 12,
@@ -189,7 +196,7 @@ const styles = StyleSheet.create({
   },
   // Botón solo (ocupa todo el ancho): no lleva flex.
   botonAgregar: {
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.chipAzul,
     borderRadius: 10,
     paddingVertical: 10,
     alignItems: 'center',
@@ -198,6 +205,6 @@ const styles = StyleSheet.create({
   botonAgregarTexto: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
 });

@@ -15,12 +15,11 @@ import { useTurnos } from '@/contextos/TurnosContext';
 import { atiendeEseDia, textoDeDias } from '@/datos/atencion';
 import { HOY } from '@/datos/consultorio';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
-const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 // "Dr. Ricardo Paz" -> "Dr. Paz"
 function medicoCorto(nombre: string) {
@@ -46,6 +45,9 @@ function celdasDelMes(anio: number, mes: number) {
 // Calendario personal de un médico: un mes por vez, con los días que atiende, los de licencia y cuántos turnos tiene
 // cada día. Al tocar un día se ven sus turnos y se le puede dar uno nuevo.
 export default function CalendarioMedico() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { matricula } = useLocalSearchParams<{ matricula: string }>();
   const { medicos } = usePersonal();
   const { turnos } = useTurnos();
@@ -74,9 +76,9 @@ export default function CalendarioMedico() {
       <View style={styles.pantalla}>
         <ScrollView contentContainerStyle={styles.contenido}>
           <Pressable onPress={volver}>
-            <Text style={styles.volver}>‹ Personal</Text>
+            <Text style={styles.volver}>{t.comun.personal}</Text>
           </Pressable>
-          <Text style={styles.detalle}>No se encontró al médico.</Text>
+          <Text style={styles.detalle}>{t.comun.noEncontradoMedico}</Text>
         </ScrollView>
         <MenuSecretaria activa="personal" />
       </View>
@@ -105,13 +107,11 @@ export default function CalendarioMedico() {
   const atiendeEseDiaElegido = atiende(diaElegido);
 
   // Resumen del día elegido, debajo de la fecha.
-  let textoDelDia = `${turnosDelDia.length} turnos · ${horasLibres} horarios libres`;
+  let textoDelDia = t.calendario.resumenDia(turnosDelDia.length, horasLibres);
   if (deLicenciaEseDia) {
-    textoDelDia = 'De licencia este día.';
+    textoDelDia = t.calendario.deLicencia;
   } else if (!atiendeEseDiaElegido) {
-    textoDelDia = 'No atiende este día.';
-  } else if (turnosDelDia.length === 1) {
-    textoDelDia = `1 turno · ${horasLibres} horarios libres`;
+    textoDelDia = t.calendario.noAtiende;
   }
 
   return (
@@ -120,9 +120,9 @@ export default function CalendarioMedico() {
         <Pressable onPress={volver} hitSlop={10}>
           <Text style={styles.volver}>‹ {medicoCorto(medico.nombre)}</Text>
         </Pressable>
-        <Text style={styles.titulo}>Calendario de {medicoCorto(medico.nombre)}</Text>
+        <Text style={styles.titulo}>{t.calendario.titulo(medicoCorto(medico.nombre))}</Text>
         <Text style={styles.subtitulo}>
-          {medico.especialidad} · atiende {textoDeDias(medico.franjas)}
+          {medico.especialidad} · {t.calendario.atiende(textoDeDias(medico.franjas, idioma))}
         </Text>
 
         <View style={styles.mesFila}>
@@ -130,7 +130,7 @@ export default function CalendarioMedico() {
             <Text style={styles.mesFlechaTexto}>‹</Text>
           </Pressable>
           <Text style={styles.mesTitulo}>
-            {MESES[mes]} {anio}
+            {t.nombresCalendario.meses[mes]} {anio}
           </Text>
           <Pressable style={styles.mesFlecha} onPress={() => cambiarMes(1)} hitSlop={8}>
             <Text style={styles.mesFlechaTexto}>›</Text>
@@ -139,7 +139,7 @@ export default function CalendarioMedico() {
 
         <View style={styles.calendario}>
           <View style={styles.semanaFila}>
-            {DIAS_SEMANA.map((nombre) => (
+            {t.nombresCalendario.semana.map((nombre) => (
               <Text key={nombre} style={styles.semanaDia}>
                 {nombre}
               </Text>
@@ -171,35 +171,35 @@ export default function CalendarioMedico() {
                       sinAtencion && styles.celdaNumeroApagado,
                       seleccionado && styles.celdaTextoElegido,
                     ]}>
-                    {detalleFecha(fecha).dia}
+                    {detalleFecha(fecha, idioma).dia}
                   </Text>
                   <Text style={[styles.celdaCantidad, seleccionado && styles.celdaTextoElegido]}>
-                    {cantidad > 0 ? `${cantidad} t.` : ' '}
+                    {cantidad > 0 ? t.calendario.cantidad(cantidad) : ' '}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
         </View>
-        <Text style={styles.leyenda}>Gris: no atiende ese día · Ámbar: de licencia · t. = turnos</Text>
+        <Text style={styles.leyenda}>{t.calendario.leyenda}</Text>
 
         <View style={styles.diaCabecera}>
           <View style={styles.diaCabeceraTextos}>
             <Text style={styles.diaTitulo}>
-              {detalleFecha(diaElegido).diaSemana} {formatearFecha(diaElegido).slice(0, 5)}
+              {detalleFecha(diaElegido, idioma).diaSemana} {formatearFecha(diaElegido).slice(0, 5)}
             </Text>
             <Text style={styles.detalle}>{textoDelDia}</Text>
           </View>
           {atiendeEseDiaElegido && diaElegido >= HOY && (
             <Pressable style={styles.botonNuevo} onPress={() => setNuevoAbierto(true)}>
-              <Text style={styles.botonNuevoTexto}>+ Turno</Text>
+              <Text style={styles.botonNuevoTexto}>{t.calendario.nuevo}</Text>
             </Pressable>
           )}
         </View>
 
         {turnosDelDia.length === 0 && atiendeEseDiaElegido && (
           <View style={styles.panel}>
-            <Text style={styles.detalle}>No tiene turnos este día.</Text>
+            <Text style={styles.detalle}>{t.calendario.sinTurnos}</Text>
           </View>
         )}
         {turnosDelDia.map((turno) => {
@@ -211,13 +211,13 @@ export default function CalendarioMedico() {
               <View style={[styles.barra, { backgroundColor: color }]} />
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.paciente} numberOfLines={1}>
-                  {paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'}
+                  {paciente ? `${paciente.nombre} ${paciente.apellido}` : t.comun.paciente}
                 </Text>
                 <Text style={styles.detalle} numberOfLines={1}>
                   {paciente?.cobertura}
                 </Text>
               </View>
-              <Text style={[styles.estado, { color }]}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
+              <Text style={[styles.estado, { color }]}>{TEXTOS_PACIENTE[idioma].estados[turno.estado]}</Text>
             </Pressable>
           );
         })}
@@ -239,11 +239,11 @@ export default function CalendarioMedico() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -252,17 +252,17 @@ const styles = StyleSheet.create({
   volver: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginBottom: 10,
   },
   titulo: {
     fontSize: 22,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   subtitulo: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   mesFila: {
@@ -276,22 +276,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mesFlechaTexto: {
     fontSize: 22,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontWeight: '700',
   },
   mesTitulo: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   calendario: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 8,
   },
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   grilla: {
     flexDirection: 'row',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBEFD2',
   },
   celdaSinAtencion: {
-    backgroundColor: '#F1F1F1',
+    backgroundColor: c.relleno,
   },
   celdaHoy: {
     borderColor: COLOR_SECRETARIA,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   celdaNumero: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   celdaNumeroApagado: {
     color: '#B5B5B5',
@@ -344,14 +344,14 @@ const styles = StyleSheet.create({
   celdaCantidad: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   celdaTextoElegido: {
     color: '#FFFFFF',
   },
   leyenda: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 8,
   },
   diaCabecera: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   diaTitulo: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   botonNuevo: {
     backgroundColor: COLOR_SECRETARIA,
@@ -380,18 +380,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   panel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   tarjetaTurno: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 12,
     marginBottom: 8,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     width: 46,
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   barra: {
     width: 3,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   paciente: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   estado: {
     fontSize: 12,

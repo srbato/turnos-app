@@ -20,6 +20,10 @@ import { horasDelDia } from '@/datos/atencion';
 import { evaluarRiesgo, nombreNivelRiesgo, textoPuntaje } from '@/datos/ausentismo';
 import { fechaDentroDe } from '@/datos/consultorio';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 const DIAS_A_MIRAR = 30;
 
@@ -35,6 +39,9 @@ type Props = {
 //  - Con turnoDestino: eligió primero al paciente y ahora elige el horario que le propone.
 //  - Con oferta: cambia el horario de una oferta ya enviada.
 export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino = null, onCerrar }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos } = useTurnos();
   const { medicos } = usePersonal();
   const { consultorio } = useConsultorio();
@@ -112,7 +119,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
 
   function nombreDelPaciente(idPaciente: string) {
     const paciente = consultorio.pacientes.find((p) => p.id === idPaciente);
-    return paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente';
+    return paciente ? `${paciente.nombre} ${paciente.apellido}` : t.comun.paciente;
   }
 
   function cerrar() {
@@ -142,14 +149,14 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
   }
 
   // Título y ayuda del Modal: cambian si se reprograma una oferta o se busca horario para un paciente.
-  let titulo = 'Horarios disponibles';
-  let ayuda = `Horarios libres desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del último turno de la lista. Elegí uno y tocá al paciente a quien se lo querés proponer. Cada paciente recibe una sola oferta a la vez.`;
+  let titulo = t.horariosDisponibles.titulo;
+  let ayuda = t.horariosDisponibles.ayuda(DIAS_MINIMOS_ADELANTO);
   if (oferta) {
-    titulo = 'Reprogramar oferta';
-    ayuda = `Elegí otro horario libre, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual del paciente. La oferta pasa al nuevo horario.`;
+    titulo = t.horariosDisponibles.tituloReprogramar;
+    ayuda = t.horariosDisponibles.ayudaReprogramar(DIAS_MINIMOS_ADELANTO);
   } else if (turnoDestino) {
-    titulo = 'Proponer un horario';
-    ayuda = `Horarios libres de ${medico}, desde dentro de ${DIAS_MINIMOS_ADELANTO} días y antes del turno actual de ${nombreDelPaciente(turnoDestino.idPaciente)}.`;
+    titulo = t.horariosDisponibles.tituloProponer;
+    ayuda = t.horariosDisponibles.ayudaProponer(medico ?? '', DIAS_MINIMOS_ADELANTO, nombreDelPaciente(turnoDestino.idPaciente));
   }
 
   return (
@@ -163,12 +170,12 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
           {dias.length === 0 ? (
             <Text style={styles.vacio}>
               {todosOcupados
-                ? 'Todos los pacientes en espera ya tienen una oferta pendiente. Cuando respondan, vas a poder ofrecer otro horario.'
-                : 'No hay horarios libres para ofrecer: el médico no atiende, está de licencia o su agenda está completa.'}
+                ? t.horariosDisponibles.todosOcupados
+                : t.horariosDisponibles.sinHorarios}
             </Text>
           ) : (
             <>
-              <Text style={styles.etiqueta}>Día</Text>
+              <Text style={styles.etiqueta}>{t.horariosDisponibles.dia}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fila}>
                 {dias.map((fecha) => (
                   <Pressable
@@ -179,7 +186,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
                       setHora('');
                     }}>
                     <Text style={[styles.diaEtiqueta, fecha === diaElegido && styles.textoActivo]}>
-                      {detalleFecha(fecha).diaSemana.slice(0, 3).toUpperCase()}
+                      {detalleFecha(fecha, idioma).diaSemana.slice(0, 3).toUpperCase()}
                     </Text>
                     <Text style={[styles.diaNumero, fecha === diaElegido && styles.textoActivo]}>
                       {formatearFecha(fecha).slice(0, 5)}
@@ -188,7 +195,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
                 ))}
               </ScrollView>
 
-              <Text style={styles.etiqueta}>Horario libre</Text>
+              <Text style={styles.etiqueta}>{t.horariosDisponibles.horarioLibre}</Text>
               <View style={styles.horas}>
                 {horasLibres.map((h) => (
                   <Pressable key={h} style={[styles.chip, h === horaElegida && styles.activo]} onPress={() => setHora(h)}>
@@ -199,31 +206,38 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
 
               {destinatario && (
                 <Text style={styles.destino}>
-                  {oferta ? 'La oferta sigue siendo para' : 'Se le propone a'}{' '}
-                  <Text style={styles.destinoNegrita}>{nombreDelPaciente(destinatario.idPaciente)}</Text>, en espera
-                  desde {formatearFecha(destinatario.adelantoDesde ?? '').slice(0, 5)} (su turno actual es el{' '}
-                  {formatearFecha(destinatario.fecha).slice(0, 5)} a las {destinatario.hora} h).
+                  {oferta ? t.horariosDisponibles.sigueSiendoPara : t.horariosDisponibles.sePropone}{' '}
+                  <Text style={styles.destinoNegrita}>{nombreDelPaciente(destinatario.idPaciente)}</Text>
+                  {t.horariosDisponibles.destino(
+                    formatearFecha(destinatario.adelantoDesde ?? '').slice(0, 5),
+                    formatearFecha(destinatario.fecha).slice(0, 5),
+                    destinatario.hora
+                  )}
                 </Text>
               )}
 
               {horario && !turnoFijo && (
                 <>
-                  <Text style={styles.etiqueta}>¿A quién se lo proponés?</Text>
+                  <Text style={styles.etiqueta}>{t.horariosDisponibles.aQuien}</Text>
                   {candidatos.map((candidato) => (
                     <Pressable key={candidato.id} style={styles.candidato} onPress={() => proponerA(candidato.id)}>
                       <View style={styles.candidatoTextos}>
                         <Text style={styles.candidatoNombre}>{nombreDelPaciente(candidato.idPaciente)}</Text>
                         <Text style={styles.candidatoDetalle}>
-                          En espera desde {formatearFecha(candidato.adelantoDesde ?? '').slice(0, 5)} · tiene{' '}
-                          {formatearFecha(candidato.fecha).slice(0, 5)} a las {candidato.hora} h
+                          {t.horariosDisponibles.candidato(
+                            formatearFecha(candidato.adelantoDesde ?? '').slice(0, 5),
+                            formatearFecha(candidato.fecha).slice(0, 5),
+                            candidato.hora
+                          )}
                         </Text>
                         <Text style={styles.candidatoRiesgo}>
-                          Historial: riesgo{' '}
-                          {nombreNivelRiesgo(riesgoDe(candidato.idPaciente)?.nivel)}{' '}
-                          · {textoPuntaje(riesgoDe(candidato.idPaciente)?.puntaje ?? 0)} pts
+                          {t.horariosDisponibles.historial(
+                            nombreNivelRiesgo(riesgoDe(candidato.idPaciente)?.nivel, idioma),
+                            textoPuntaje(riesgoDe(candidato.idPaciente)?.puntaje ?? 0, idioma)
+                          )}
                         </Text>
                       </View>
-                      <Text style={styles.proponer}>Proponer ›</Text>
+                      <Text style={styles.proponer}>{t.horariosDisponibles.proponer}</Text>
                     </Pressable>
                   ))}
                 </>
@@ -233,14 +247,14 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
 
           <View style={styles.filaBotones}>
             <Pressable style={styles.botonSecundario} onPress={cerrar}>
-              <Text style={styles.botonSecundarioTexto}>Cerrar</Text>
+              <Text style={styles.botonSecundarioTexto}>{t.comun.cerrar}</Text>
             </Pressable>
             {(oferta || turnoDestino) && (
               <Pressable
                 disabled={!horario}
                 style={[styles.botonPrimario, !horario && styles.botonDeshabilitado]}
                 onPress={ofrecer}>
-                <Text style={styles.botonPrimarioTexto}>{oferta ? 'Cambiar horario' : 'Proponer horario'}</Text>
+                <Text style={styles.botonPrimarioTexto}>{oferta ? t.horariosDisponibles.cambiar : t.horariosDisponibles.proponerHorario}</Text>
               </Pressable>
             )}
           </View>
@@ -250,7 +264,7 @@ export function HorariosDisponiblesModal({ medico, oferta = null, turnoDestino =
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fondo: {
     flex: 1,
     backgroundColor: 'rgba(26, 24, 21, 0.5)',
@@ -258,7 +272,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
     maxHeight: '90%',
@@ -266,30 +280,30 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   medico: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 4,
   },
   ayuda: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 4,
   },
   vacio: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 16,
   },
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 14,
     marginBottom: 6,
   },
@@ -303,7 +317,7 @@ const styles = StyleSheet.create({
   },
   diaCaja: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -312,16 +326,16 @@ const styles = StyleSheet.create({
   diaEtiqueta: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaNumero: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -329,7 +343,7 @@ const styles = StyleSheet.create({
   chipTexto: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   activo: {
     backgroundColor: COLOR_SECRETARIA,
@@ -341,7 +355,7 @@ const styles = StyleSheet.create({
   candidato: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.chipAzul,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -353,35 +367,35 @@ const styles = StyleSheet.create({
   candidatoNombre: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   candidatoRiesgo: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginTop: 2,
   },
   candidatoDetalle: {
     fontSize: 11,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   proponer: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   destino: {
     fontSize: 12,
-    color: '#5A5A5A',
-    backgroundColor: FONDO_SECRETARIA,
+    color: c.textoSecundario,
+    backgroundColor: c.chipAzul,
     borderRadius: 10,
     padding: 10,
     marginTop: 14,
   },
   destinoNegrita: {
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   filaBotones: {
     flexDirection: 'row',
@@ -397,7 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },

@@ -1,3 +1,5 @@
+import { Idioma } from '@/contextos/PreferenciasContext';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 import { Turno } from '@/contextos/TurnosContext';
 import { Paciente } from '@/datos/consultorio';
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PENDIENTE } from '@/constantes/colores';
@@ -74,19 +76,21 @@ export function evaluarRiesgo(
 }
 
 // El puntaje como texto con coma ("1,8"), sin decimal si es entero ("2").
-export function textoPuntaje(puntaje: number) {
-  return Number.isInteger(puntaje) ? String(puntaje) : String(puntaje).replace('.', ',');
+// El idioma es opcional: si no se pasa, sale con coma decimal como siempre ("1,5").
+export function textoPuntaje(puntaje: number, idioma: Idioma = 'es') {
+  return Number.isInteger(puntaje) ? String(puntaje) : String(puntaje).replace('.', TEXTOS_SECRETARIA[idioma].decimal);
 }
 
 // Nombre del nivel para mostrar en pantalla: "alto", "medio" o "bajo".
-export function nombreNivelRiesgo(nivel: NivelRiesgo | undefined) {
+export function nombreNivelRiesgo(nivel: NivelRiesgo | undefined, idioma: Idioma = 'es') {
+  const nombres = TEXTOS_SECRETARIA[idioma].niveles;
   if (nivel === 'alto') {
-    return 'alto';
+    return nombres.alto;
   }
   if (nivel === 'en-riesgo') {
-    return 'medio';
+    return nombres.medio;
   }
-  return 'bajo';
+  return nombres.bajo;
 }
 
 // Color del nivel: rojo (alto), ámbar (medio) o verde (bajo).

@@ -11,15 +11,12 @@ import { useTurnos } from '@/contextos/TurnosContext';
 import { EstadoTurno, HOY } from '@/datos/consultorio';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, formatearFecha } from '@/utilidades/turnos';
 import { sinRepetidos } from '@/utilidades/listas';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 type Filtro = 'todos' | EstadoTurno;
-
-const FILTROS: { id: Filtro; etiqueta: string }[] = [
-  { id: 'todos', etiqueta: 'Todos' },
-  { id: 'atendido', etiqueta: 'Atendidos' },
-  { id: 'ausente', etiqueta: 'No asistió' },
-  { id: 'cancelado', etiqueta: 'Cancelados' },
-];
 
 // "Dra. Lucía Fernández" -> "Dra. Fernández"
 function medicoCorto(nombre: string) {
@@ -31,6 +28,15 @@ function medicoCorto(nombre: string) {
 // motivo cuando lo canceló el sistema o Secretaría por riesgo de inasistencia. Los turnos de hoy en adelante que siguen
 // vigentes están en las agendas, no acá.
 export default function HistorialTurnos() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
+  const FILTROS: { id: Filtro; etiqueta: string }[] = [
+    { id: 'todos', etiqueta: t.historial.filtros.todos },
+    { id: 'atendido', etiqueta: t.historial.filtros.atendido },
+    { id: 'ausente', etiqueta: t.historial.filtros.ausente },
+    { id: 'cancelado', etiqueta: t.historial.filtros.cancelado },
+  ];
   const { turnos } = useTurnos();
   const { consultorio } = useConsultorio();
   const pacientes = consultorio.pacientes;
@@ -39,7 +45,7 @@ export default function HistorialTurnos() {
 
   function nombreDelPaciente(idPaciente: string) {
     const paciente = pacientes.find((p) => p.id === idPaciente);
-    return paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente';
+    return paciente ? `${paciente.nombre} ${paciente.apellido}` : t.comun.paciente;
   }
 
   // Los horarios libres (turnos sin paciente) no son parte del historial.
@@ -62,25 +68,23 @@ export default function HistorialTurnos() {
     <View style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/secretaria/alertas'))} hitSlop={10}>
-          <Text style={styles.volver}>‹ Alertas</Text>
+          <Text style={styles.volver}>{t.historial.volver}</Text>
         </Pressable>
-        <Text style={styles.titulo}>Historial de turnos</Text>
-        <Text style={styles.subtitulo}>
-          Los turnos que ya pasaron y los que se cancelaron, con el motivo. Tocá uno para ver la ficha del paciente.
-        </Text>
+        <Text style={styles.titulo}>{t.historial.titulo}</Text>
+        <Text style={styles.subtitulo}>{t.historial.subtitulo}</Text>
 
         <View style={styles.resumen}>
           <View style={styles.resumenItem}>
             <Text style={[styles.resumenNumero, { color: COLORES_ESTADO.atendido }]}>{cantidad('atendido')}</Text>
-            <Text style={styles.resumenTexto}>Atendidos</Text>
+            <Text style={styles.resumenTexto}>{t.historial.atendidos}</Text>
           </View>
           <View style={styles.resumenItem}>
             <Text style={[styles.resumenNumero, { color: COLORES_ESTADO.ausente }]}>{cantidad('ausente')}</Text>
-            <Text style={styles.resumenTexto}>No asistieron</Text>
+            <Text style={styles.resumenTexto}>{t.historial.noAsistieron}</Text>
           </View>
           <View style={styles.resumenItem}>
             <Text style={[styles.resumenNumero, { color: COLOR_CANCELADO }]}>{cantidad('cancelado')}</Text>
-            <Text style={styles.resumenTexto}>Cancelados</Text>
+            <Text style={styles.resumenTexto}>{t.historial.cancelados}</Text>
           </View>
         </View>
 
@@ -88,7 +92,7 @@ export default function HistorialTurnos() {
           style={styles.buscador}
           value={busqueda}
           onChangeText={setBusqueda}
-          placeholder="Buscar por paciente o médico"
+          placeholder={t.historial.buscar}
           placeholderTextColor="#8FB9B5"
         />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
@@ -104,14 +108,14 @@ export default function HistorialTurnos() {
 
         {visibles.length === 0 && (
           <View style={styles.panel}>
-            <Text style={styles.detalle}>No hay turnos en el historial con ese filtro.</Text>
+            <Text style={styles.detalle}>{t.historial.vacio}</Text>
           </View>
         )}
 
         {dias.map((dia) => (
           <View key={dia}>
             <Text style={styles.diaTitulo}>
-              {detalleFecha(dia).diaSemana} {formatearFecha(dia)}
+              {detalleFecha(dia, idioma).diaSemana} {formatearFecha(dia)}
             </Text>
             {visibles
               .filter((turno) => turno.fecha === dia)
@@ -135,7 +139,7 @@ export default function HistorialTurnos() {
                         <Text style={styles.motivo}>{turno.motivoCancelacion}</Text>
                       )}
                     </View>
-                    <Text style={[styles.estado, { color }]}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
+                    <Text style={[styles.estado, { color }]}>{TEXTOS_PACIENTE[idioma].estados[turno.estado]}</Text>
                   </Pressable>
                 );
               })}
@@ -148,11 +152,11 @@ export default function HistorialTurnos() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -161,17 +165,17 @@ const styles = StyleSheet.create({
   volver: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginBottom: 10,
   },
   titulo: {
     fontSize: 24,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   subtitulo: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 4,
     marginBottom: 14,
   },
@@ -182,7 +186,7 @@ const styles = StyleSheet.create({
   },
   resumenItem: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',
@@ -193,17 +197,17 @@ const styles = StyleSheet.create({
   },
   resumenTexto: {
     fontSize: 11,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   buscador: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   chipsFila: {
     gap: 8,
@@ -211,8 +215,8 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
-    backgroundColor: '#FFFFFF',
+    borderColor: c.bordeAcento,
+    backgroundColor: c.tarjeta,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -224,27 +228,27 @@ const styles = StyleSheet.create({
   chipTexto: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   chipTextoActivo: {
     color: '#FFFFFF',
   },
   panel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
   },
   diaTitulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 12,
     marginBottom: 8,
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 12,
     marginBottom: 8,
@@ -253,7 +257,7 @@ const styles = StyleSheet.create({
     width: 46,
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   barra: {
     width: 3,
@@ -268,11 +272,11 @@ const styles = StyleSheet.create({
   paciente: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   motivo: {

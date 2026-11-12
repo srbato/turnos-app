@@ -188,7 +188,7 @@ export default function FichaPaciente() {
             <View key={turno.id} style={styles.tarjeta}>
               <View style={styles.filaTurno}>
                 <Text style={styles.valor}>
-                  {formatearFecha(turno.fecha)} · {turno.hora} h
+                  {formatearFecha(turno.fecha)} · {idioma === 'es' ? `${turno.hora} h` : turno.hora}
                 </Text>
                 <View style={[styles.chipEstado, { backgroundColor: COLORES_ESTADO[turno.estado] }]}>
                   <Text style={styles.chipEstadoTexto}>{t.estados[turno.estado]}</Text>

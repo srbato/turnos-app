@@ -19,6 +19,10 @@ import { FranjaHoraria } from '@/datos/atencion';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { fechaDentroDe, HOY } from '@/datos/consultorio';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 const COLOR_BAJA = '#8A8A8A';
 
@@ -30,6 +34,9 @@ function medicoCorto(nombre: string) {
 
 // Ficha de un médico para Secretaría: datos editables, estado (activo / licencia) y baja.
 export default function FichaMedico() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { medicos, editarMedico } = usePersonal();
   const { turnos } = useTurnos();
@@ -48,8 +55,8 @@ export default function FichaMedico() {
     return (
       <View style={styles.pantalla}>
         <Pressable style={styles.contenido} onPress={() => router.navigate('/secretaria/personal')}>
-          <Text style={styles.volver}>‹ Personal</Text>
-          <Text style={styles.detalle}>No se encontró al médico.</Text>
+          <Text style={styles.volver}>{t.comun.personal}</Text>
+          <Text style={styles.detalle}>{t.comun.noEncontradoMedico}</Text>
         </Pressable>
         <MenuSecretaria activa="personal" />
       </View>
@@ -62,26 +69,21 @@ export default function FichaMedico() {
       turno.fecha >= HOY &&
       (turno.estado === 'pendiente' || turno.estado === 'confirmado')
   ).length;
-  let textoProximos = `Tiene ${proximos} turnos próximos.`;
-  if (proximos === 0) {
-    textoProximos = 'No tiene turnos próximos.';
-  } else if (proximos === 1) {
-    textoProximos = 'Tiene 1 turno próximo.';
-  }
+  const textoProximos = t.ficha.proximos(proximos);
 
   // Una licencia que ya terminó cuenta como activo.
   const efectivo = estadoEfectivo(medico);
   const deLicencia = efectivo === 'licencia';
   let colorEstado = COLOR_BAJA;
-  let etiquetaEstado = 'Baja';
+  let etiquetaEstado = t.ficha.etiquetaEstado.baja;
   if (efectivo === 'activo') {
     colorEstado = COLOR_CONFIRMADO;
-    etiquetaEstado = 'Activo';
+    etiquetaEstado = t.ficha.etiquetaEstado.activo;
   } else if (efectivo === 'licencia') {
     colorEstado = COLOR_PENDIENTE;
-    etiquetaEstado = 'Licencia';
+    etiquetaEstado = t.ficha.etiquetaEstado.licencia;
     if (medico.licenciaHasta) {
-      etiquetaEstado = etiquetaEstado + ' · vuelve el ' + formatearFecha(medico.licenciaHasta).slice(0, 5);
+      etiquetaEstado = etiquetaEstado + t.ficha.etiquetaLicencia(formatearFecha(medico.licenciaHasta).slice(0, 5));
     }
   }
   // Los próximos 60 días, para elegir cuándo vuelve.
@@ -105,12 +107,12 @@ export default function FichaMedico() {
 
   function guardar() {
     if (especialidad.trim() === '' || matricula.trim() === '' || sala.trim() === '') {
-      setMensaje({ texto: 'Completá todos los campos.', esError: true });
+      setMensaje({ texto: t.ficha.completar, esError: true });
       return;
     }
     guardarCambios(
       { especialidad: especialidad.trim(), matricula: matricula.trim(), sala: sala.trim() },
-      'Cambios guardados ✓'
+      t.ficha.guardado
     );
   }
 
@@ -143,7 +145,7 @@ export default function FichaMedico() {
     <PantallaConTeclado style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
         <Pressable onPress={() => router.navigate('/secretaria/personal')} hitSlop={10}>
-          <Text style={styles.volver}>‹ Personal</Text>
+          <Text style={styles.volver}>{t.comun.personal}</Text>
         </Pressable>
 
         <View style={styles.encabezado}>
@@ -159,15 +161,13 @@ export default function FichaMedico() {
           </View>
         </View>
 
-        <Text style={styles.seccion}>ESTADO</Text>
+        <Text style={styles.seccion}>{t.ficha.estado}</Text>
         <View style={styles.tarjeta}>
           {medico.estado === 'baja' ? (
             <>
-              <Text style={styles.detalleOscuro}>
-                Este médico está dado de baja: no aparece en las agendas ni se le pueden asignar turnos.
-              </Text>
+              <Text style={styles.detalleOscuro}>{t.ficha.estadoBaja}</Text>
               <Pressable style={styles.botonPrimario} onPress={() => cambiarEstado('activo')}>
-                <Text style={styles.botonPrimarioTexto}>Reactivar médico</Text>
+                <Text style={styles.botonPrimarioTexto}>{t.ficha.reactivar}</Text>
               </Pressable>
             </>
           ) : (
@@ -178,7 +178,7 @@ export default function FichaMedico() {
                   onPress={() => cambiarEstado('activo')}>
                   <Text
                     style={[styles.segmentoTexto, !deLicencia && !eligiendoLicencia && styles.segmentoTextoActivo]}>
-                    Activo
+                    {t.ficha.activo}
                   </Text>
                 </Pressable>
                 <Pressable
@@ -186,7 +186,7 @@ export default function FichaMedico() {
                   onPress={() => !deLicencia && setEligiendoLicencia(true)}>
                   <Text
                     style={[styles.segmentoTexto, (deLicencia || eligiendoLicencia) && styles.segmentoTextoActivo]}>
-                    De licencia
+                    {t.ficha.deLicencia}
                   </Text>
                 </Pressable>
               </View>
@@ -195,24 +195,20 @@ export default function FichaMedico() {
                 <>
                   <Text style={styles.vuelta}>
                     {medico.licenciaHasta
-                      ? `Vuelve a atender el ${detalleFecha(medico.licenciaHasta).diaSemana} ${formatearFecha(medico.licenciaHasta)}.`
-                      : 'Licencia sin fecha de vuelta.'}
+                      ? t.ficha.vuelve(`${detalleFecha(medico.licenciaHasta, idioma).diaSemana} ${formatearFecha(medico.licenciaHasta)}`)
+                      : t.ficha.sinFechaVuelta}
                   </Text>
-                  <Text style={styles.ayuda}>
-                    Su agenda aparece bloqueada hasta ese día. Los pacientes pueden sacar turno con él desde que vuelve.
-                  </Text>
+                  <Text style={styles.ayuda}>{t.ficha.agendaBloqueada}</Text>
                   <Pressable style={styles.botonSecundario} onPress={() => setEligiendoLicencia(true)}>
-                    <Text style={styles.botonSecundarioTexto}>Cambiar fecha de vuelta</Text>
+                    <Text style={styles.botonSecundarioTexto}>{t.ficha.cambiarFecha}</Text>
                   </Pressable>
                 </>
               )}
 
               {eligiendoLicencia && (
                 <>
-                  <Text style={styles.vuelta}>¿Cuándo vuelve a atender?</Text>
-                  <Text style={styles.ayuda}>
-                    Elegí el primer día en que ya atiende. Hasta entonces está de licencia.
-                  </Text>
+                  <Text style={styles.vuelta}>{t.ficha.cuandoVuelve}</Text>
+                  <Text style={styles.ayuda}>{t.ficha.elegiPrimerDia}</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.diasFila}>
                     {diasParaVolver.map((dia) => (
                       <Pressable
@@ -220,13 +216,13 @@ export default function FichaMedico() {
                         style={[styles.diaCaja, dia === fechaVuelta && styles.diaCajaActiva]}
                         onPress={() => setFechaVuelta(dia)}>
                         <Text style={[styles.diaEtiqueta, dia === fechaVuelta && styles.diaTextoActivo]}>
-                          {detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
+                          {detalleFecha(dia, idioma).diaSemana.slice(0, 3).toUpperCase()}
                         </Text>
                         <Text style={[styles.diaNumero, dia === fechaVuelta && styles.diaTextoActivo]}>
-                          {detalleFecha(dia).dia}
+                          {detalleFecha(dia, idioma).dia}
                         </Text>
                         <Text style={[styles.diaMes, dia === fechaVuelta && styles.diaTextoActivo]}>
-                          {detalleFecha(dia).mes}
+                          {detalleFecha(dia, idioma).mes}
                         </Text>
                       </Pressable>
                     ))}
@@ -238,19 +234,19 @@ export default function FichaMedico() {
                         setEligiendoLicencia(false);
                         setFechaVuelta('');
                       }}>
-                      <Text style={styles.botonSecundarioTexto}>Cancelar</Text>
+                      <Text style={styles.botonSecundarioTexto}>{t.comun.cancelar}</Text>
                     </Pressable>
                     <Pressable
                       disabled={fechaVuelta === ''}
                       style={[styles.botonConfirmarLicencia, fechaVuelta === '' && styles.botonDeshabilitado]}
                       onPress={confirmarLicencia}>
-                      <Text style={styles.botonPrimarioTexto}>Confirmar licencia</Text>
+                      <Text style={styles.botonPrimarioTexto}>{t.ficha.confirmarLicencia}</Text>
                     </Pressable>
                   </View>
                 </>
               )}
 
-              {!deLicencia && !eligiendoLicencia && <Text style={styles.ayuda}>Atiende con normalidad.</Text>}
+              {!deLicencia && !eligiendoLicencia && <Text style={styles.ayuda}>{t.ficha.atiendeNormal}</Text>}
               <Text style={styles.ayuda}>{textoProximos}</Text>
             </>
           )}
@@ -261,34 +257,31 @@ export default function FichaMedico() {
             onPress={() =>
               router.push(`/secretaria/calendario-medico?matricula=${encodeURIComponent(medico.matricula)}`)
             }>
-            <Text style={styles.botonSecundarioTexto}>▦  Ver todo el calendario de {medicoCorto(medico.nombre)}</Text>
+            <Text style={styles.botonSecundarioTexto}>{t.ficha.verCalendario(medicoCorto(medico.nombre))}</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.seccion}>HORARIOS DE ATENCIÓN</Text>
+        <Text style={styles.seccion}>{t.ficha.horariosTitulo}</Text>
         <View style={styles.tarjeta}>
           <EditorHorarios franjas={medico.franjas} onCambiar={cambiarHorarios} />
-          <Text style={styles.ayuda}>
-            Los cambios se guardan solos. Si quitás un horario, los turnos que caían ahí se cancelan y quedan en Alertas
-            para que avises a los pacientes.
-          </Text>
+          <Text style={styles.ayuda}>{t.ficha.horariosNota}</Text>
         </View>
 
-        <Text style={styles.seccion}>DATOS DEL MÉDICO</Text>
+        <Text style={styles.seccion}>{t.ficha.datos}</Text>
         <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Nombre y apellido</Text>
+          <Text style={styles.etiqueta}>{t.ficha.nombre}</Text>
           <View style={[styles.campo, styles.campoBloqueado]}>
             <Text style={styles.campoBloqueadoTexto}>{medico.nombre}</Text>
           </View>
-          <Text style={styles.nota}>No se puede cambiar: figura en los turnos ya cargados.</Text>
+          <Text style={styles.nota}>{t.ficha.nombreNota}</Text>
 
-          <Text style={styles.etiqueta}>Especialidad</Text>
+          <Text style={styles.etiqueta}>{t.ficha.especialidad}</Text>
           <TextInput style={styles.campo} value={especialidad} onChangeText={setEspecialidad} maxLength={40} />
 
-          <Text style={styles.etiqueta}>Matrícula</Text>
+          <Text style={styles.etiqueta}>{t.ficha.matricula}</Text>
           <TextInput style={styles.campo} value={matricula} onChangeText={setMatricula} maxLength={20} />
 
-          <Text style={styles.etiqueta}>Sala</Text>
+          <Text style={styles.etiqueta}>{t.ficha.sala}</Text>
           <TextInput style={styles.campo} value={sala} onChangeText={setSala} maxLength={30} />
 
 
@@ -298,13 +291,13 @@ export default function FichaMedico() {
             </Text>
           )}
           <Pressable style={styles.botonPrimario} onPress={guardar}>
-            <Text style={styles.botonPrimarioTexto}>Guardar cambios</Text>
+            <Text style={styles.botonPrimarioTexto}>{t.comun.guardarCambios}</Text>
           </Pressable>
         </View>
 
         {medico.estado !== 'baja' && (
           <Pressable style={styles.botonBaja} onPress={() => setConfirmandoBaja(true)}>
-            <Text style={styles.botonBajaTexto}>Dar de baja al médico</Text>
+            <Text style={styles.botonBajaTexto}>{t.ficha.darDeBaja}</Text>
           </Pressable>
         )}
       </ScrollView>
@@ -314,22 +307,19 @@ export default function FichaMedico() {
       <Modal visible={confirmandoBaja} animationType="fade" transparent onRequestClose={() => setConfirmandoBaja(false)}>
         <View style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
-            <Text style={styles.modalTitulo}>¿Dar de baja a {medico.nombre}?</Text>
-            <Text style={styles.detalleOscuro}>
-              Deja de aparecer en las agendas y no se le podrán asignar turnos. Su historial se conserva y se puede
-              reactivar cuando quieras.
-            </Text>
+            <Text style={styles.modalTitulo}>{t.ficha.bajaTitulo(medico.nombre)}</Text>
+            <Text style={styles.detalleOscuro}>{t.ficha.bajaTexto}</Text>
             {proximos > 0 && (
               <Text style={[styles.detalleOscuro, styles.aviso]}>
-                {textoProximos} Se cancelan automáticamente y quedan en Alertas para que avises a los pacientes.
+                {t.ficha.bajaCancela(textoProximos)}
               </Text>
             )}
             <View style={styles.filaBotones}>
               <Pressable style={styles.botonSecundarioMitad} onPress={() => setConfirmandoBaja(false)}>
-                <Text style={styles.botonSecundarioTexto}>Volver</Text>
+                <Text style={styles.botonSecundarioTexto}>{t.comun.volver}</Text>
               </Pressable>
               <Pressable style={styles.botonConfirmarBaja} onPress={darDeBaja}>
-                <Text style={styles.botonPrimarioTexto}>Sí, dar de baja</Text>
+                <Text style={styles.botonPrimarioTexto}>{t.ficha.siBaja}</Text>
               </Pressable>
             </View>
           </View>
@@ -339,11 +329,11 @@ export default function FichaMedico() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -352,7 +342,7 @@ const styles = StyleSheet.create({
   volver: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   encabezado: {
     flexDirection: 'row',
@@ -381,11 +371,11 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chipEstado: {
@@ -402,19 +392,19 @@ const styles = StyleSheet.create({
   seccion: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     letterSpacing: 0.5,
     marginTop: 20,
     marginBottom: 8,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 14,
   },
   segmentos: {
     flexDirection: 'row',
-    backgroundColor: '#D5ECE9',
+    backgroundColor: c.chipAzul,
     borderRadius: 12,
     padding: 3,
   },
@@ -430,7 +420,7 @@ const styles = StyleSheet.create({
   segmentoTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   segmentoTextoActivo: {
     color: '#FFFFFF',
@@ -438,7 +428,7 @@ const styles = StyleSheet.create({
   vuelta: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 12,
   },
   diasFila: {
@@ -448,7 +438,7 @@ const styles = StyleSheet.create({
   diaCaja: {
     width: 56,
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 12,
     paddingVertical: 6,
     alignItems: 'center',
@@ -460,17 +450,17 @@ const styles = StyleSheet.create({
   diaEtiqueta: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaNumero: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   diaMes: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaTextoActivo: {
     color: '#FFFFFF',
@@ -492,31 +482,31 @@ const styles = StyleSheet.create({
   },
   ayuda: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 10,
   },
   detalleOscuro: {
     fontSize: 14,
-    color: '#3A3A3A',
+    color: c.texto,
   },
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 12,
     marginBottom: 6,
   },
   campo: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   campoBloqueado: {
-    backgroundColor: '#F2F5F5',
+    backgroundColor: c.relleno,
   },
   campoBloqueadoTexto: {
     fontSize: 14,
@@ -524,7 +514,7 @@ const styles = StyleSheet.create({
   },
   nota: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 4,
   },
   mensaje: {
@@ -564,14 +554,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
   },
   modalTitulo: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 10,
   },
   aviso: {
@@ -608,7 +598,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },

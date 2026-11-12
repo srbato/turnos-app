@@ -399,7 +399,7 @@ export default function AgendaMedico() {
                   </Pressable>
                 </View>
                 <Text style={styles.modalDato}>
-                  {formatearFecha(turnoSeleccionado.fecha)} · {turnoSeleccionado.hora} h ·{' '}
+                  {formatearFecha(turnoSeleccionado.fecha)} · {idioma === 'es' ? `${turnoSeleccionado.hora} h` : turnoSeleccionado.hora} ·{' '}
                   {pacienteSeleccionado.cobertura} {pacienteSeleccionado.plan}
                 </Text>
 

@@ -12,6 +12,10 @@ import { horasReservadas } from '@/datos/adelantos';
 import { Paciente } from '@/datos/consultorio';
 import { atiendeEseDia } from '@/datos/atencion';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 // "Dra. Lucía Fernández" -> "Fernández"
 export function apellidoDelMedico(nombreCompleto: string) {
@@ -43,6 +47,9 @@ export function NuevoTurnoSecretaria({
   medicoFijo,
   color = COLOR_SECRETARIA,
 }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos, agregarTurno } = useTurnos();
   const { ofertas } = useAdelantos();
   const { medicos } = usePersonal();
@@ -126,7 +133,7 @@ export function NuevoTurnoSecretaria({
       <View style={styles.fondo}>
         <View style={styles.tarjeta}>
           <Text style={styles.titulo}>
-            Nuevo turno · {detalleFecha(fecha).diaSemana} {formatearFecha(fecha).slice(0, 5)}
+            {t.nuevoTurno.titulo(detalleFecha(fecha, idioma).diaSemana, formatearFecha(fecha).slice(0, 5))}
           </Text>
 
           {pacienteElegido && (
@@ -135,14 +142,14 @@ export function NuevoTurnoSecretaria({
                 {pacienteElegido.nombre} {pacienteElegido.apellido}
               </Text>
               <Text style={styles.filaPacienteDetalle}>
-                DNI {pacienteElegido.dni} · {pacienteElegido.cobertura}
+                {t.nuevoTurno.dni(pacienteElegido.dni, pacienteElegido.cobertura)}
               </Text>
             </View>
           )}
 
           {elegirDia && (
             <>
-              <Text style={styles.etiquetaCampo}>Día</Text>
+              <Text style={styles.etiquetaCampo}>{t.nuevoTurno.dia}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
                 {dias.map((dia) => (
                   <Pressable
@@ -150,7 +157,7 @@ export function NuevoTurnoSecretaria({
                     style={[styles.chip, dia === fecha && { backgroundColor: color, borderColor: color }]}
                     onPress={() => elegirFecha(dia)}>
                     <Text style={[styles.chipTexto, dia === fecha && styles.chipTextoActivo]}>
-                      {detalleFecha(dia).diaSemana.slice(0, 3)} {detalleFecha(dia).dia} {detalleFecha(dia).mes}
+                      {detalleFecha(dia, idioma).diaSemana.slice(0, 3)} {detalleFecha(dia, idioma).dia} {detalleFecha(dia, idioma).mes}
                     </Text>
                   </Pressable>
                 ))}
@@ -158,9 +165,9 @@ export function NuevoTurnoSecretaria({
             </>
           )}
 
-          <Text style={styles.etiquetaCampo}>Médico</Text>
+          <Text style={styles.etiquetaCampo}>{t.nuevoTurno.medico}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
-            {medicosActivos.length === 0 && <Text style={styles.sinOpciones}>Ningún médico atiende ese día.</Text>}
+            {medicosActivos.length === 0 && <Text style={styles.sinOpciones}>{t.nuevoTurno.ninguno}</Text>}
             {medicosActivos.map((m) => (
               <Pressable
                 key={m.nombre}
@@ -176,7 +183,7 @@ export function NuevoTurnoSecretaria({
             ))}
           </ScrollView>
 
-          <Text style={styles.etiquetaCampo}>Horario libre</Text>
+          <Text style={styles.etiquetaCampo}>{t.nuevoTurno.horario}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsFila}>
             {medico !== '' &&
               horasOfrecidas.map((h) => (
@@ -191,12 +198,12 @@ export function NuevoTurnoSecretaria({
 
           {!elegirDia && (
             <>
-              <Text style={styles.etiquetaCampo}>Paciente</Text>
+              <Text style={styles.etiquetaCampo}>{t.nuevoTurno.paciente}</Text>
               <TextInput
                 style={styles.buscador}
                 value={busqueda}
                 onChangeText={setBusqueda}
-                placeholder="Buscar por nombre"
+                placeholder={t.nuevoTurno.buscar}
                 placeholderTextColor="#8FB9B5"
               />
               {/* Va en modo "expandido" y no en Modal: este componente ya está dentro de un Modal. */}
@@ -205,10 +212,10 @@ export function NuevoTurnoSecretaria({
                   opciones={pacientesFiltrados.map(aOpcion)}
                   elegida={pacienteSeleccionado ? aOpcion(pacienteSeleccionado) : undefined}
                   onElegir={setIdPaciente}
-                  placeholder="Elegí un paciente"
+                  placeholder={t.nuevoTurno.elegirPaciente}
                   modo="expandido"
                   color={color}
-                  textoVacio="Ningún paciente coincide con la búsqueda."
+                  textoVacio={t.nuevoTurno.sinCoincidencias}
                 />
               </View>
             </>
@@ -218,13 +225,13 @@ export function NuevoTurnoSecretaria({
 
           <View style={styles.filaBotones}>
             <Pressable style={[styles.botonSecundario, { borderColor: color }]} onPress={onCerrar}>
-              <Text style={[styles.botonSecundarioTexto, { color }]}>Cancelar</Text>
+              <Text style={[styles.botonSecundarioTexto, { color }]}>{t.comun.cancelar}</Text>
             </Pressable>
             <Pressable
               disabled={!puedeGuardar}
               style={[styles.botonPrimario, { backgroundColor: color }, !puedeGuardar && styles.botonDeshabilitado]}
               onPress={guardar}>
-              <Text style={styles.botonPrimarioTexto}>Asignar turno</Text>
+              <Text style={styles.botonPrimarioTexto}>{t.nuevoTurno.asignar}</Text>
             </Pressable>
           </View>
         </View>
@@ -233,7 +240,7 @@ export function NuevoTurnoSecretaria({
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fondo: {
     flex: 1,
     backgroundColor: 'rgba(26, 24, 21, 0.5)',
@@ -241,7 +248,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
     maxHeight: '90%',
@@ -249,14 +256,14 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   etiquetaCampo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 12,
     marginBottom: 6,
   },
@@ -265,7 +272,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -277,19 +284,19 @@ const styles = StyleSheet.create({
   chipTexto: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   chipTextoActivo: {
     color: '#FFFFFF',
   },
   buscador: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   selectorPaciente: {
     marginTop: 8,
@@ -297,10 +304,10 @@ const styles = StyleSheet.create({
   filaPacienteNombre: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   pacienteFijo: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.relleno,
     borderRadius: 10,
     paddingVertical: 9,
     paddingHorizontal: 10,
@@ -308,12 +315,12 @@ const styles = StyleSheet.create({
   },
   sinOpciones: {
     fontSize: 12,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     paddingVertical: 8,
   },
   filaPacienteDetalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   error: {
     color: '#C0392B',
@@ -335,7 +342,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },

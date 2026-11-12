@@ -20,13 +20,13 @@ import { ofertasVigentes } from '@/datos/adelantos';
 import { colorNivelRiesgo, evaluarRiesgo, nombreNivelRiesgo, PUNTOS_POR_ASISTENCIA, PUNTOS_POR_CONFIRMACION, PUNTOS_POR_FALTA, textoPuntaje } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 // Cómo suman y restan los puntos de riesgo (ver datos/ausentismo.ts).
-const REGLAS = [
-  { puntos: `+${textoPuntaje(PUNTOS_POR_FALTA)}`, texto: 'Cada falta (no asistió)' },
-  { puntos: `−${textoPuntaje(PUNTOS_POR_ASISTENCIA)}`, texto: 'Cada vez que asistió' },
-  { puntos: `−${textoPuntaje(PUNTOS_POR_CONFIRMACION)}`, texto: 'Cada turno que confirmó' },
-];
+
 
 // "Dra. Lucía Fernández" -> "Dra. Fernández"
 function medicoCorto(nombre: string) {
@@ -38,17 +38,17 @@ function medicoCorto(nombre: string) {
 // están todos hasta que se confirmen. La idea: avisarles para que confirmen y, si no responden, liberar el horario.
 
 // Texto que se suma al panel de historial cuando hay turnos cancelados por el sistema o por riesgo.
-function avisoCancelados(cantidad: number) {
-  if (cantidad === 0) {
-    return '';
-  }
-  if (cantidad === 1) {
-    return ' Hay 1 turno próximo cancelado por el sistema o por riesgo: avisales a los pacientes.';
-  }
-  return ` Hay ${cantidad} turnos próximos cancelados por el sistema o por riesgo: avisales a los pacientes.`;
-}
+
 
 export default function AlertasSecretaria() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
+  const REGLAS = [
+    { puntos: `+${textoPuntaje(PUNTOS_POR_FALTA, idioma)}`, texto: t.alertas.reglas.falta },
+    { puntos: `−${textoPuntaje(PUNTOS_POR_ASISTENCIA, idioma)}`, texto: t.alertas.reglas.asistencia },
+    { puntos: `−${textoPuntaje(PUNTOS_POR_CONFIRMACION, idioma)}`, texto: t.alertas.reglas.confirmacion },
+  ];
   const { turnos, cambiarEstadoTurno, cancelarConMotivo, enviarAviso } = useTurnos();
   const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
@@ -71,15 +71,15 @@ export default function AlertasSecretaria() {
   async function cancelarPorRiesgo(id: string) {
     const error = await cancelarConMotivo(
       id,
-      `Cancelado por riesgo de inasistencia: no confirmó tras ${avisosAntesDeActuar} avisos. El horario quedó libre para la lista de espera.`
+      t.alertas.motivoCancelacion(avisosAntesDeActuar)
     );
     mostrarError(error);
   }
 
   function cuando(fecha: string, hora: string) {
-    if (fecha === HOY) return `Hoy ${hora} h`;
-    if (fecha === manana) return `Mañana ${hora} h`;
-    return `${detalleFecha(fecha).diaSemana.slice(0, 3)} ${formatearFecha(fecha).slice(0, 5)} · ${hora} h`;
+    if (fecha === HOY) return t.alertas.hoy(hora);
+    if (fecha === manana) return t.alertas.manana(hora);
+    return TEXTOS_PACIENTE[idioma].aviso.otroDia(detalleFecha(fecha, idioma).diaSemana.slice(0, 3), formatearFecha(fecha).slice(0, 5), hora);
   }
 
   // Turnos que el sistema canceló solo porque el médico no atiende ese día (cambió sus días, licencia, baja o error de
@@ -95,29 +95,24 @@ export default function AlertasSecretaria() {
   return (
     <View style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido}>
-        <Text style={styles.titulo}>Alertas</Text>
-        <Text style={styles.subtitulo}>
-          Turnos que todavía no confirmaron los pacientes. Avisales para que confirmen; si no responden, liberá el
-          horario.
-        </Text>
+        <Text style={styles.titulo}>{t.alertas.titulo}</Text>
+        <Text style={styles.subtitulo}>{t.alertas.subtitulo}</Text>
 
         {ofertasEnCurso > 0 && (
           <Pressable style={styles.banner} onPress={() => router.replace('/secretaria/espera')}>
             <Text style={styles.bannerTexto}>
-              {ofertasEnCurso === 1
-                ? 'Hay 1 oferta de adelanto esperando respuesta'
-                : `Hay ${ofertasEnCurso} ofertas de adelanto esperando respuesta`}
+              {t.alertas.ofertas(ofertasEnCurso)}
             </Text>
             <Text style={styles.bannerFlecha}>›</Text>
           </Pressable>
         )}
 
-        <Text style={styles.seccion}>SIN CONFIRMAR ({sinConfirmar.length})</Text>
+        <Text style={styles.seccion}>{t.alertas.sinConfirmarTitulo(sinConfirmar.length)}</Text>
 
         {sinConfirmar.length === 0 && (
           <View style={styles.tarjeta}>
-            <Text style={styles.vacioTitulo}>Todo en orden</Text>
-            <Text style={styles.detalle}>No hay turnos pendientes de confirmar.</Text>
+            <Text style={styles.vacioTitulo}>{t.alertas.todoEnOrden}</Text>
+            <Text style={styles.detalle}>{t.alertas.sinPendientes}</Text>
           </View>
         )}
 
@@ -130,10 +125,10 @@ export default function AlertasSecretaria() {
           return (
             <View key={turno.id} style={[styles.tarjeta, { borderLeftColor: color }]}>
               <View style={styles.filaEncabezado}>
-                <Text style={styles.nombre}>{paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'}</Text>
+                <Text style={styles.nombre}>{paciente ? `${paciente.nombre} ${paciente.apellido}` : t.comun.paciente}</Text>
                 {riesgo && riesgo.faltas > 0 && (
                   <Text style={[styles.nivel, { color }]}>
-                    {textoPuntaje(riesgo.puntaje)} pts · riesgo {nombreNivelRiesgo(riesgo.nivel)}
+                    {t.alertas.nivel(textoPuntaje(riesgo.puntaje, idioma), nombreNivelRiesgo(riesgo.nivel, idioma))}
                   </Text>
                 )}
               </View>
@@ -142,48 +137,39 @@ export default function AlertasSecretaria() {
               </Text>
               {avisos > 0 && (
                 <Text style={styles.detalle}>
-                  Avisos enviados: {avisos} · último el {formatearFecha(turno.avisos![avisos - 1]).slice(0, 5)}
+                  {t.alertas.avisosEnviados(avisos, formatearFecha(turno.avisos![avisos - 1]).slice(0, 5))}
                 </Text>
               )}
 
               <View style={styles.filaBotones}>
                 <Pressable style={styles.botonPrimario} onPress={async () => mostrarError(await cambiarEstadoTurno(turno.id, 'confirmado'))}>
-                  <Text style={styles.botonPrimarioTexto}>Ya confirmó</Text>
+                  <Text style={styles.botonPrimarioTexto}>{t.alertas.yaConfirmo}</Text>
                 </Pressable>
                 {avisos < avisosAntesDeActuar ? (
                   <Pressable style={styles.botonSuave} onPress={async () => mostrarError(await enviarAviso(turno.id))}>
-                    <Text style={styles.botonSuaveTexto}>
-                      Enviar aviso ({avisos}/{avisosAntesDeActuar})
-                    </Text>
+                    <Text style={styles.botonSuaveTexto}>{t.alertas.enviarAviso(avisos, avisosAntesDeActuar)}</Text>
                   </Pressable>
                 ) : (
                   <View style={styles.avisosCompletos}>
-                    <Text style={styles.avisosCompletosTexto}>
-                      {avisosAntesDeActuar}/{avisosAntesDeActuar} avisos enviados
-                    </Text>
+                    <Text style={styles.avisosCompletosTexto}>{t.alertas.avisosCompletos(avisosAntesDeActuar)}</Text>
                   </View>
                 )}
               </View>
 
               {alto && !puedeActuar && (
-                <Text style={styles.ayudaRiesgo}>
-                  Riesgo alto: después de {avisosAntesDeActuar} avisos podés reprogramar o cancelar este turno para darle el
-                  horario a alguien de la lista de espera con mejor historial.
-                </Text>
+                <Text style={styles.ayudaRiesgo}>{t.alertas.ayudaRiesgo(avisosAntesDeActuar)}</Text>
               )}
               {puedeActuar && (
                 <>
-                  <Text style={styles.ayudaRiesgo}>
-                    Ya recibió {avisosAntesDeActuar} avisos y tiene riesgo alto: podés reprogramar o cancelar su turno.
-                  </Text>
+                  <Text style={styles.ayudaRiesgo}>{t.alertas.ayudaPuede(avisosAntesDeActuar)}</Text>
                   <View style={styles.filaBotones}>
                     <Pressable
                       style={styles.botonSuave}
                       onPress={() => router.push({ pathname: '/secretaria/reprogramar/[id]', params: { id: turno.id } })}>
-                      <Text style={styles.botonSuaveTexto}>Reprogramar</Text>
+                      <Text style={styles.botonSuaveTexto}>{t.comun.reprogramar}</Text>
                     </Pressable>
                     <Pressable style={styles.botonCancelarRiesgo} onPress={() => cancelarPorRiesgo(turno.id)}>
-                      <Text style={styles.botonPrimarioTexto}>Cancelar turno</Text>
+                      <Text style={styles.botonPrimarioTexto}>{t.comun.cancelarTurno}</Text>
                     </Pressable>
                   </View>
                 </>
@@ -194,14 +180,14 @@ export default function AlertasSecretaria() {
 
         {noAsistieron.length > 0 && (
           <View style={styles.panel}>
-            <Text style={styles.panelTitulo}>No asistieron hoy</Text>
+            <Text style={styles.panelTitulo}>{t.alertas.noAsistieronHoy}</Text>
             <View style={styles.fichas}>
               {noAsistieron.map((turno) => {
                 const paciente = pacientes.find((p) => p.id === turno.idPaciente);
                 return (
                   <View key={turno.id} style={styles.fichaAusente}>
                     <Text style={styles.fichaAusenteTexto}>
-                      {paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente'} · {turno.hora}
+                      {paciente ? `${paciente.nombre} ${paciente.apellido}` : t.comun.paciente} · {turno.hora}
                     </Text>
                   </View>
                 );
@@ -211,23 +197,25 @@ export default function AlertasSecretaria() {
         )}
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitulo}>Historial de turnos</Text>
+          <Text style={styles.panelTitulo}>{t.alertas.historialTitulo}</Text>
           <Text style={styles.panelAyuda}>
-            Los turnos que ya pasaron y los cancelados, con el motivo.
-            {avisoCancelados(canceladosPorSistema.length)}
+            {t.alertas.historialAyuda}
+            {t.alertas.cancelados(canceladosPorSistema.length)}
           </Text>
           <Pressable style={styles.botonHistorial} onPress={() => router.push('/secretaria/historial')}>
-            <Text style={styles.botonHistorialTexto}>Ver historial de turnos</Text>
+            <Text style={styles.botonHistorialTexto}>{t.alertas.verHistorial}</Text>
           </Pressable>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitulo}>Cómo se calcula el riesgo</Text>
+          <Text style={styles.panelTitulo}>{t.alertas.comoSeCalcula}</Text>
           <Text style={styles.panelAyuda}>
-            Las faltas suman y asistir o confirmar resta; el puntaje no baja de 0. Desde {textoPuntaje(reglasRiesgo.medio)} {reglasRiesgo.medio === 1 ? 'punto' : 'puntos'} el riesgo es medio y desde{' '}
-            {textoPuntaje(reglasRiesgo.alto)}, alto. No confirmar no suma nada. A un paciente de riesgo alto que no confirma, después de {avisosAntesDeActuar}{' '}
-            avisos tuyos podés reprogramarle o cancelarle el turno y darle el horario a alguien de la lista de espera con
-            mejor historial. Los puntos de cada paciente están en su ficha.
+            {t.alertas.calculo(
+              textoPuntaje(reglasRiesgo.medio, idioma),
+              t.puntos(reglasRiesgo.medio),
+              textoPuntaje(reglasRiesgo.alto, idioma),
+              avisosAntesDeActuar
+            )}
           </Text>
           <View style={styles.fichas}>
             {REGLAS.map((regla) => (
@@ -247,11 +235,11 @@ export default function AlertasSecretaria() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -260,11 +248,11 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 24,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   subtitulo: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 4,
     marginBottom: 14,
   },
@@ -289,13 +277,13 @@ const styles = StyleSheet.create({
   seccion: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     letterSpacing: 0.5,
     marginTop: 18,
     marginBottom: 8,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     borderLeftWidth: 4,
     borderLeftColor: COLOR_CONFIRMADO,
@@ -317,7 +305,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   nivel: {
     fontSize: 12,
@@ -326,7 +314,7 @@ const styles = StyleSheet.create({
   },
   detalle: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   avisosCompletos: {
@@ -334,10 +322,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',
-    backgroundColor: '#E3E6E8',
+    backgroundColor: c.relleno,
   },
   avisosCompletosTexto: {
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -350,7 +338,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSuaveTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -363,13 +351,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   botonHistorialTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 13,
     fontWeight: '700',
   },
   ayudaRiesgo: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 10,
   },
   botonCancelarRiesgo: {
@@ -416,7 +404,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   panel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 14,
     marginTop: 10,
@@ -424,11 +412,11 @@ const styles = StyleSheet.create({
   panelTitulo: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   panelAyuda: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   fichas: {
@@ -451,7 +439,7 @@ const styles = StyleSheet.create({
   fichaRegla: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.chipAzul,
     borderRadius: 12,
     paddingRight: 12,
     paddingVertical: 5,
@@ -472,6 +460,6 @@ const styles = StyleSheet.create({
   fichaReglaTexto: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
 });

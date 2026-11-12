@@ -15,6 +15,10 @@ import {
   fechaHoraComoDate,
   formatearFecha,
 } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 function volver() {
   if (router.canGoBack()) {
@@ -27,6 +31,9 @@ function volver() {
 // Ficha de un paciente para Secretaría: datos administrativos y sus turnos.
 // No muestra nada clínico (medicación, alergias, preconsultas): eso es solo del médico.
 export default function FichaPacienteSecretaria() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { turnos } = useTurnos();
   const { consultorio } = useConsultorio();
@@ -37,9 +44,9 @@ export default function FichaPacienteSecretaria() {
     return (
       <View style={styles.pantalla}>
         <Pressable style={styles.volverFila} onPress={volver}>
-          <Text style={styles.volver}>‹ Pacientes</Text>
+          <Text style={styles.volver}>{t.fichaPaciente.volver}</Text>
         </Pressable>
-        <Text style={styles.vacioTexto}>No se encontró el paciente.</Text>
+        <Text style={styles.vacioTexto}>{t.comun.noEncontradoPaciente}</Text>
       </View>
     );
   }
@@ -54,14 +61,14 @@ export default function FichaPacienteSecretaria() {
   // Puntos de riesgo de ausencia: las faltas suman; asistir y confirmar restan (ver datos/ausentismo.ts).
   const riesgo = evaluarRiesgo(paciente, turnos, reglasRiesgo);
   const colorRiesgo = colorNivelRiesgo(riesgo.nivel);
-  const etiquetaRiesgo = 'Riesgo ' + nombreNivelRiesgo(riesgo.nivel);
+  const etiquetaRiesgo = t.fichaPaciente.nivel(nombreNivelRiesgo(riesgo.nivel, idioma));
   const ausenciasEnApp = turnosDelPaciente.filter((turno) => turno.estado === 'ausente');
 
   return (
     <View style={styles.pantalla}>
       <View style={styles.encabezado}>
         <Pressable onPress={volver}>
-          <Text style={styles.volver}>‹ Pacientes</Text>
+          <Text style={styles.volver}>{t.fichaPaciente.volver}</Text>
         </Pressable>
         <View style={styles.encabezadoFila}>
           <View style={styles.avatar}>
@@ -77,67 +84,65 @@ export default function FichaPacienteSecretaria() {
       </View>
 
       <ScrollView contentContainerStyle={styles.contenido}>
-        <Text style={styles.seccion}>Datos administrativos</Text>
+        <Text style={styles.seccion}>{t.fichaPaciente.datos}</Text>
         <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Cobertura</Text>
+          <Text style={styles.etiqueta}>{t.fichaPaciente.cobertura}</Text>
           <Text style={styles.valor}>
             {paciente.cobertura} {paciente.plan}
           </Text>
-          <Text style={styles.etiqueta}>N° de afiliado</Text>
+          <Text style={styles.etiqueta}>{t.fichaPaciente.afiliado}</Text>
           <Text style={styles.valor}>{paciente.numeroAfiliado}</Text>
-          <Text style={styles.etiqueta}>Email de contacto</Text>
+          <Text style={styles.etiqueta}>{t.fichaPaciente.emailContacto}</Text>
           <Text style={styles.valor}>{paciente.email}</Text>
         </View>
 
-        <Text style={styles.seccion}>Riesgo de ausencia</Text>
+        <Text style={styles.seccion}>{t.fichaPaciente.riesgoTitulo}</Text>
         <View style={styles.tarjeta}>
           <View style={styles.riesgoFila}>
             <View style={[styles.riesgoPuntos, { backgroundColor: colorRiesgo }]}>
-              <Text style={styles.riesgoPuntosNumero}>{textoPuntaje(riesgo.puntaje)}</Text>
-              <Text style={styles.riesgoPuntosTexto}>{riesgo.puntaje === 1 ? 'punto' : 'puntos'}</Text>
+              <Text style={styles.riesgoPuntosNumero}>{textoPuntaje(riesgo.puntaje, idioma)}</Text>
+              <Text style={styles.riesgoPuntosTexto}>{t.puntos(riesgo.puntaje)}</Text>
             </View>
             <View style={styles.riesgoTextos}>
               <Text style={[styles.riesgoNivel, { color: colorRiesgo }]}>{etiquetaRiesgo}</Text>
               <Text style={styles.riesgoDetalle}>
-                Faltó {riesgo.faltas} {riesgo.faltas === 1 ? 'vez' : 'veces'} · asistió {riesgo.asistencias} ·
-                confirmó {riesgo.confirmaciones}.
+                {t.fichaPaciente.faltas(riesgo.faltas, riesgo.asistencias, riesgo.confirmaciones)}
               </Text>
             </View>
           </View>
           <Text style={styles.riesgoRegla}>
-            Cada falta suma {textoPuntaje(PUNTOS_POR_FALTA)} punto; cada asistencia resta {textoPuntaje(PUNTOS_POR_ASISTENCIA)} y
-            cada turno confirmado resta {textoPuntaje(PUNTOS_POR_CONFIRMACION)}. No baja de 0.
+            {t.fichaPaciente.regla(textoPuntaje(PUNTOS_POR_FALTA, idioma), textoPuntaje(PUNTOS_POR_ASISTENCIA, idioma), textoPuntaje(PUNTOS_POR_CONFIRMACION, idioma))}
           </Text>
           {ausenciasEnApp.length > 0 && (
             <>
-              <Text style={styles.etiqueta}>Turnos a los que no asistió</Text>
+              <Text style={styles.etiqueta}>{t.fichaPaciente.ausencias}</Text>
               {ausenciasEnApp.map((turno) => (
                 <Text key={turno.id} style={styles.valor}>
-                  {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h · {turno.medico}
+                  {detalleFecha(turno.fecha, idioma).diaSemana} {formatearFecha(turno.fecha)} · {t.comun.hora(turno.hora)} · {turno.medico}
                 </Text>
               ))}
             </>
           )}
         </View>
 
-        <Text style={styles.seccion}>Turnos</Text>
+        <Text style={styles.seccion}>{t.fichaPaciente.turnos}</Text>
         {turnosDelPaciente.length === 0 && (
           <View style={styles.tarjeta}>
-            <Text style={styles.valor}>Todavía no tiene turnos.</Text>
+            <Text style={styles.valor}>{t.fichaPaciente.sinTurnos}</Text>
           </View>
         )}
         {turnosDelPaciente.map((turno) => (
           <View key={turno.id} style={styles.tarjetaTurno}>
             <View style={styles.turnoDatos}>
               <Text style={styles.turnoFecha}>
-                {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h
+                {detalleFecha(turno.fecha, idioma).diaSemana} {formatearFecha(turno.fecha)} · {t.comun.hora(turno.hora)}
               </Text>
               <Text style={styles.turnoDetalle}>
                 {turno.medico} · {turno.especialidad}
               </Text>
             </View>
             <View style={[styles.chipEstado, { backgroundColor: COLORES_ESTADO[turno.estado] }]}>
-              <Text style={styles.chipEstadoTexto}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
+              <Text style={styles.chipEstadoTexto}>{TEXTOS_PACIENTE[idioma].estados[turno.estado]}</Text>
             </View>
           </View>
         ))}
@@ -146,11 +151,11 @@ export default function FichaPacienteSecretaria() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 20,
@@ -175,7 +180,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -183,7 +188,7 @@ const styles = StyleSheet.create({
   avatarTexto: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   encabezadoTextos: {
     flex: 1,
@@ -205,27 +210,27 @@ const styles = StyleSheet.create({
   seccion: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
     marginTop: 4,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
   },
   etiqueta: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 8,
   },
   valor: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
   riesgoFila: {
@@ -259,24 +264,24 @@ const styles = StyleSheet.create({
   },
   riesgoRegla: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 10,
   },
   riesgoDetalle: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
     padding: 20,
   },
   tarjetaTurno: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
@@ -288,11 +293,11 @@ const styles = StyleSheet.create({
   turnoFecha: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   turnoDetalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chipEstado: {

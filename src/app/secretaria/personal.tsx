@@ -11,13 +11,19 @@ import { MARGEN_SUPERIOR } from '@/constantes/pantalla';
 import { estadoEfectivo, usePersonal } from '@/contextos/PersonalContext';
 import { FranjaHoraria, textoDeDias } from '@/datos/atencion';
 import { formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 type Pestana = 'medicos' | 'secretarias';
 
 const COLORES_ESTADO_MEDICO = { activo: COLOR_CONFIRMADO, licencia: COLOR_PENDIENTE, baja: '#8A8A8A' };
-const ETIQUETAS_ESTADO_MEDICO = { activo: 'Activo', licencia: 'Licencia', baja: 'Baja' };
 
 export default function PersonalSecretaria() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { medicos, secretarias, altaMedico } = usePersonal();
 
   const [pestana, setPestana] = useState<Pestana>('medicos');
@@ -32,23 +38,23 @@ export default function PersonalSecretaria() {
 
   async function darDeAlta() {
     if (nombre.trim() === '' || matricula.trim() === '' || especialidad.trim() === '' || email.trim() === '') {
-      setError('Completá todos los campos.');
+      setError(t.personal.errores.completar);
       return;
     }
     if (!email.includes('@') || !email.includes('.')) {
-      setError('Ingresá un email válido.');
+      setError(t.personal.errores.email);
       return;
     }
     if (contrasena.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
+      setError(t.personal.errores.contrasena);
       return;
     }
     if (franjas.length === 0) {
-      setError('Cargá al menos un horario de atención.');
+      setError(t.personal.errores.horario);
       return;
     }
     if (medicos.some((medico) => medico.matricula === matricula.trim())) {
-      setError('Ya hay un médico con esa matrícula.');
+      setError(t.personal.errores.matricula);
       return;
     }
     // El médico ingresa a la app con este email y esta contraseña.
@@ -77,21 +83,21 @@ export default function PersonalSecretaria() {
   return (
     <PantallaConTeclado style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
-        <Text style={styles.titulo}>Personal</Text>
+        <Text style={styles.titulo}>{t.personal.titulo}</Text>
         <Text style={styles.subtitulo}>
-          {medicos.filter((medico) => medico.estado !== 'baja').length} médicos · {secretarias.length} secretarias
+          {t.personal.subtitulo(medicos.filter((medico) => medico.estado !== 'baja').length, secretarias.length)}
         </Text>
 
         <View style={styles.pestanas}>
           <Pressable
             style={[styles.pestana, pestana === 'medicos' && styles.pestanaActiva]}
             onPress={() => setPestana('medicos')}>
-            <Text style={[styles.pestanaTexto, pestana === 'medicos' && styles.pestanaTextoActiva]}>Médicos</Text>
+            <Text style={[styles.pestanaTexto, pestana === 'medicos' && styles.pestanaTextoActiva]}>{t.personal.medicos}</Text>
           </Pressable>
           <Pressable
             style={[styles.pestana, pestana === 'secretarias' && styles.pestanaActiva]}
             onPress={() => setPestana('secretarias')}>
-            <Text style={[styles.pestanaTexto, pestana === 'secretarias' && styles.pestanaTextoActiva]}>Secretarias</Text>
+            <Text style={[styles.pestanaTexto, pestana === 'secretarias' && styles.pestanaTextoActiva]}>{t.personal.secretarias}</Text>
           </Pressable>
         </View>
 
@@ -107,16 +113,16 @@ export default function PersonalSecretaria() {
               <View style={styles.tarjetaTextos}>
                 <Text style={styles.nombre}>{medico.nombre}</Text>
                 <Text style={styles.detalle}>
-                  {medico.especialidad} · {textoDeDias(medico.franjas)}
+                  {medico.especialidad} · {textoDeDias(medico.franjas, idioma)}
                 </Text>
-                <Text style={styles.detalle}>Mat. {medico.matricula}</Text>
+                <Text style={styles.detalle}>{t.personal.matricula(medico.matricula)}</Text>
               </View>
               <View style={styles.estadoCaja}>
                 <Text style={[styles.estado, { color: COLORES_ESTADO_MEDICO[estadoEfectivo(medico)] }]}>
-                  {ETIQUETAS_ESTADO_MEDICO[estadoEfectivo(medico)]}
+                  {t.personal.estados[estadoEfectivo(medico)]}
                 </Text>
                 {estadoEfectivo(medico) === 'licencia' && medico.licenciaHasta && (
-                  <Text style={styles.vuelve}>Vuelve el {formatearFecha(medico.licenciaHasta).slice(0, 5)}</Text>
+                  <Text style={styles.vuelve}>{t.personal.vuelveEl(formatearFecha(medico.licenciaHasta).slice(0, 5))}</Text>
                 )}
               </View>
               <Text style={styles.flecha}>›</Text>
@@ -133,30 +139,30 @@ export default function PersonalSecretaria() {
                 <Text style={styles.nombre}>{secretaria.nombre}</Text>
                 <Text style={styles.detalle}>{secretaria.horario}</Text>
               </View>
-              <Text style={[styles.estado, { color: COLOR_CONFIRMADO }]}>Activa</Text>
+              <Text style={[styles.estado, { color: COLOR_CONFIRMADO }]}>{t.personal.activa}</Text>
             </View>
           ))}
 
         {pestana === 'medicos' && !formularioAbierto && (
           <Pressable style={styles.botonAlta} onPress={() => setFormularioAbierto(true)}>
-            <Text style={styles.botonAltaTexto}>+ Alta de médico</Text>
+            <Text style={styles.botonAltaTexto}>{t.personal.alta}</Text>
           </Pressable>
         )}
 
         {pestana === 'medicos' && formularioAbierto && (
           <View style={styles.formulario}>
-            <Text style={styles.formularioTitulo}>Alta de médico</Text>
+            <Text style={styles.formularioTitulo}>{t.personal.altaTitulo}</Text>
 
-            <Text style={styles.etiqueta}>Nombre y apellido</Text>
+            <Text style={styles.etiqueta}>{t.personal.nombre}</Text>
             <TextInput
               style={styles.campo}
               value={nombre}
               onChangeText={setNombre}
-              placeholder="Dra. Laura Gómez"
+              placeholder={t.personal.nombreEjemplo}
               placeholderTextColor="#8FB9B5"
             />
 
-            <Text style={styles.etiqueta}>Matrícula</Text>
+            <Text style={styles.etiqueta}>{t.personal.matriculaCampo}</Text>
             <TextInput
               style={styles.campo}
               value={matricula}
@@ -165,16 +171,16 @@ export default function PersonalSecretaria() {
               placeholderTextColor="#8FB9B5"
             />
 
-            <Text style={styles.etiqueta}>Especialidad</Text>
+            <Text style={styles.etiqueta}>{t.personal.especialidad}</Text>
             <TextInput
               style={styles.campo}
               value={especialidad}
               onChangeText={setEspecialidad}
-              placeholder="Pediatría"
+              placeholder={t.personal.especialidadEjemplo}
               placeholderTextColor="#8FB9B5"
             />
 
-            <Text style={styles.etiqueta}>Email (para ingresar a la app)</Text>
+            <Text style={styles.etiqueta}>{t.personal.email}</Text>
             <TextInput
               style={styles.campo}
               value={email}
@@ -185,23 +191,23 @@ export default function PersonalSecretaria() {
               placeholderTextColor="#8FB9B5"
             />
 
-            <Text style={styles.etiqueta}>Contraseña inicial</Text>
+            <Text style={styles.etiqueta}>{t.personal.contrasena}</Text>
             <TextInput
               style={styles.campo}
               value={contrasena}
               onChangeText={setContrasena}
               secureTextEntry
-              placeholder="Al menos 6 caracteres"
+              placeholder={t.personal.contrasenaEjemplo}
               placeholderTextColor="#8FB9B5"
             />
 
-            <Text style={styles.etiqueta}>Horarios de atención</Text>
+            <Text style={styles.etiqueta}>{t.personal.horarios}</Text>
             <EditorHorarios franjas={franjas} onCambiar={setFranjas} />
 
             {error !== '' && <Text style={styles.error}>{error}</Text>}
 
             <Pressable style={styles.botonGuardar} onPress={darDeAlta}>
-              <Text style={styles.botonGuardarTexto}>Dar de alta</Text>
+              <Text style={styles.botonGuardarTexto}>{t.personal.darDeAlta}</Text>
             </Pressable>
             <Pressable
               style={styles.cancelar}
@@ -209,7 +215,7 @@ export default function PersonalSecretaria() {
                 setFormularioAbierto(false);
                 setError('');
               }}>
-              <Text style={styles.cancelarTexto}>Cancelar</Text>
+              <Text style={styles.cancelarTexto}>{t.personal.cancelar}</Text>
             </Pressable>
           </View>
         )}
@@ -220,11 +226,11 @@ export default function PersonalSecretaria() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -233,17 +239,17 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 24,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   subtitulo: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
     marginBottom: 14,
   },
   pestanas: {
     flexDirection: 'row',
-    backgroundColor: '#D5ECE9',
+    backgroundColor: c.chipAzul,
     borderRadius: 12,
     padding: 3,
     marginBottom: 14,
@@ -255,20 +261,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   pestanaActiva: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
   },
   pestanaTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   pestanaTextoActiva: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
@@ -293,11 +299,11 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   tarjetaBaja: {
@@ -308,7 +314,7 @@ const styles = StyleSheet.create({
   },
   flecha: {
     fontSize: 20,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginLeft: 8,
   },
   estadoCaja: {
@@ -337,10 +343,10 @@ const styles = StyleSheet.create({
   botonAltaTexto: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   formulario: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 18,
     padding: 16,
     marginTop: 4,
@@ -348,24 +354,24 @@ const styles = StyleSheet.create({
   formularioTitulo: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 4,
   },
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 12,
     marginBottom: 6,
   },
   campo: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   error: {
     fontSize: 13,
@@ -391,6 +397,6 @@ const styles = StyleSheet.create({
   cancelarTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
 });

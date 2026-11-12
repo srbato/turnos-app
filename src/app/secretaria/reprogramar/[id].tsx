@@ -20,6 +20,10 @@ import { useAdelantos } from '@/contextos/AdelantosContext';
 import { horasReservadas } from '@/datos/adelantos';
 import { horasOcupadas, useTurnos } from '@/contextos/TurnosContext';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 function volver() {
   if (router.canGoBack()) {
@@ -31,6 +35,9 @@ function volver() {
 
 // Reprogramar un turno de cualquier paciente. El médico y el paciente no cambian: solo la fecha y la hora.
 export default function ReprogramarSecretaria() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { id } = useLocalSearchParams<{ id: string }>();
   const { turnos, reprogramarTurno } = useTurnos();
   const { mostrarError } = useErrores();
@@ -51,7 +58,7 @@ export default function ReprogramarSecretaria() {
 
   // Solo se ofrecen los días en que el médico atiende. Mientras no elija otro, se muestra el primero con atención.
   const atiende = (dia: string) => atiendeEn(personal, turno.medico, dia);
-  const dias = diasDesde(undefined, DIAS_OFRECIDOS);
+  const dias = diasDesde(undefined, DIAS_OFRECIDOS, idioma);
   const diasConAtencion = dias.filter((dia) => atiende(dia.fecha));
   const fechaSeleccionada =
     fecha && diasConAtencion.some((dia) => dia.fecha === fecha) ? fecha : (diasConAtencion[0] ?? dias[0]).fecha;
@@ -76,21 +83,21 @@ export default function ReprogramarSecretaria() {
     <View style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido}>
         <Pressable onPress={volver}>
-          <Text style={styles.volver}>‹ Reprogramar turno</Text>
+          <Text style={styles.volver}>{t.reprogramar.titulo}</Text>
         </Pressable>
 
         <View style={styles.tarjeta}>
-          <Text style={styles.etiqueta}>Paciente</Text>
+          <Text style={styles.etiqueta}>{t.comun.paciente}</Text>
           <Text style={styles.valor}>
             {paciente.nombre} {paciente.apellido}
           </Text>
-          <Text style={styles.etiqueta}>Profesional</Text>
+          <Text style={styles.etiqueta}>{t.reprogramar.profesional}</Text>
           <Text style={styles.valor}>
             {turno.medico} · {turno.especialidad}
           </Text>
-          <Text style={styles.etiqueta}>Turno actual</Text>
+          <Text style={styles.etiqueta}>{t.reprogramar.turnoActual}</Text>
           <Text style={styles.valor}>
-            {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h
+            {detalleFecha(turno.fecha, idioma).diaSemana} {formatearFecha(turno.fecha)} · {t.comun.hora(turno.hora)}
           </Text>
         </View>
 
@@ -116,25 +123,25 @@ export default function ReprogramarSecretaria() {
         onPress={confirmar}>
         <Text style={styles.botonConfirmarTexto}>
           {hora
-            ? `Reprogramar para ${formatearFechaCorta(fechaSeleccionada)} · ${hora} h`
-            : 'Seleccioná un nuevo horario'}
+            ? t.reprogramar.confirmar(formatearFechaCorta(fechaSeleccionada, idioma), hora)
+            : t.reprogramar.elegirNuevo}
         </Text>
       </Pressable>
 
       <Modal visible={confirmado} animationType="fade" transparent onRequestClose={() => router.replace(RUTA_AGENDA_SECRETARIA)}>
         <View style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
-            <Text style={styles.modalTitulo}>Turno reprogramado</Text>
+            <Text style={styles.modalTitulo}>{t.reprogramar.reprogramado}</Text>
             <Text style={styles.modalPaciente}>
               {paciente.nombre} {paciente.apellido}
             </Text>
             <Text style={styles.modalDato}>{turno.medico}</Text>
             <Text style={styles.modalDato}>
-              {formatearFechaLarga(fechaSeleccionada)} · {hora} h
+              {formatearFechaLarga(fechaSeleccionada, idioma)} · {t.comun.hora(hora ?? '')}
             </Text>
-            <Text style={styles.modalDato}>Queda pendiente de confirmación del paciente.</Text>
+            <Text style={styles.modalDato}>{t.reprogramar.pendiente}</Text>
             <Pressable style={styles.botonModal} onPress={() => router.replace(RUTA_AGENDA_SECRETARIA)}>
-              <Text style={styles.botonConfirmarTexto}>Volver a la agenda</Text>
+              <Text style={styles.botonConfirmarTexto}>{t.reprogramar.volverAgenda}</Text>
             </Pressable>
           </View>
         </View>
@@ -143,11 +150,11 @@ export default function ReprogramarSecretaria() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 20,
@@ -156,24 +163,24 @@ const styles = StyleSheet.create({
   volver: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 16,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
   },
   etiqueta: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 8,
   },
   valor: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
   botonConfirmar: {
@@ -197,14 +204,14 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 24,
   },
   modalTitulo: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
@@ -212,12 +219,12 @@ const styles = StyleSheet.create({
   modalPaciente: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 4,
   },
   modalDato: {
     fontSize: 15,
-    color: '#3A3A3A',
+    color: c.texto,
     marginBottom: 4,
   },
   botonModal: {

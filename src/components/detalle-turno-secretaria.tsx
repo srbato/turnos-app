@@ -7,6 +7,10 @@ import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { useErrores } from '@/contextos/ErroresContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 type Props = {
   idTurno: string; // '' = cerrado
@@ -16,6 +20,9 @@ type Props = {
 // Detalle de un turno para Secretaría: confirmar, reprogramar, cancelar y ver la ficha del paciente.
 // Se guarda el id (y no el turno) para que el Modal muestre siempre el estado actualizado.
 export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
   const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
@@ -38,9 +45,9 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
           {turno && paciente && (
             <>
               <View style={styles.encabezado}>
-                <Text style={styles.titulo}>Detalle del turno</Text>
+                <Text style={styles.titulo}>{t.detalleTurno.titulo}</Text>
                 <View style={[styles.chipEstado, { backgroundColor: COLORES_ESTADO[turno.estado] }]}>
-                  <Text style={styles.chipEstadoTexto}>{ETIQUETAS_ESTADO[turno.estado]}</Text>
+                  <Text style={styles.chipEstadoTexto}>{TEXTOS_PACIENTE[idioma].estados[turno.estado]}</Text>
                 </View>
               </View>
 
@@ -48,22 +55,22 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                 {paciente.nombre} {paciente.apellido}
               </Text>
               <Text style={styles.subtitulo}>
-                {detalleFecha(turno.fecha).diaSemana} {formatearFecha(turno.fecha)} · {turno.hora} h
+                {detalleFecha(turno.fecha, idioma).diaSemana} {formatearFecha(turno.fecha)} · {t.comun.hora(turno.hora)}
               </Text>
 
               <View style={styles.filas}>
                 <View style={styles.fila}>
-                  <Text style={styles.etiqueta}>Médico</Text>
+                  <Text style={styles.etiqueta}>{t.comun.medico}</Text>
                   <Text style={styles.valor}>{turno.medico}</Text>
                 </View>
                 <View style={styles.fila}>
-                  <Text style={styles.etiqueta}>Especialidad</Text>
+                  <Text style={styles.etiqueta}>{t.detalleTurno.especialidad}</Text>
                   <Text style={styles.valor}>
                     {turno.especialidad} · {turno.sala}
                   </Text>
                 </View>
                 <View style={[styles.fila, styles.filaUltima]}>
-                  <Text style={styles.etiqueta}>Cobertura</Text>
+                  <Text style={styles.etiqueta}>{t.detalleTurno.cobertura}</Text>
                   <Text style={styles.valor}>{turno.cobertura || paciente.cobertura}</Text>
                 </View>
               </View>
@@ -77,7 +84,7 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                         cerrar();
                         mostrarError(await cambiarEstadoTurno(turno.id, 'confirmado'));
                       }}>
-                      <Text style={styles.botonPrimarioTexto}>Confirmar turno</Text>
+                      <Text style={styles.botonPrimarioTexto}>{t.detalleTurno.confirmar}</Text>
                     </Pressable>
                   )}
                   <Pressable
@@ -87,22 +94,20 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                       cerrar();
                       router.push({ pathname: '/secretaria/reprogramar/[id]', params: { id } });
                     }}>
-                    <Text style={styles.botonSecundarioTexto}>Reprogramar</Text>
+                    <Text style={styles.botonSecundarioTexto}>{t.comun.reprogramar}</Text>
                   </Pressable>
                   <Pressable style={styles.botonCancelar} onPress={() => setConfirmandoCancelacion(true)}>
-                    <Text style={styles.botonCancelarTexto}>Cancelar turno</Text>
+                    <Text style={styles.botonCancelarTexto}>{t.comun.cancelarTurno}</Text>
                   </Pressable>
                 </>
               )}
 
               {sePuedeModificar && confirmandoCancelacion && (
                 <>
-                  <Text style={styles.confirmarTexto}>
-                    ¿Cancelar este turno? El horario queda libre y se le puede ofrecer a la lista de espera.
-                  </Text>
+                  <Text style={styles.confirmarTexto}>{t.detalleTurno.confirmarCancelacion}</Text>
                   <View style={styles.filaBotones}>
                     <Pressable style={styles.botonSecundarioMitad} onPress={() => setConfirmandoCancelacion(false)}>
-                      <Text style={styles.botonSecundarioTexto}>Volver</Text>
+                      <Text style={styles.botonSecundarioTexto}>{t.comun.volver}</Text>
                     </Pressable>
                     <Pressable
                       style={styles.botonConfirmarCancelar}
@@ -110,7 +115,7 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                         cerrar();
                         mostrarError(await cancelarTurno(turno.id));
                       }}>
-                      <Text style={styles.botonPrimarioTexto}>Sí, cancelar</Text>
+                      <Text style={styles.botonPrimarioTexto}>{t.detalleTurno.siCancelar}</Text>
                     </Pressable>
                   </View>
                 </>
@@ -123,10 +128,10 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
                   cerrar();
                   router.push({ pathname: '/secretaria/paciente', params: { id } });
                 }}>
-                <Text style={styles.linkFicha}>Ver ficha del paciente</Text>
+                <Text style={styles.linkFicha}>{t.comun.verFicha}</Text>
               </Pressable>
               <Pressable style={styles.cerrar} onPress={cerrar}>
-                <Text style={styles.cerrarTexto}>Cerrar</Text>
+                <Text style={styles.cerrarTexto}>{t.comun.cerrar}</Text>
               </Pressable>
             </>
           )}
@@ -136,7 +141,7 @@ export function DetalleTurnoSecretaria({ idTurno, onCerrar }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fondo: {
     flex: 1,
     backgroundColor: 'rgba(26, 24, 21, 0.5)',
@@ -144,7 +149,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
     maxHeight: '90%',
@@ -158,7 +163,7 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -175,18 +180,18 @@ const styles = StyleSheet.create({
   paciente: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   subtitulo: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginTop: 2,
     marginBottom: 14,
   },
   filas: {
     borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
+    borderTopColor: c.bordeSuave,
     marginBottom: 16,
   },
   fila: {
@@ -194,20 +199,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDEDED',
+    borderBottomColor: c.bordeSuave,
   },
   filaUltima: {
     borderBottomWidth: 0,
   },
   etiqueta: {
     fontSize: 13,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   valor: {
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
     textAlign: 'right',
     marginLeft: 12,
   },
@@ -240,7 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonSecundarioTexto: {
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -259,7 +264,7 @@ const styles = StyleSheet.create({
   },
   confirmarTexto: {
     fontSize: 14,
-    color: '#3A3A3A',
+    color: c.texto,
     marginBottom: 12,
   },
   filaBotones: {
@@ -281,11 +286,11 @@ const styles = StyleSheet.create({
   linkFicha: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   cerrarTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
 });

@@ -1,7 +1,7 @@
 // Colores neutros de las pantallas de la app (todo lo que no es el color del rol) en modo claro y oscuro.
 // Los colores de cada rol (azul del médico, verde de la secretaría...) viven en colores.ts y no cambian con el modo.
 // El Perfil tiene su propia paleta dorada, en tema.ts.
-import { COLOR_MEDICO, COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
+import { COLOR_MEDICO, COLOR_PACIENTE, COLOR_SECRETARIA, FONDO_PACIENTE, FONDO_SECRETARIA } from '@/constantes/colores';
 
 // Mezcla un color '#RRGGBB' con blanco (55 %) para que se vea sobre fondos oscuros.
 export function aclarar(hex: string) {
@@ -21,6 +21,7 @@ export type PaletaApp = {
   relleno: string; // fondos sutiles: cabeceras de tabla, chips grises, barras vacías
   chipAzul: string;
   chipRojo: string;
+  bordeAcento: string; // borde de tarjetas y campos (en la secretaría, con un tinte verdoso en modo claro)
   acento: string; // color del rol usado como texto (en modo oscuro se aclara para que se lea)
 };
 
@@ -35,6 +36,7 @@ export const PALETA_CLARA: PaletaApp = {
   relleno: '#F0F1F3',
   chipAzul: '#E6ECF5',
   chipRojo: '#FBDCDC',
+  bordeAcento: '#D5D8DD',
   acento: COLOR_MEDICO,
 };
 
@@ -49,10 +51,11 @@ export const PALETA_OSCURA: PaletaApp = {
   relleno: '#2B2F36',
   chipAzul: '#233450',
   chipRojo: '#4A2A2D',
+  bordeAcento: '#3A3F47',
   acento: aclarar(COLOR_MEDICO),
 };
 
-export type RolPaleta = 'medico' | 'paciente';
+export type RolPaleta = 'medico' | 'paciente' | 'secretaria';
 
 // Cada rol cambia el fondo (en claro) y el color de acento; el resto de los neutros es común.
 export function paletaApp(modoOscuro: boolean, rol: RolPaleta = 'medico'): PaletaApp {
@@ -63,6 +66,15 @@ export function paletaApp(modoOscuro: boolean, rol: RolPaleta = 'medico'): Palet
       fondo: modoOscuro ? base.fondo : FONDO_PACIENTE,
       chipAzul: modoOscuro ? base.chipAzul : FONDO_PACIENTE,
       acento: modoOscuro ? aclarar(COLOR_PACIENTE) : COLOR_PACIENTE,
+    };
+  }
+  if (rol === 'secretaria') {
+    return {
+      ...base,
+      fondo: modoOscuro ? base.fondo : FONDO_SECRETARIA,
+      chipAzul: modoOscuro ? '#1F3A38' : FONDO_SECRETARIA,
+      bordeAcento: modoOscuro ? base.bordeAcento : '#B9DAD6',
+      acento: modoOscuro ? aclarar(COLOR_SECRETARIA) : COLOR_SECRETARIA,
     };
   }
   return base;

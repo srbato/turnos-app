@@ -12,9 +12,16 @@ import { RUTA_AGENDA_SECRETARIA } from '@/constantes/rutas';
 import { useConfiguracion } from '@/contextos/ConfiguracionContext';
 import { useConsultorio } from '@/contextos/ConsultorioContext';
 import { HOY } from '@/datos/consultorio';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 // Tabla de todos los pacientes del consultorio. Tocar una fila abre el alta de turno con ese paciente ya elegido.
 export default function PacientesSecretaria() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { consultorio } = useConsultorio();
   const { nombre: nombreConsultorio } = useConfiguracion();
   const pacientes = consultorio.pacientes;
@@ -25,10 +32,10 @@ export default function PacientesSecretaria() {
       <View style={styles.encabezado}>
         {/* Se llega desde el botón Pacientes de Agendas: la flecha vuelve ahí, aunque se haya entrado por URL. */}
         <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace(RUTA_AGENDA_SECRETARIA))} hitSlop={10}>
-          <Text style={styles.volver}>‹ Turnos del día</Text>
+          <Text style={styles.volver}>{t.pacientes.volver}</Text>
         </Pressable>
         <Text style={styles.subtitulo}>{nombreConsultorio}</Text>
-        <Text style={styles.titulo}>Pacientes</Text>
+        <Text style={styles.titulo}>{t.pacientes.titulo}</Text>
       </View>
 
       <TablaPacientes
@@ -53,11 +60,11 @@ export default function PacientesSecretaria() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 20,

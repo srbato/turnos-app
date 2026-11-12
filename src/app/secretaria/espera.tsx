@@ -27,14 +27,11 @@ import {
 import { evaluarRiesgo, nombreNivelRiesgo, textoPuntaje } from '@/datos/ausentismo';
 import { detalleFecha, formatearFecha } from '@/utilidades/turnos';
 import { sinRepetidos } from '@/utilidades/listas';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { Idioma, usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
-const ETIQUETAS_RESPUESTA: Record<EstadoOferta, string> = {
-  enviada: 'Esperando respuesta',
-  aceptada: 'Aceptó',
-  rechazada: 'Rechazó',
-  'sin-respuesta': 'No contestó',
-  retirada: 'Retirada',
-};
 const COLORES_RESPUESTA: Record<EstadoOferta, string> = {
   enviada: COLOR_PENDIENTE,
   aceptada: COLOR_CONFIRMADO,
@@ -49,8 +46,8 @@ function medicoCorto(nombre: string) {
   return `${palabras[0]} ${palabras[palabras.length - 1]}`;
 }
 
-function textoCorto(fecha: string, hora: string) {
-  return `${detalleFecha(fecha).diaSemana.slice(0, 3)} ${formatearFecha(fecha).slice(0, 5)} · ${hora} h`;
+function textoCorto(fecha: string, hora: string, idioma: Idioma) {
+  return TEXTOS_PACIENTE[idioma].aviso.otroDia(detalleFecha(fecha, idioma).diaSemana.slice(0, 3), formatearFecha(fecha).slice(0, 5), hora);
 }
 
 // Lista de espera = adelantos. Los pacientes sacan un turno y pueden anotarse para adelantarlo. Secretaría elige a
@@ -58,6 +55,9 @@ function textoCorto(fecha: string, hora: string) {
 // o mira los horarios libres y toca a quién se lo propone. Cada paciente recibe una oferta a la vez y cada horario
 // se ofrece a un solo paciente.
 export default function EsperaSecretaria() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos } = useTurnos();
   const { ofertas, noContesta } = useAdelantos();
   const { mostrarError } = useErrores();
@@ -66,15 +66,15 @@ export default function EsperaSecretaria() {
 
   function nombreDelPaciente(idPaciente: string) {
     const paciente = consultorio.pacientes.find((p) => p.id === idPaciente);
-    return paciente ? `${paciente.nombre} ${paciente.apellido}` : 'Paciente';
+    return paciente ? `${paciente.nombre} ${paciente.apellido}` : t.comun.paciente;
   }
   // Historial del paciente según sus faltas, asistencias y confirmaciones: ayuda a elegir a quién darle un horario.
   function textoHistorial(idPaciente: string) {
     const paciente = consultorio.pacientes.find((p) => p.id === idPaciente);
     if (!paciente) return '';
     const riesgo = evaluarRiesgo(paciente, turnos, reglasRiesgo);
-    const nivel = nombreNivelRiesgo(riesgo.nivel);
-    return `Historial: riesgo ${nivel} · ${textoPuntaje(riesgo.puntaje)} pts`;
+    const nivel = nombreNivelRiesgo(riesgo.nivel, idioma);
+    return t.espera.historial(nivel, textoPuntaje(riesgo.puntaje, idioma));
   }
   // Médico cuya agenda se está mirando para ofrecer un horario (null = cerrado).
   const [medicoAbierto, setMedicoAbierto] = useState<string | null>(null);
@@ -93,17 +93,13 @@ export default function EsperaSecretaria() {
   return (
     <View style={styles.pantalla}>
       <ScrollView contentContainerStyle={styles.contenido}>
-        <Text style={styles.titulo}>Lista de espera</Text>
-        <Text style={styles.subtitulo}>
-          Pacientes que quieren adelantar su turno. Tocá a uno para proponerle un horario libre del médico (desde dentro
-          de {DIAS_MINIMOS_ADELANTO} días), o mirá los horarios libres y elegí a quién ofrecérselo. Cada paciente recibe
-          una oferta a la vez.
-        </Text>
+        <Text style={styles.titulo}>{t.espera.titulo}</Text>
+        <Text style={styles.subtitulo}>{t.espera.subtitulo(DIAS_MINIMOS_ADELANTO)}</Text>
 
-        <Text style={styles.seccion}>OFERTAS EN CURSO ({vigentes.length})</Text>
+        <Text style={styles.seccion}>{t.espera.ofertasEnCurso(vigentes.length)}</Text>
         {vigentes.length === 0 && (
           <View style={styles.panel}>
-            <Text style={styles.detalle}>No hay ofertas ahora. Tocá a un paciente de la lista y proponele un horario.</Text>
+            <Text style={styles.detalle}>{t.espera.sinOfertas}</Text>
           </View>
         )}
         {vigentes.map((oferta) => {
@@ -112,38 +108,37 @@ export default function EsperaSecretaria() {
           return (
             <Pressable key={oferta.id} style={styles.panelOferta} onPress={() => setIdOferta(oferta.id)}>
               <View style={styles.encabezadoOferta}>
-                <Text style={styles.etiquetaLiberado}>HORARIO OFRECIDO</Text>
+                <Text style={styles.etiquetaLiberado}>{t.espera.horarioOfrecido}</Text>
                 <View style={styles.chip}>
-                  <Text style={styles.chipTexto}>en {diasDesdeHoy(oferta.horario.fecha)} días</Text>
+                  <Text style={styles.chipTexto}>{t.espera.enDias(diasDesdeHoy(oferta.horario.fecha))}</Text>
                 </View>
               </View>
               <Text style={styles.liberadoTitulo}>
-                {textoCorto(oferta.horario.fecha, oferta.horario.hora)} · {medicoCorto(oferta.horario.medico)}
+                {textoCorto(oferta.horario.fecha, oferta.horario.hora, idioma)} · {medicoCorto(oferta.horario.medico)}
               </Text>
 
               <View style={styles.ofrecido}>
                 <View style={styles.ofrecidoTextos}>
-                  <Text style={styles.ofrecidoEtiqueta}>Se le ofreció a</Text>
+                  <Text style={styles.ofrecidoEtiqueta}>{t.espera.seLeOfrecio}</Text>
                   <Text style={styles.candidatoNombre}>{nombreDelPaciente(turno.idPaciente)}</Text>
                   <Text style={styles.detalle}>
-                    Espera desde {formatearFecha(turno.adelantoDesde ?? '').slice(0, 5)} · tiene{' '}
-                    {textoCorto(turno.fecha, turno.hora)}
+                    {t.espera.esperaDesde(formatearFecha(turno.adelantoDesde ?? '').slice(0, 5), textoCorto(turno.fecha, turno.hora, idioma))}
                   </Text>
-                  <Text style={styles.esperando}>Esperando su respuesta</Text>
+                  <Text style={styles.esperando}>{t.espera.esperandoSuRespuesta}</Text>
                 </View>
                 <Pressable onPress={async () => mostrarError(await noContesta(oferta))}>
-                  <Text style={styles.noContesta}>No contesta</Text>
+                  <Text style={styles.noContesta}>{t.espera.noContesta}</Text>
                 </Pressable>
               </View>
-              <Text style={styles.modificar}>Tocá para reprogramar o cancelar la oferta</Text>
+              <Text style={styles.modificar}>{t.espera.tocarParaModificar}</Text>
             </Pressable>
           );
         })}
 
-        <Text style={styles.seccion}>EN ESPERA ({enLista.length})</Text>
+        <Text style={styles.seccion}>{t.espera.enEspera(enLista.length)}</Text>
         {enLista.length === 0 && (
           <View style={styles.panel}>
-            <Text style={styles.detalle}>Nadie está en la lista. Los pacientes se anotan al sacar su turno.</Text>
+            <Text style={styles.detalle}>{t.espera.nadieEnLista}</Text>
           </View>
         )}
         {medicosEnLista.map((medico) => {
@@ -153,11 +148,11 @@ export default function EsperaSecretaria() {
               <View style={styles.encabezadoOferta}>
                 <Text style={styles.panelTitulo}>{medico}</Text>
                 <View style={styles.chip}>
-                  <Text style={styles.chipTexto}>{delMedico.length} en espera</Text>
+                  <Text style={styles.chipTexto}>{t.espera.enEsperaChip(delMedico.length)}</Text>
                 </View>
               </View>
               <Pressable style={styles.botonHorarios} onPress={() => setMedicoAbierto(medico)}>
-                <Text style={styles.botonHorariosTexto}>Ver horarios disponibles</Text>
+                <Text style={styles.botonHorariosTexto}>{t.espera.verHorarios}</Text>
               </Pressable>
               {delMedico.map((turno, indice) => {
                 const oferta = vigentes.find((o) => o.idTurno === turno.id);
@@ -172,18 +167,17 @@ export default function EsperaSecretaria() {
                     <View style={styles.candidatoTextos}>
                       <Text style={styles.candidatoNombre}>{nombreDelPaciente(turno.idPaciente)}</Text>
                       <Text style={styles.detalle}>
-                        Desde {formatearFecha(turno.adelantoDesde ?? '').slice(0, 5)} · turno{' '}
-                        {textoCorto(turno.fecha, turno.hora)}
+                        {t.espera.desde(formatearFecha(turno.adelantoDesde ?? '').slice(0, 5), textoCorto(turno.fecha, turno.hora, idioma))}
                       </Text>
                       <Text style={styles.detalle}>{textoHistorial(turno.idPaciente)}</Text>
                       {oferta && (
                         <Text style={styles.tagOferta}>
-                          Oferta pendiente: {textoCorto(oferta.horario.fecha, oferta.horario.hora)}
+                          {t.espera.ofertaPendiente(textoCorto(oferta.horario.fecha, oferta.horario.hora, idioma))}
                         </Text>
                       )}
                     </View>
                     {/* Sin oferta pendiente: se le puede proponer un horario; con oferta, se abre para modificarla. */}
-                    <Text style={styles.accionFila}>{oferta ? 'Ver ›' : 'Proponer ›'}</Text>
+                    <Text style={styles.accionFila}>{oferta ? t.espera.ver : t.espera.proponer}</Text>
                   </Pressable>
                 );
               })}
@@ -193,18 +187,18 @@ export default function EsperaSecretaria() {
 
         {respuestas.length > 0 && (
           <>
-            <Text style={styles.seccion}>RESPUESTAS</Text>
+            <Text style={styles.seccion}>{t.espera.respuestasTitulo}</Text>
             <View style={styles.panel}>
               {[...respuestas].reverse().map((respuesta, indice) => {
                 const turno = turnos.find((t) => t.id === respuesta.idTurno);
                 return (
                   <View key={respuesta.id} style={[styles.filaSimple, indice > 0 && styles.filaBorde]}>
                     <Text style={styles.filaTitulo}>
-                      {turno ? nombreDelPaciente(turno.idPaciente) : 'Paciente'} ·{' '}
-                      {textoCorto(respuesta.horario.fecha, respuesta.horario.hora)}
+                      {turno ? nombreDelPaciente(turno.idPaciente) : t.comun.paciente} ·{' '}
+                      {textoCorto(respuesta.horario.fecha, respuesta.horario.hora, idioma)}
                     </Text>
                     <Text style={[styles.estadoRespuesta, { color: COLORES_RESPUESTA[respuesta.estado] }]}>
-                      {ETIQUETAS_RESPUESTA[respuesta.estado]}
+                      {t.espera.respuestas[respuesta.estado]}
                     </Text>
                   </View>
                 );
@@ -230,11 +224,11 @@ export default function EsperaSecretaria() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   contenido: {
     padding: 18,
@@ -243,29 +237,29 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 24,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   subtitulo: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 4,
   },
   seccion: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     letterSpacing: 0.5,
     marginTop: 20,
     marginBottom: 8,
   },
   panel: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 14,
     marginBottom: 10,
   },
   panelOferta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: COLOR_PENDIENTE,
@@ -285,7 +279,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   chip: {
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.chipAzul,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -293,12 +287,12 @@ const styles = StyleSheet.create({
   chipTexto: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   liberadoTitulo: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   ofrecido: {
     flexDirection: 'row',
@@ -325,24 +319,24 @@ const styles = StyleSheet.create({
   noContesta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginLeft: 8,
   },
   modificar: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginTop: 10,
   },
   panelTitulo: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   accionFila: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
     marginLeft: 8,
   },
   botonHorarios: {
@@ -356,7 +350,7 @@ const styles = StyleSheet.create({
   botonHorariosTexto: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   candidato: {
     flexDirection: 'row',
@@ -375,9 +369,9 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderWidth: 1,
-    borderColor: '#B9DAD6',
+    borderColor: c.bordeAcento,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -385,7 +379,7 @@ const styles = StyleSheet.create({
   posicionTexto: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   candidatoTextos: {
     flex: 1,
@@ -393,11 +387,11 @@ const styles = StyleSheet.create({
   candidatoNombre: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   tagOferta: {
@@ -411,12 +405,12 @@ const styles = StyleSheet.create({
   },
   filaBorde: {
     borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
+    borderTopColor: c.bordeSuave,
   },
   filaTitulo: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   estadoRespuesta: {
     fontSize: 12,

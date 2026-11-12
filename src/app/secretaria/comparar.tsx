@@ -20,6 +20,10 @@ import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { COLORES_ESTADO, detalleFecha, ETIQUETAS_ESTADO, fechaComoTexto } from '@/utilidades/turnos';
 import { sinRepetidos } from '@/utilidades/listas';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
+import { TEXTOS_PACIENTE } from '@/datos/textos-paciente';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 
 const COLOR_AUSENTE = '#B03A3A';
 const MAXIMO_MEDICOS = 4;
@@ -42,6 +46,9 @@ function especialidadCorta(especialidad: string) {
 
 // Grilla horario × médico: sirve para comparar agendas (por ejemplo, de la misma especialidad) y acomodar pacientes.
 export default function CompararHorarios() {
+  const { idioma, modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro, 'secretaria'));
+  const t = TEXTOS_SECRETARIA[idioma];
   const { turnos } = useTurnos();
   const { ofertas } = useAdelantos();
   // Los médicos dados de baja ya no tienen agenda.
@@ -102,19 +109,19 @@ export default function CompararHorarios() {
 
   function nombreAbreviado(idPaciente: string) {
     const paciente = pacientes.find((p) => p.id === idPaciente);
-    return paciente ? `${paciente.nombre[0]}. ${paciente.apellido}` : 'Paciente';
+    return paciente ? `${paciente.nombre[0]}. ${paciente.apellido}` : t.comun.paciente;
   }
 
   return (
     <View style={styles.pantalla}>
       <View style={styles.encabezado}>
         <Pressable onPress={() => router.replace(RUTA_AGENDA_SECRETARIA)} hitSlop={10}>
-          <Text style={styles.volver}>‹ Turnos del día</Text>
+          <Text style={styles.volver}>{t.comparar.volver}</Text>
         </Pressable>
         <View style={styles.encabezadoFila}>
-          <Text style={styles.titulo}>Comparar horarios</Text>
+          <Text style={styles.titulo}>{t.comparar.titulo}</Text>
           <Pressable style={styles.chip} onPress={() => setEligiendoMedicos(true)}>
-            <Text style={styles.chipTexto}>{medicosElegidos.length} médicos ▾</Text>
+            <Text style={styles.chipTexto}>{t.comparar.medicos(medicosElegidos.length)}</Text>
           </Pressable>
         </View>
 
@@ -128,11 +135,11 @@ export default function CompararHorarios() {
                 style={[styles.diaCaja, seleccionado && styles.diaCajaSeleccionada]}
                 onPress={() => setDiaElegido(dia)}>
                 <Text style={[styles.diaEtiqueta, seleccionado && styles.diaTextoSeleccionado]}>
-                  {dia === HOY ? 'HOY' : detalleFecha(dia).diaSemana.slice(0, 3).toUpperCase()}
+                  {dia === HOY ? t.agenda.hoy : detalleFecha(dia, idioma).diaSemana.slice(0, 3).toUpperCase()}
                 </Text>
-                <Text style={[styles.diaNumero, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).dia}</Text>
-                <Text style={[styles.diaMes, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia).mes}</Text>
-                <Text style={[styles.diaCantidad, seleccionado && styles.diaTextoSeleccionado]}>{cantidad} t.</Text>
+                <Text style={[styles.diaNumero, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia, idioma).dia}</Text>
+                <Text style={[styles.diaMes, seleccionado && styles.diaTextoSeleccionado]}>{detalleFecha(dia, idioma).mes}</Text>
+                <Text style={[styles.diaCantidad, seleccionado && styles.diaTextoSeleccionado]}>{t.comparar.cantidad(cantidad)}</Text>
               </Pressable>
             );
           })}
@@ -163,7 +170,7 @@ export default function CompararHorarios() {
               if (enLicencia(medico, diaElegido)) {
                 return (
                   <View key={medico.nombre} style={[styles.celda, styles.celdaBloqueo]}>
-                    <Text style={styles.celdaBloqueoTexto}>Licencia</Text>
+                    <Text style={styles.celdaBloqueoTexto}>{t.comparar.licencia}</Text>
                   </View>
                 );
               }
@@ -178,9 +185,9 @@ export default function CompararHorarios() {
                       key={medico.nombre}
                       style={[styles.celda, styles.celdaOfrecida]}
                       onPress={() => setIdOfertaSeleccionada(oferta.id)}>
-                      <Text style={styles.celdaOfrecidaTitulo}>Ofrecido</Text>
+                      <Text style={styles.celdaOfrecidaTitulo}>{t.comparar.ofrecido}</Text>
                       <Text style={styles.celdaOfrecidaTexto} numberOfLines={1}>
-                        a {nombreAbreviado(idPaciente)}
+                        {t.comparar.a(nombreAbreviado(idPaciente))}
                       </Text>
                     </Pressable>
                   );
@@ -189,7 +196,7 @@ export default function CompararHorarios() {
                 if (!horariosDe(medico.nombre).includes(hora)) {
                   return (
                     <View key={medico.nombre} style={[styles.celda, styles.celdaBloqueo]}>
-                      <Text style={styles.celdaBloqueoTexto}>No atiende</Text>
+                      <Text style={styles.celdaBloqueoTexto}>{t.comparar.noAtiende}</Text>
                     </View>
                   );
                 }
@@ -198,7 +205,7 @@ export default function CompararHorarios() {
                     key={medico.nombre}
                     style={[styles.celda, styles.celdaLibre]}
                     onPress={() => setNuevo({ medico: medico.nombre, hora })}>
-                    <Text style={styles.celdaLibreTexto}>Libre</Text>
+                    <Text style={styles.celdaLibreTexto}>{t.comparar.libre}</Text>
                   </Pressable>
                 );
               }
@@ -220,7 +227,7 @@ export default function CompararHorarios() {
                     {nombreAbreviado(turno.idPaciente)}
                   </Text>
                   <Text style={[styles.celdaEstado, { color }]} numberOfLines={1}>
-                    {riesgoAlto ? 'Riesgo alto' : ETIQUETAS_ESTADO[turno.estado]}
+                    {riesgoAlto ? t.comparar.riesgoAlto : TEXTOS_PACIENTE[idioma].estados[turno.estado]}
                   </Text>
                 </Pressable>
               );
@@ -246,8 +253,8 @@ export default function CompararHorarios() {
       <Modal visible={eligiendoMedicos} animationType="fade" transparent onRequestClose={() => setEligiendoMedicos(false)}>
         <View style={styles.fondoModal}>
           <View style={styles.tarjetaModal}>
-            <Text style={styles.modalTitulo}>Médicos en la grilla</Text>
-            <Text style={styles.ayuda}>Elegí hasta {MAXIMO_MEDICOS}. Probá con médicos de la misma especialidad.</Text>
+            <Text style={styles.modalTitulo}>{t.comparar.modalTitulo}</Text>
+            <Text style={styles.ayuda}>{t.comparar.modalAyuda(MAXIMO_MEDICOS)}</Text>
             {medicos.map((medico) => {
               const marcado = medicosElegidos.includes(medico.nombre);
               return (
@@ -256,7 +263,7 @@ export default function CompararHorarios() {
                     <Text style={styles.filaMedicoNombre}>{medico.nombre}</Text>
                     <Text style={styles.filaMedicoDetalle}>
                       {medico.especialidad}
-                      {medico.estado === 'licencia' ? ' · licencia' : ''}
+                      {medico.estado === 'licencia' ? t.comparar.enLicencia : ''}
                     </Text>
                   </View>
                   <View style={[styles.checkbox, marcado && styles.checkboxMarcado]}>
@@ -266,7 +273,7 @@ export default function CompararHorarios() {
               );
             })}
             <Pressable style={styles.botonPrimario} onPress={() => setEligiendoMedicos(false)}>
-              <Text style={styles.botonPrimarioTexto}>Listo</Text>
+              <Text style={styles.botonPrimarioTexto}>{t.comun.listo}</Text>
             </Pressable>
           </View>
         </View>
@@ -275,11 +282,11 @@ export default function CompararHorarios() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     paddingTop: MARGEN_SUPERIOR,
-    backgroundColor: FONDO_SECRETARIA,
+    backgroundColor: c.fondo,
   },
   encabezado: {
     paddingHorizontal: 18,
@@ -289,7 +296,7 @@ const styles = StyleSheet.create({
   volver: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   encabezadoFila: {
     flexDirection: 'row',
@@ -302,12 +309,12 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 22,
     fontFamily: FUENTE_TITULOS,
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   chip: {
     borderWidth: 1,
-    borderColor: '#B9DAD6',
-    backgroundColor: '#FFFFFF',
+    borderColor: c.bordeAcento,
+    backgroundColor: c.tarjeta,
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -315,7 +322,7 @@ const styles = StyleSheet.create({
   chipTexto: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   semanaFila: {
     gap: 8,
@@ -323,7 +330,7 @@ const styles = StyleSheet.create({
   },
   diaCaja: {
     width: 56,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     paddingVertical: 7,
     alignItems: 'center',
@@ -334,21 +341,21 @@ const styles = StyleSheet.create({
   diaEtiqueta: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaNumero: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   diaMes: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaCantidad: {
     fontSize: 10,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   diaTextoSeleccionado: {
     color: '#FFFFFF',
@@ -365,7 +372,7 @@ const styles = StyleSheet.create({
   },
   columnaMedico: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     paddingVertical: 7,
     alignItems: 'center',
@@ -373,11 +380,11 @@ const styles = StyleSheet.create({
   medicoNombre: {
     fontSize: 13,
     fontWeight: '700',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   medicoEspecialidad: {
     fontSize: 10,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   grilla: {
     flex: 1,
@@ -394,12 +401,12 @@ const styles = StyleSheet.create({
   horaTexto: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   celda: {
     flex: 1,
     minHeight: 54,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     borderLeftWidth: 3,
     borderLeftColor: '#B9DAD6',
@@ -411,14 +418,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#9CCBC6',
+    borderColor: c.bordeAcento,
     borderLeftWidth: 1,
     alignItems: 'center',
   },
   celdaLibreTexto: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLOR_SECRETARIA,
+    color: c.acento,
   },
   celdaOfrecida: {
     backgroundColor: '#FDF4DE',
@@ -439,7 +446,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   celdaBloqueo: {
-    backgroundColor: '#DDE9E7',
+    backgroundColor: c.chipAzul,
     borderLeftWidth: 1,
     alignItems: 'center',
   },
@@ -450,7 +457,7 @@ const styles = StyleSheet.create({
   celdaPaciente: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   celdaEstado: {
     fontSize: 11,
@@ -464,7 +471,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
     maxHeight: '90%',
@@ -472,14 +479,14 @@ const styles = StyleSheet.create({
   modalTitulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   ayuda: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 8,
   },
   filaMedico: {
@@ -487,7 +494,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EDEDED',
+    borderBottomColor: c.bordeSuave,
   },
   filaMedicoTextos: {
     flex: 1,
@@ -495,11 +502,11 @@ const styles = StyleSheet.create({
   filaMedicoNombre: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   filaMedicoDetalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   checkbox: {

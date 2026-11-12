@@ -79,7 +79,7 @@ export function TablaPacientes({ pacientes, color, onElegir, onVerFicha }: Props
                         <Text style={styles.celda}>
                           {dia}/{mes}
                         </Text>
-                        <Text style={styles.celdaChica}>{proximo.hora} h</Text>
+                        <Text style={styles.celdaChica}>{idioma === 'es' ? `${proximo.hora} h` : proximo.hora}</Text>
                       </>
                     ) : (
                       <Text style={styles.celdaChica}>—</Text>

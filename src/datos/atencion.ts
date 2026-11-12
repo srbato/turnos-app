@@ -1,3 +1,5 @@
+import { Idioma } from '@/contextos/PreferenciasContext';
+import { TEXTOS_SECRETARIA } from '@/datos/textos-secretaria';
 // Horarios de atención de los médicos. Cada médico tiene sus franjas (las carga Secretaría en su ficha) y de ahí
 // salen sus horarios de turno: los usan el paciente al sacar turno, Secretaría en sus agendas y los médicos.
 
@@ -96,7 +98,8 @@ export function ordenarFranjas(franjas: FranjaHoraria[]) {
 }
 
 // Los días en que atiende, como texto: "lun, mié, vie". Si son 3 o más días seguidos se acorta: "lun a vie".
-export function textoDeDias(franjas: FranjaHoraria[]) {
+export function textoDeDias(franjas: FranjaHoraria[], idioma: Idioma = 'es') {
+  const textos = TEXTOS_SECRETARIA[idioma];
   const posiciones: number[] = []; // posición de cada día en SEMANA (0 = lunes … 6 = domingo)
   SEMANA.forEach((dia, posicion) => {
     if (franjas.some((franja) => franja.dia === dia)) {
@@ -104,12 +107,12 @@ export function textoDeDias(franjas: FranjaHoraria[]) {
     }
   });
   if (posiciones.length === 0) {
-    return 'sin horarios';
+    return textos.textoDeDias.sinHorarios;
   }
   const primero = posiciones[0];
   const ultimo = posiciones[posiciones.length - 1];
   if (posiciones.length >= 3 && ultimo - primero === posiciones.length - 1) {
-    return `${NOMBRES_DIAS[SEMANA[primero]]} a ${NOMBRES_DIAS[SEMANA[ultimo]]}`;
+    return `${textos.dias[SEMANA[primero]]} ${textos.textoDeDias.a} ${textos.dias[SEMANA[ultimo]]}`;
   }
-  return posiciones.map((posicion) => NOMBRES_DIAS[SEMANA[posicion]]).join(', ');
+  return posiciones.map((posicion) => textos.dias[SEMANA[posicion]]).join(', ');
 }
