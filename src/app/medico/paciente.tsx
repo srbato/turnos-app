@@ -14,6 +14,8 @@ import { EstadoTurno } from '@/datos/consultorio';
 import { filasPreconsulta } from '@/datos/preconsulta';
 import { datosParaMedico } from '@/utilidades/datos-medico';
 import { fechaHoraComoDate, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -41,6 +43,7 @@ const ETIQUETAS_ESTADO: Record<EstadoTurno, string> = {
 
 // Ficha de un paciente, vista por el médico. El id del paciente llega por la URL.
 export default function FichaPaciente() {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const { id } = useLocalSearchParams();
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
@@ -225,25 +228,25 @@ export default function FichaPaciente() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   pantallaVacia: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
     padding: 20,
   },
   volverVacio: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
     marginBottom: 20,
   },
   textoVacio: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   encabezado: {
     backgroundColor: FONDO_GRAFITO,
@@ -306,14 +309,14 @@ const styles = StyleSheet.create({
   seccion: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 8,
     marginBottom: 8,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -321,12 +324,12 @@ const styles = StyleSheet.create({
   etiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
     marginTop: 6,
   },
   valor: {
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
   filaMedicamento: {
@@ -334,7 +337,7 @@ const styles = StyleSheet.create({
   },
   detalleMedicamento: {
     fontSize: 12,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 4,
   },
   filaTurno: {
@@ -355,7 +358,7 @@ const styles = StyleSheet.create({
   verPreconsulta: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLOR_MEDICO,
+    color: c.acento,
     marginTop: 8,
   },
   filaPreconsulta: {

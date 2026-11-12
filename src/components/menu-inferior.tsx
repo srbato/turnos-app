@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconoAnimado } from '@/components/icono-animado';
 import { MARGEN_INFERIOR } from '@/constantes/pantalla';
+import { aclarar, PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 export type SeccionMenu = {
   id: string;
@@ -20,7 +22,11 @@ type Props = {
 
 // Menú de abajo, común a los roles. Cada rol le pasa sus secciones y su color.
 // Cambia de sección con replace (no push), así las secciones no se apilan una sobre otra.
-export function MenuInferior({ secciones, activa, colorActivo }: Props) {
+export function MenuInferior({ secciones, activa, colorActivo: colorDelRol }: Props) {
+  const { modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  // El color del rol es oscuro: sobre el fondo oscuro de la barra casi no se lee, así que se aclara.
+  const colorActivo = modoOscuro ? aclarar(colorDelRol) : colorDelRol;
   return (
     <View style={styles.tabBar}>
       {secciones.map((seccion) => {
@@ -47,12 +53,12 @@ export function MenuInferior({ secciones, activa, colorActivo }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
+    borderTopColor: c.bordeSuave,
     paddingVertical: 10,
     paddingBottom: 10 + MARGEN_INFERIOR,
   },
@@ -62,11 +68,11 @@ const styles = StyleSheet.create({
   },
   tabIcono: {
     fontSize: 20,
-    color: '#9A9A9A',
+    color: c.textoTenue,
   },
   tabTexto: {
     fontSize: 11,
-    color: '#9A9A9A',
+    color: c.textoTenue,
     marginTop: 2,
   },
 });

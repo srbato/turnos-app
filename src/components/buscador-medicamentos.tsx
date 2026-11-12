@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { buscarMedicamentos, MedicamentoVademecum, ResultadoVademecum } from '@/servicios/vademecum';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -15,6 +17,7 @@ type Props = {
 // Buscador de medicamentos en CIMA (el vademécum de la AEMPS, de España): un campo, un botón Buscar y la lista de
 // resultados. El estado es de este componente y no lo comparte nadie, así que alcanza con useState.
 export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const [texto, setTexto] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
@@ -137,12 +140,12 @@ export function BuscadorMedicamentos({ oscuro = false, onElegir }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   contenedor: {
     flex: 1,
   },
   contenedorOscuro: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   bandaOscura: {
     backgroundColor: FONDO_GRAFITO,
@@ -169,10 +172,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   buscadorClaro: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderWidth: 1,
-    borderColor: '#D5D8DD',
-    color: '#1A1A1A',
+    borderColor: c.borde,
+    color: c.texto,
   },
   botonBuscar: {
     backgroundColor: COLOR_MEDICO,
@@ -210,16 +213,16 @@ const styles = StyleSheet.create({
   cantidad: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 10,
   },
   vacioOscuro: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 20,
   },
   vacioClaro: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
     borderRadius: 12,
     padding: 20,
   },
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   errorTexto: {
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   botonReintentarTexto: {
-    color: COLOR_MEDICO,
+    color: c.acento,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -256,10 +259,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tarjetaOscura: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
   },
   tarjetaClara: {
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   datos: {
     flex: 1,
@@ -268,11 +271,11 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   laboratorio: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 3,
   },
   lateral: {
@@ -280,7 +283,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   marcaReceta: {
-    backgroundColor: '#FBDCDC',
+    backgroundColor: c.chipRojo,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -293,6 +296,6 @@ const styles = StyleSheet.create({
   elegir: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
   },
 });

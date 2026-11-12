@@ -28,6 +28,8 @@ import { EstadoTurno, HOY, Paciente } from '@/datos/consultorio';
 import { filasPreconsulta } from '@/datos/preconsulta';
 import { datosParaMedico } from '@/utilidades/datos-medico';
 import { detalleFecha, fechaComoTexto, fechaHoraComoDate, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -102,6 +104,7 @@ type PropsTarjetaTurno = {
 
 // Tarjeta de un turno en la agenda.
 function TarjetaTurno(props: PropsTarjetaTurno) {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const nombre = props.paciente ? `${props.paciente.nombre} ${props.paciente.apellido}` : 'Paciente';
   const cobertura = props.paciente ? props.paciente.cobertura : '';
   const preconsulta = props.tienePreconsulta ? 'preconsulta lista' : 'sin preconsulta';
@@ -144,6 +147,7 @@ function TarjetaTurno(props: PropsTarjetaTurno) {
 }
 
 export default function AgendaMedico() {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const { turnos, cancelarTurno, cambiarEstadoTurno, registrarConsulta } = useTurnos();
   const perfilMedico = usePerfilMedico();
   const medicoLogueado = useMedicoLogueado();
@@ -613,10 +617,10 @@ export default function AgendaMedico() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   encabezado: {
     backgroundColor: FONDO_GRAFITO,
@@ -686,7 +690,7 @@ const styles = StyleSheet.create({
   },
   diaCaja: {
     width: 56,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     paddingVertical: 8,
     alignItems: 'center',
@@ -698,17 +702,17 @@ const styles = StyleSheet.create({
   diaNombre: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   diaNumero: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
   diaCantidad: {
     fontSize: 10,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 2,
   },
   diaTextoElegido: {
@@ -723,11 +727,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#D5D8DD',
+    borderColor: c.borde,
     borderRadius: 999,
     paddingHorizontal: 4,
     paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
   },
   filtroChipElegido: {
     backgroundColor: COLOR_MEDICO,
@@ -736,7 +740,7 @@ const styles = StyleSheet.create({
   filtroTexto: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   filtroTextoElegido: {
     color: '#FFFFFF',
@@ -744,7 +748,7 @@ const styles = StyleSheet.create({
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -764,11 +768,11 @@ const styles = StyleSheet.create({
   horaTexto: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   duracionTexto: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 2,
   },
   tarjetaDatos: {
@@ -778,11 +782,11 @@ const styles = StyleSheet.create({
   pacienteTexto: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   subtituloTexto: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   subtituloRiesgoAlto: {
@@ -800,14 +804,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   estadoVacio: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
   },
   estadoVacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   fondoModal: {
@@ -816,7 +820,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -832,11 +836,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   modalDato: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 4,
   },
   modalAviso: {
@@ -853,7 +857,7 @@ const styles = StyleSheet.create({
   modalSeccion: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     marginTop: 20,
@@ -865,29 +869,29 @@ const styles = StyleSheet.create({
   modalEtiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
   },
   modalTexto: {
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
   botonX: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F0F1F3',
+    backgroundColor: c.relleno,
     justifyContent: 'center',
     alignItems: 'center',
   },
   botonXTexto: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D5D8DD',
+    borderColor: c.borde,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -926,7 +930,7 @@ const styles = StyleSheet.create({
   },
   avisoCorreccion: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 10,
   },
   acciones: {
@@ -952,7 +956,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonAtendidoSecundarioTexto: {
-    color: COLOR_MEDICO,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -979,7 +983,7 @@ const styles = StyleSheet.create({
   textoConfirmacion: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 10,
   },
   filaConfirmacion: {
@@ -995,7 +999,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonNoTexto: {
-    color: COLOR_MEDICO,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },

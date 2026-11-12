@@ -18,8 +18,6 @@ type TextosPerfil = {
   idiomaDetalle: string;
   modoOscuro: string;
   modoOscuroDetalle: string;
-  recordatorios: string;
-  recordatoriosDetalle: string;
   alertas: string;
   alertasDetalle: string;
   cerrarSesion: string;
@@ -59,8 +57,6 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     idiomaDetalle: 'Español o English',
     modoOscuro: 'Modo oscuro',
     modoOscuroDetalle: 'Cambia el aspecto de esta pantalla',
-    recordatorios: 'Recordatorios de turno',
-    recordatoriosDetalle: 'WhatsApp y notificaciones',
     alertas: 'Alertas de medicación',
     alertasDetalle: 'Avisos de interacciones',
     cerrarSesion: 'Cerrar sesión',
@@ -102,8 +98,6 @@ export const TEXTOS_PERFIL: Record<Idioma, TextosPerfil> = {
     idiomaDetalle: 'Español or English',
     modoOscuro: 'Dark mode',
     modoOscuroDetalle: 'Changes the look of this screen',
-    recordatorios: 'Appointment reminders',
-    recordatoriosDetalle: 'WhatsApp and notifications',
     alertas: 'Medication alerts',
     alertasDetalle: 'Interaction warnings',
     cerrarSesion: 'Log out',

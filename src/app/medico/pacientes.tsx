@@ -11,6 +11,8 @@ import { useMedicoLogueado } from '@/contextos/PersonalContext';
 import { useTurnos } from '@/contextos/TurnosContext';
 import { HOY } from '@/datos/consultorio';
 import { buscarProximoTurno, detalleFecha, fechaHoraComoDate } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
@@ -18,6 +20,7 @@ const COLOR_RIESGO_ALTO = '#D64545';
 const FONDO_RIESGO_ALTO = '#FBDCDC';
 
 export default function PacientesDelMedico() {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
   const { consultorio } = useConsultorio();
@@ -147,10 +150,10 @@ export default function PacientesDelMedico() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   encabezado: {
     backgroundColor: FONDO_GRAFITO,
@@ -211,24 +214,24 @@ const styles = StyleSheet.create({
   cantidad: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginBottom: 10,
   },
   estadoVacio: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
   },
   estadoVacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -253,11 +256,11 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chipRiesgo: {

@@ -2,6 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_MEDICO } from '@/constantes/colores';
 import { Consulta } from '@/datos/consultorio';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 // conNotas: las notas privadas solo las ve el médico que las escribió.
 type Props = {
@@ -11,6 +13,7 @@ type Props = {
 
 // Lo que el médico anotó al atender un turno (una entrada de la historia clínica). Los campos vacíos no se muestran.
 export function DetalleConsulta({ consulta, conNotas }: Props) {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const filas = [
     { titulo: 'Motivo', valor: consulta.motivo },
     { titulo: 'Diagnóstico', valor: consulta.diagnostico },
@@ -34,7 +37,7 @@ export function DetalleConsulta({ consulta, conNotas }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   fila: {
     marginTop: 6,
   },
@@ -45,7 +48,7 @@ const styles = StyleSheet.create({
   },
   valor: {
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 2,
   },
 });

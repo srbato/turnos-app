@@ -4,6 +4,8 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { DetalleEstudioModal, COLORES_ESTUDIO, ETIQUETAS_ESTUDIO } from '@/components/modal-estudio';
 import { COLOR_PACIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { Estudio } from '@/datos/estudios';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 type Props = {
   estudios: Estudio[];
@@ -12,6 +14,7 @@ type Props = {
 
 // Lista de estudios para las tabs de Estudios. Tocar uno abre su detalle.
 export function ListaEstudios({ estudios, textoVacio }: Props) {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const [estudioSeleccionado, setEstudioSeleccionado] = useState<Estudio | null>(null);
 
   return (
@@ -48,7 +51,7 @@ export function ListaEstudios({ estudios, textoVacio }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
     backgroundColor: FONDO_PACIENTE,
@@ -63,7 +66,7 @@ const styles = StyleSheet.create({
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -88,11 +91,11 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chip: {
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
   },
   vacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
   },
 });

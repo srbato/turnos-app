@@ -3,6 +3,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLOR_CANCELADO, COLOR_CONFIRMADO, COLOR_PACIENTE, COLOR_PENDIENTE, FONDO_PACIENTE } from '@/constantes/colores';
 import { EstadoEstudio, Estudio } from '@/datos/estudios';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 export const COLORES_ESTUDIO: Record<EstadoEstudio, string> = {
   pendiente: COLOR_PENDIENTE,
@@ -25,6 +27,7 @@ type Props = {
 
 // Modal con el detalle de un estudio. Lo usan el home y la sección Estudios.
 export function DetalleEstudioModal({ estudio, onCerrar }: Props) {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   return (
     <Modal
       visible={estudio !== null}
@@ -89,7 +92,7 @@ export function DetalleEstudioModal({ estudio, onCerrar }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tipo: {
     width: 44,
     height: 44,
@@ -109,7 +112,7 @@ const styles = StyleSheet.create({
   },
   detalle: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   chip: {
@@ -130,7 +133,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 20,
     padding: 20,
   },
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
   modalEtiqueta: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -155,24 +158,24 @@ const styles = StyleSheet.create({
   modalTitulo: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   modalFila: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: '#EDEDED',
+    borderTopColor: c.bordeSuave,
     marginBottom: 14,
   },
   modalFilaEtiqueta: {
     fontSize: 13,
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   modalFilaValor: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   avisoCaja: {
     backgroundColor: FONDO_PENDIENTE,
@@ -203,6 +206,6 @@ const styles = StyleSheet.create({
   cerrarTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
 });

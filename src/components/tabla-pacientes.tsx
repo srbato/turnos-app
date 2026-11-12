@@ -7,6 +7,8 @@ import { useTurnos } from '@/contextos/TurnosContext';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { Paciente } from '@/datos/consultorio';
 import { buscarProximoTurno } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 type Props = {
   pacientes: Paciente[]; // los del consultorio activo
@@ -21,6 +23,7 @@ const ETIQUETA_RIESGO = { bajo: 'bajo', 'en-riesgo': 'medio', alto: 'alto' };
 // Tabla con todos los pacientes del consultorio: se busca por nombre, DNI u obra social, y al tocar una fila se elige
 // al paciente (para darle un turno). Solo datos administrativos.
 export function TablaPacientes({ pacientes, color, onElegir, onVerFicha }: Props) {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const { turnos } = useTurnos();
   const { reglasRiesgo } = useConfiguracion();
   const [busqueda, setBusqueda] = useState('');
@@ -99,30 +102,30 @@ export function TablaPacientes({ pacientes, color, onElegir, onVerFicha }: Props
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   contenedor: {
     flex: 1,
     padding: 16,
   },
   buscador: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderWidth: 1,
-    borderColor: '#DADDE1',
+    borderColor: c.borde,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   cantidad: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginVertical: 10,
   },
   tabla: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -136,11 +139,11 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   filaEncabezado: {
-    backgroundColor: '#EEF0F3',
+    backgroundColor: c.relleno,
     paddingVertical: 9,
   },
   filaAlterna: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: c.relleno,
   },
   cuerpoFila: {
     flex: 1,
@@ -151,7 +154,7 @@ const styles = StyleSheet.create({
   encabezado: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
   },
   colPaciente: {
@@ -177,21 +180,21 @@ const styles = StyleSheet.create({
   nombre: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   dni: {
     fontSize: 11,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     marginTop: 1,
   },
   celda: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   celdaChica: {
     fontSize: 11,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   punto: {
     width: 10,
@@ -205,7 +208,7 @@ const styles = StyleSheet.create({
   },
   vacio: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textAlign: 'center',
     padding: 24,
   },

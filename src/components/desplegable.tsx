@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { aclarar, PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 export type OpcionDesplegable = {
   id: string;
@@ -49,6 +51,10 @@ export function Desplegable({
   textoVacio = 'No hay opciones para elegir.',
   placeholderBuscador,
 }: Props) {
+  const { modoOscuro } = usePreferencias();
+  const styles = crearEstilos(paletaApp(modoOscuro));
+  // El color del rol es oscuro: como texto sobre fondo oscuro se aclara.
+  const colorTexto = modoOscuro ? aclarar(color) : color;
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const esMultiple = onAlternar !== undefined;
@@ -123,7 +129,7 @@ export function Desplegable({
         <Text style={[styles.botonTexto, !hayElegidas && styles.botonPlaceholder]} numberOfLines={esMultiple ? 2 : 1}>
           {hayElegidas ? textoBoton : placeholder}
         </Text>
-        <Text style={[styles.flecha, { color }]}>{abierto ? '▴' : '▾'}</Text>
+        <Text style={[styles.flecha, { color: colorTexto }]}>{abierto ? '▴' : '▾'}</Text>
       </Pressable>
 
       {modo === 'expandido' && abierto && <View style={[styles.contenedorExpandido, { borderColor: color }]}>{lista}</View>}
@@ -148,7 +154,7 @@ export function Desplegable({
               )}
               {lista}
               <Pressable style={[styles.botonCerrar, { borderColor: color }]} onPress={() => cambiarAbierto(false)}>
-                <Text style={[styles.botonCerrarTexto, { color }]}>Cerrar</Text>
+                <Text style={[styles.botonCerrarTexto, { color: colorTexto }]}>Cerrar</Text>
               </Pressable>
             </View>
           </View>
@@ -158,7 +164,7 @@ export function Desplegable({
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   boton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -168,15 +174,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
   },
   botonTexto: {
     flex: 1,
     fontSize: 15,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   botonPlaceholder: {
-    color: '#8A8A8A',
+    color: c.textoTenue,
   },
   flecha: {
     fontSize: 13,
@@ -186,7 +192,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 6,
     padding: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
   },
   listaExpandida: {
     maxHeight: 170,
@@ -213,11 +219,11 @@ const styles = StyleSheet.create({
   filaTexto: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   filaDetalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 1,
   },
   filaTextoElegida: {
@@ -225,7 +231,7 @@ const styles = StyleSheet.create({
   },
   vacio: {
     fontSize: 13,
-    color: '#8A8A8A',
+    color: c.textoTenue,
     padding: 12,
     textAlign: 'center',
   },
@@ -236,7 +242,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tarjeta: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 16,
     padding: 16,
     maxHeight: '80%',
@@ -244,7 +250,7 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
@@ -255,7 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 8,
   },
   botonCerrar: {

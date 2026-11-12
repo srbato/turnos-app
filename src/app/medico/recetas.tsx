@@ -25,12 +25,15 @@ import { useTurnos } from '@/contextos/TurnosContext';
 import { recetaVigente, vencimientoReceta, Receta } from '@/datos/recetas';
 import { MedicamentoVademecum } from '@/servicios/vademecum';
 import { formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 const COLOR_MEDICO = '#1B4B8F';
 const FONDO_GRAFITO = '#1E2126';
 const COLOR_ERROR = '#D64545';
 
 export default function RecetasDelMedico() {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const { turnos } = useTurnos();
   const medicoLogueado = useMedicoLogueado();
   const { recetas, emitirReceta, editarReceta, eliminarReceta } = useRecetas();
@@ -358,10 +361,10 @@ export default function RecetasDelMedico() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   encabezado: {
     backgroundColor: FONDO_GRAFITO,
@@ -428,22 +431,22 @@ const styles = StyleSheet.create({
   labelSinMargen: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   linkVademecum: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
   },
   volverReceta: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
     marginBottom: 12,
   },
   ayudaBuscador: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 12,
   },
   alturaBuscador: {
@@ -462,22 +465,22 @@ const styles = StyleSheet.create({
   detalleVigencia: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLOR_MEDICO,
+    color: c.acento,
     marginTop: 3,
   },
   editar: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLOR_MEDICO,
+    color: c.acento,
   },
   iconoVencida: {
-    backgroundColor: '#ECECEC',
+    backgroundColor: c.relleno,
   },
   pacienteFijo: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1A1A',
-    backgroundColor: '#F4F5F7',
+    color: c.texto,
+    backgroundColor: c.fondo,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -494,14 +497,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   confirmacion: {
-    backgroundColor: '#FBDCDC',
+    backgroundColor: c.chipRojo,
     borderRadius: 12,
     padding: 14,
     marginTop: 12,
   },
   confirmacionTexto: {
     fontSize: 13,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   botonConfirmarEliminar: {
     flex: 1,
@@ -518,19 +521,19 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   estadoVacio: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
   },
   estadoVacioTexto: {
     fontSize: 14,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
   },
   tarjeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -539,14 +542,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#E6ECF5',
+    backgroundColor: c.chipAzul,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   iconoTexto: {
     fontSize: 20,
-    color: COLOR_MEDICO,
+    color: c.acento,
   },
   datos: {
     flex: 1,
@@ -554,11 +557,11 @@ const styles = StyleSheet.create({
   medicamento: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: c.texto,
   },
   detalle: {
     fontSize: 12,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   fondoModal: {
@@ -567,7 +570,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   tarjetaModal: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -576,13 +579,13 @@ const styles = StyleSheet.create({
   modalTitulo: {
     fontSize: 20,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
     marginBottom: 16,
   },
   label: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginBottom: 6,
   },
   selectorPaciente: {
@@ -590,7 +593,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D5D8DD',
+    borderColor: c.borde,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -612,7 +615,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     borderWidth: 1,
-    borderColor: '#D5D8DD',
+    borderColor: c.borde,
     borderRadius: 10,
     paddingLeft: 12,
     paddingRight: 8,
@@ -622,7 +625,7 @@ const styles = StyleSheet.create({
   textoSwitch: {
     flex: 1,
     fontSize: 14,
-    color: '#1A1A1A',
+    color: c.texto,
   },
   filaBotones: {
     flexDirection: 'row',
@@ -638,7 +641,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   botonCancelarTexto: {
-    color: COLOR_MEDICO,
+    color: c.acento,
     fontSize: 14,
     fontWeight: '700',
   },

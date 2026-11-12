@@ -6,23 +6,20 @@ export type Idioma = 'es' | 'en';
 type Preferencias = {
   idioma: Idioma;
   modoOscuro: boolean;
-  recordatorios: boolean;
 };
 
 // Lo que se comparte: las preferencias y las funciones para cambiarlas.
 type PreferenciasContextType = Preferencias & {
   cambiarIdioma: (idioma: Idioma) => void;
   alternarModoOscuro: () => void;
-  alternarRecordatorios: () => void;
 };
 
 const CLAVE_STORAGE = 'preferencias';
 
-// El perfil siempre fue oscuro, por eso el modo oscuro arranca activado.
+// La app arranca en modo claro; el modo oscuro se activa desde Perfil y se guarda en el dispositivo.
 const PREFERENCIAS_INICIALES: Preferencias = {
   idioma: 'es',
-  modoOscuro: true,
-  recordatorios: true,
+  modoOscuro: false,
 };
 
 // Valor que se usa solo si una pantalla queda fuera del Provider.
@@ -30,7 +27,6 @@ const VALOR_POR_DEFECTO: PreferenciasContextType = {
   ...PREFERENCIAS_INICIALES,
   cambiarIdioma: () => {},
   alternarModoOscuro: () => {},
-  alternarRecordatorios: () => {},
 };
 
 const PreferenciasContext = createContext(VALOR_POR_DEFECTO);
@@ -71,13 +67,8 @@ export function PreferenciasProvider({ children }: { children: ReactNode }) {
     guardar({ ...preferencias, modoOscuro: !preferencias.modoOscuro });
   }
 
-  function alternarRecordatorios() {
-    guardar({ ...preferencias, recordatorios: !preferencias.recordatorios });
-  }
-
   return (
-    <PreferenciasContext.Provider
-      value={{ ...preferencias, cambiarIdioma, alternarModoOscuro, alternarRecordatorios }}>
+    <PreferenciasContext.Provider value={{ ...preferencias, cambiarIdioma, alternarModoOscuro }}>
       {children}
     </PreferenciasContext.Provider>
   );

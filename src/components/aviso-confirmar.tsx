@@ -10,6 +10,8 @@ import { useTurnos } from '@/contextos/TurnosContext';
 import { evaluarRiesgo } from '@/datos/ausentismo';
 import { HOY } from '@/datos/consultorio';
 import { detalleFecha, fechaComoTexto, formatearFecha } from '@/utilidades/turnos';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 // "Hoy 10:00 h", "Mañana 10:00 h" o "Jue 15/10 · 10:00 h".
 function cuando(fecha: string, hora: string) {
@@ -24,6 +26,7 @@ function cuando(fecha: string, hora: string) {
 // Si ya recibió los avisos necesarios y su historial es de riesgo alto, el cartel pasa a rojo y avisa que el turno puede
 // reprogramarse (sin hablar de puntos ni de riesgo: dice el hecho, no lo etiqueta).
 export function AvisoConfirmar() {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   const { turnos, misTurnos, cambiarEstadoTurno, cancelarTurno } = useTurnos();
   const { mostrarError } = useErrores();
   const { consultorio } = useConsultorio();
@@ -78,7 +81,7 @@ export function AvisoConfirmar() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   tarjeta: {
     backgroundColor: FONDO_PACIENTE,
     borderWidth: 1,
@@ -87,7 +90,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tarjetaUrgente: {
-    backgroundColor: '#FBDCDC',
+    backgroundColor: c.chipRojo,
     borderColor: COLOR_CANCELADO,
   },
   etiqueta: {
@@ -98,17 +101,17 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 18,
     fontFamily: FUENTE_TITULOS,
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 4,
   },
   detalle: {
     fontSize: 13,
-    color: '#5A5A5A',
+    color: c.textoSecundario,
     marginTop: 2,
   },
   texto: {
     fontSize: 13,
-    color: '#1A1A1A',
+    color: c.texto,
     marginTop: 10,
   },
   filaBotones: {
@@ -120,7 +123,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: 'transparent',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: c.tarjeta,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',

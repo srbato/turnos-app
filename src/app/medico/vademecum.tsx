@@ -4,12 +4,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FUENTE_TITULOS } from '@/constantes/fuentes';
 import { BuscadorMedicamentos } from '@/components/buscador-medicamentos';
 import { MenuMedico } from '@/components/menu-medico';
+import { PaletaApp, paletaApp } from '@/constantes/paleta-app';
+import { usePreferencias } from '@/contextos/PreferenciasContext';
 
 const FONDO_GRAFITO = '#1E2126';
 
 // Pantalla de consulta del vademécum (CIMA, de la AEMPS de España). Solo se mira: no se guarda nada. La búsqueda y la
 // lista las maneja BuscadorMedicamentos, el mismo componente que usa el formulario de Nueva receta para elegir uno.
 export default function Vademecum() {
+  const styles = crearEstilos(paletaApp(usePreferencias().modoOscuro));
   function volver() {
     if (router.canGoBack()) {
       router.back();
@@ -38,10 +41,10 @@ export default function Vademecum() {
   );
 }
 
-const styles = StyleSheet.create({
+const crearEstilos = (c: PaletaApp) => StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: '#F4F5F7',
+    backgroundColor: c.fondo,
   },
   encabezado: {
     backgroundColor: FONDO_GRAFITO,

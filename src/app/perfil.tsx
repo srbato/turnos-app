@@ -58,8 +58,7 @@ export default function Perfil() {
   }
 
   // Las preferencias vienen del contexto: se guardan en el dispositivo y se aplican acá.
-  const { idioma, modoOscuro, recordatorios, cambiarIdioma, alternarModoOscuro, alternarRecordatorios } =
-    usePreferencias();
+  const { idioma, modoOscuro, cambiarIdioma, alternarModoOscuro } = usePreferencias();
   const tema = modoOscuro ? TEMA_OSCURO : TEMA_CLARO;
   const textos = TEXTOS_PERFIL[idioma];
 
@@ -219,14 +218,6 @@ export default function Perfil() {
             subtitulo={textos.modoOscuroDetalle}
             activo={modoOscuro}
             onCambiar={alternarModoOscuro}
-          />
-          <View style={[styles.divisor, { backgroundColor: tema.borde }]} />
-          <FilaToggle
-            tema={tema}
-            titulo={textos.recordatorios}
-            subtitulo={textos.recordatoriosDetalle}
-            activo={recordatorios}
-            onCambiar={alternarRecordatorios}
           />
           {/* Las alertas de medicación (interacciones) son solo para el médico. */}
           {rol === 'medico' && (
